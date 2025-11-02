@@ -3,36 +3,26 @@ email: xjxnnd@example.com
 description: >-
   这是你的 Minimal Mistakes 博客描述。
   用于记录你的想法、学习和生活。
-baseurl: "" # 保持为空
-url: "https://xxyzyh-code.github.io" # 替换为你的实际地址
+baseurl: ""
+url: "https://xxyzyh-code.github.io"
 
-# 激活 Minimal Mistakes 主题
 remote_theme: "mmistakes/minimal-mistakes"
 
-# 博客的核心设置
-minimal_mistakes_skin: "default" # 可选：air, aqua, contrast, dark, neon, mint, solarized, warm, default
+minimal_mistakes_skin: "default"
 locale: "zh-CN"
 timezone: "Asia/Shanghai"
 
-# 启用插件
 plugins:
   - jekyll-feed
   - jekyll-sitemap
   - jekyll-archives
   - jekyll-remote-theme
   - jekyll-include-cache
-  - jekyll-seo-tag       # ✅ SEO 优化
-  - jekyll-paginate-v2   # ✅ 分页支持
-  - jekyll-search        # ✅ 本地搜索（Minimal Mistakes 支持）
 
-# 包含目录
 include:
   - _pages
   - _data
 
-# ---------------------------------------------
-# 作者信息
-# ---------------------------------------------
 author:
   xxyzyh:
     name: "小写博客主人"
@@ -46,9 +36,6 @@ author:
       - label: "Twitter"
         url: "https://twitter.com/yhz926"
 
-# ---------------------------------------------
-# 导航栏设置
-# ---------------------------------------------
 navigation:
   main:
     - title: "首页"
@@ -61,14 +48,9 @@ navigation:
       url: /tags/
     - title: "分类"
       url: /categories/
-    - title: "二级分类"
-      url: /subcategories/
     - title: "存档"
       url: /archives/
 
-# ---------------------------------------------
-# 外观与布局设置
-# ---------------------------------------------
 defaults:
   - scope:
       path: ""
@@ -76,19 +58,9 @@ defaults:
       layout: single
       author_profile: true
 
-# ---------------------------------------------
-# 站点功能设置
-# ---------------------------------------------
-search: true           # ✅ 启用本地搜索功能
-search_full_content: true
-masthead:
-  sticky: true          # ✅ 顶部导航栏固定
-
-paginate: 5            # ✅ 每页显示 5 篇文章
+search: false   # ❌ 禁用搜索，防止 GitHub Pages 报错
+paginate: 5
 paginate_path: "/page:num/"
 
-# ---------------------------------------------
-# 构建设置
-# ---------------------------------------------
 markdown: kramdown
 highlighter: rouge
