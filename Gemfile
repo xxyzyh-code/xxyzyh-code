@@ -19,7 +19,6 @@ group :jekyll_plugins do
   # 您在 _config.yml 中启用的插件：
   gem "jekyll-feed"
   gem "jekyll-sitemap"
-  gem "jekyll-paginate"
   # 如果您使用了 jekyll-archives，请取消注释下一行
   gem "jekyll-archives"
   
