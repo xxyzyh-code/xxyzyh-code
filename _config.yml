@@ -25,3 +25,19 @@ plugins:
 # 启用 Minimal Mistakes 的功能
 include:
   - _pages
+
+# ---------------------------------------------
+# 作者信息区块（新加）
+# ---------------------------------------------
+author:
+  xxyzyh:                     # 可用任意唯一标识符
+    name: "小写博客主人"       # 显示在侧边栏的名字
+    avatar: "/assets/images/avatar.jpg" # 头像路径，放在 assets 里
+    bio: "一个热爱写作和分享的个人博客作者。" # 简短介绍
+    email: xjxnnd@example.com
+    location: "中国"           # 可选
+    links:                     # 可选：社交媒体或外部链接
+      - label: "GitHub"
+        url: "https://github.com/xxyzyh-code"
+      - label: "Twitter"
+        url: "https://twitter.com/yhz926"
