@@ -1,56 +1,60 @@
 ---
-layout: page
-title: 二级分类
+layout: default
+title: "📂 二级分类导航"
 permalink: /subcategories/
+author_profile: true
 ---
 
-<h1 style="text-align:center;">📂 二级分类索引</h1>
-<p style="text-align:center; color:#888;">点击二级分类查看文章</p>
+<h2 style="text-align:center; margin-top:20px;">📁 博客二级分类导航</h2>
+<p style="text-align:center; color:#888; font-size:0.95em;">
+点击任意分类以展开查看对应的文章。
+</p>
 
-{% assign all_categories = "" | split: "," %}
+<div id="category-list" style="margin-top:40px;"></div>
 
-{% for post in site.posts %}
-  {% assign post_cats = post.categories %}
-  {% if post_cats.size > 0 %}
-    {% assign first_level = post_cats[0] %}
-    {% assign second_levels = post_cats[1..-1] %}
-    
-    {% for second in second_levels %}
-      {% assign entry = first_level | append: "||" | append: second | append: "||" | append: post.url | append: "||" | append: post.title %}
-      {% assign all_categories = all_categories | push: entry %}
-    {% endfor %}
-    
-    {% if second_levels == nil or second_levels == empty %}
-      {% assign entry = first_level | append: "||" | append: "" | append: "||" | append: post.url | append: "||" | append: post.title %}
-      {% assign all_categories = all_categories | push: entry %}
-    {% endif %}
-  {% endif %}
-{% endfor %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const categories = {};
 
-{% assign grouped = all_categories | sort %}
+  {% for post in site.posts %}
+    const cats = {{ post.categories | jsonify }};
+    if (cats.length > 0) {
+      const mainCat = cats[0];
+      const subCat = cats[1] || "未分类";
+      if (!categories[mainCat]) categories[mainCat] = {};
+      if (!categories[mainCat][subCat]) categories[mainCat][subCat] = [];
+      categories[mainCat][subCat].push({
+        title: {{ post.title | jsonify }},
+        url: {{ post.url | jsonify }},
+        date: {{ post.date | date: "%Y-%m-%d" | jsonify }}
+      });
+    }
+  {% endfor %}
 
-{% assign current_first = "" %}
-<ul>
-{% for item in grouped %}
-  {% assign parts = item | split: "||" %}
-  {% assign first = parts[0] %}
-  {% assign second = parts[1] %}
-  {% assign url = parts[2] %}
-  {% assign title = parts[3] %}
-
-  {% if first != current_first %}
-    {% if current_first != "" %}
-      </ul>
-    {% endif %}
-    <h2>{{ first }}</h2>
-    <ul>
-    {% assign current_first = first %}
-  {% endif %}
-
-  {% if second != "" %}
-    <li><strong>{{ second }}</strong> — <a href="{{ url }}">{{ title }}</a></li>
-  {% else %}
-    <li><a href="{{ url }}">{{ title }}</a></li>
-  {% endif %}
-{% endfor %}
-</ul>
+  const container = document.getElementById("category-list");
+  Object.keys(categories).sort().forEach(main => {
+    const section = document.createElement("div");
+    section.innerHTML = `
+      <details style="margin-bottom:20px; border:1px solid #444; border-radius:6px; background:#222;">
+        <summary style="padding:10px 15px; font-size:1.2em; font-weight:600; color:#fff; cursor:pointer;">🎯 ${main}</summary>
+        <div style="padding:10px 20px;">
+          ${Object.keys(categories[main]).sort().map(sub => `
+            <details style="margin-top:10px; border:1px solid #555; border-radius:6px;">
+              <summary style="padding:8px 12px; background:#333; color:#eee; cursor:pointer;">📎 ${sub}</summary>
+              <ul style="list-style:none; padding-left:20px; margin:10px 0;">
+                ${categories[main][sub].map(post => `
+                  <li style="margin:6px 0;">
+                    <a href="${post.url}" style="color:#68c1ff; text-decoration:none;">${post.title}</a>
+                    <span style="color:#888; font-size:0.85em;">（${post.date}）</span>
+                  </li>
+                `).join("")}
+              </ul>
+            </details>
+          `).join("")}
+        </div>
+      </details>
+    `;
+    container.appendChild(section);
+  });
+});
+</script>
