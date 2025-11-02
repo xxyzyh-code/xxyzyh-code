@@ -12,7 +12,7 @@ classes: wide
 
 <!-- 访问统计 -->
 <div style="text-align: center; margin-bottom: 20px;">
-  ![Visitor Count](https://visitor-badge.laobi.icu/badge?page_id=xxyzyh-code.xxyzyh-code)
+  <img src="https://visitor-badge.laobi.icu/badge?page_id=xxyzyh-code.xxyzyh-code" alt="Visitor Count">
 </div>
 
 欢迎来到我的博客！在这里你可以看到我最新的文章列表和博客动态。  
