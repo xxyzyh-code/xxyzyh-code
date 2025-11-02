@@ -20,6 +20,7 @@ plugins:
   - jekyll-sitemap
   - jekyll-archives
   - jekyll-remote-theme
+  - jekyll-include-cache
 
 # 启用 Minimal Mistakes 的功能
 include:
