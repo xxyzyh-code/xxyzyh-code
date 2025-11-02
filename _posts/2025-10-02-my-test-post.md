@@ -1,5 +1,5 @@
 ---
-title: "欢迎来到我的新博客"
+title: "欢迎来到我的测试文"
 excerpt: "这是使用 Minimal Mistakes 主题写下的测试文章。"
 date: 2025-10-02
 last_modified_at: 2025-10-02
