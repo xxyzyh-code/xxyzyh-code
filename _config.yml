@@ -64,3 +64,9 @@ paginate_path: "/page:num/"
 
 markdown: kramdown
 highlighter: rouge
+
+# ---------------------------------------------
+# 站内搜索设置（纯前端，无需插件）
+# ---------------------------------------------
+search: true
+search_full_content: true
