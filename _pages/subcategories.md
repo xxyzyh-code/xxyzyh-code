@@ -5,25 +5,52 @@ permalink: /subcategories/
 ---
 
 <h1 style="text-align:center;">📂 二级分类索引</h1>
-<p style="text-align:center; color:#888;">点击下面的二级分类查看文章</p>
+<p style="text-align:center; color:#888;">点击二级分类查看文章</p>
 
-{% assign posts_by_category = site.posts | group_by_exp:"post", "post.categories[0]" %}
+{% assign all_categories = "" | split: "," %}
 
-{% for category in posts_by_category %}
-  <h2 style="margin-top:40px;">一级分类：{{ category.name }}</h2>
-  <ul>
-    {% for post in category.items %}
-      {% if post.categories.size > 1 %}
-        {% assign subcat = post.categories[1] %}
-        <li>
-          <strong>二级分类：{{ subcat }}</strong> —
-          <a href="{{ post.url }}">{{ post.title }}</a>
-        </li>
-      {% else %}
-        <li>
-          <a href="{{ post.url }}">{{ post.title }}</a>
-        </li>
-      {% endif %}
+{% for post in site.posts %}
+  {% assign post_cats = post.categories %}
+  {% if post_cats.size > 0 %}
+    {% assign first_level = post_cats[0] %}
+    {% assign second_levels = post_cats[1..-1] %}
+    
+    {% for second in second_levels %}
+      {% assign entry = first_level | append: "||" | append: second | append: "||" | append: post.url | append: "||" | append: post.title %}
+      {% assign all_categories = all_categories | push: entry %}
     {% endfor %}
-  </ul>
+    
+    {% if second_levels == nil or second_levels == empty %}
+      {% assign entry = first_level | append: "||" | append: "" | append: "||" | append: post.url | append: "||" | append: post.title %}
+      {% assign all_categories = all_categories | push: entry %}
+    {% endif %}
+  {% endif %}
 {% endfor %}
+
+{% assign grouped = all_categories | sort %}
+
+{% assign current_first = "" %}
+<ul>
+{% for item in grouped %}
+  {% assign parts = item | split: "||" %}
+  {% assign first = parts[0] %}
+  {% assign second = parts[1] %}
+  {% assign url = parts[2] %}
+  {% assign title = parts[3] %}
+
+  {% if first != current_first %}
+    {% if current_first != "" %}
+      </ul>
+    {% endif %}
+    <h2>{{ first }}</h2>
+    <ul>
+    {% assign current_first = first %}
+  {% endif %}
+
+  {% if second != "" %}
+    <li><strong>{{ second }}</strong> — <a href="{{ url }}">{{ title }}</a></li>
+  {% else %}
+    <li><a href="{{ url }}">{{ title }}</a></li>
+  {% endif %}
+{% endfor %}
+</ul>
