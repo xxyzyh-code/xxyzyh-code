@@ -19,6 +19,7 @@ plugins:
   - jekyll-feed
   - jekyll-sitemap
   - jekyll-archives
+  - jekyll-remote-theme
 
 # 启用 Minimal Mistakes 的功能
 include:
