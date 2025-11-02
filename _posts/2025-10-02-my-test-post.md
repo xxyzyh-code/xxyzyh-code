@@ -9,7 +9,7 @@ categories:
 tags:
   - 测试
   - 文学创作
-permalink: /my-first-post/
+permalink: /my-test-post/
 author: xxyzyh
 author_profile: true
 toc: true
@@ -21,7 +21,7 @@ header:
   overlay_image: /assets/images/blog-header.jpg
 ---
 
-Hello, World — This is my first blog post.  
+Hello, World — This is my test blog post.  
 
 恭喜 🎉！你的 Jekyll 博客已經成功運行。  
 
@@ -34,5 +34,5 @@ Hello, World — This is my first blog post.
 
 <!-- 文章访问量 -->
 <div style="text-align: center; margin-top: 30px;">
-  <img src="https://visitor-badge.laobi.icu/badge?page_id=xxyzyh-code.my-first-post" alt="Visitor Count">
+  <img src="https://visitor-badge.laobi.icu/badge?page_id=xxyzyh-code.my-test-post" alt="Visitor Count">
 </div>
