@@ -11,33 +11,84 @@ remote_theme: "mmistakes/minimal-mistakes"
 
 # 博客的核心设置
 minimal_mistakes_skin: "default" # 可选：air, aqua, contrast, dark, neon, mint, solarized, warm, default
-locale: "zh-CN" # 设置语言为中文
-timezone: "Asia/Shanghai" # 设置你的时区
+locale: "zh-CN"
+timezone: "Asia/Shanghai"
 
-# 禁用默认插件（推荐保持）
+# 启用插件
 plugins:
   - jekyll-feed
   - jekyll-sitemap
   - jekyll-archives
   - jekyll-remote-theme
   - jekyll-include-cache
+  - jekyll-seo-tag       # ✅ SEO 优化
+  - jekyll-paginate-v2   # ✅ 分页支持
+  - jekyll-search        # ✅ 本地搜索（Minimal Mistakes 支持）
 
-# 启用 Minimal Mistakes 的功能
+# 包含目录
 include:
   - _pages
+  - _data
 
 # ---------------------------------------------
-# 作者信息区块（新加）
+# 作者信息
 # ---------------------------------------------
 author:
-  xxyzyh:                     # 可用任意唯一标识符
-    name: "小写博客主人"       # 显示在侧边栏的名字
-    avatar: "/assets/images/avatar.jpg" # 头像路径，放在 assets 里
-    bio: "一个热爱写作和分享的个人博客作者。" # 简短介绍
+  xxyzyh:
+    name: "小写博客主人"
+    avatar: "/assets/images/avatar.jpg"
+    bio: "一个热爱写作和分享的个人博客作者。"
     email: xjxnnd@example.com
-    location: "中国"           # 可选
-    links:                     # 可选：社交媒体或外部链接
+    location: "中国"
+    links:
       - label: "GitHub"
         url: "https://github.com/xxyzyh-code"
       - label: "Twitter"
         url: "https://twitter.com/yhz926"
+
+# ---------------------------------------------
+# 导航栏设置
+# ---------------------------------------------
+navigation:
+  main:
+    - title: "首页"
+      url: /
+    - title: "关于我"
+      url: /about/
+    - title: "联系我"
+      url: /contact/
+    - title: "标签"
+      url: /tags/
+    - title: "分类"
+      url: /categories/
+    - title: "二级分类"
+      url: /subcategories/
+    - title: "存档"
+      url: /archives/
+
+# ---------------------------------------------
+# 外观与布局设置
+# ---------------------------------------------
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: single
+      author_profile: true
+
+# ---------------------------------------------
+# 站点功能设置
+# ---------------------------------------------
+search: true           # ✅ 启用本地搜索功能
+search_full_content: true
+masthead:
+  sticky: true          # ✅ 顶部导航栏固定
+
+paginate: 5            # ✅ 每页显示 5 篇文章
+paginate_path: "/page:num/"
+
+# ---------------------------------------------
+# 构建设置
+# ---------------------------------------------
+markdown: kramdown
+highlighter: rouge
