@@ -195,9 +195,10 @@ for(const cat in catMap){
 </div>
 
 {% assign posts = site.posts | limit: 5 %}
-{% include archive-posts.html type="list" %}
+{% include post_list %} 
 
 <div style="text-align:center; margin:60px auto;">
   <p style="font-size:0.9em; color:#888;">本站訪問統計：</p>
   <img src="https://visitor-badge.laobi.icu/badge?page_id=xxyzyh-code.xxyzyh-code" alt="Visitor Count">
 </div>
+
