@@ -61,6 +61,11 @@ classes: wide
   #subcat-posts {
     margin-top: 10px;
     padding-left: 20px;
+    animation: fadeIn 0.4s ease-in-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 </style>
 
@@ -76,6 +81,7 @@ const posts = [
   {% endfor %}
 ];
 
+// 建立分類 → 二級分類 → 文章的對應結構
 const catMap = {};
 posts.forEach(post => {
   post.categories.forEach(cat => {
@@ -104,7 +110,6 @@ for (const cat in catMap) {
   const titleSpan = document.createElement('strong');
   titleSpan.textContent = cat;
   catHeader.appendChild(titleSpan);
-
   catDiv.appendChild(catHeader);
 
   const subUl = document.createElement('ul');
@@ -113,17 +118,18 @@ for (const cat in catMap) {
   subUl.style.paddingLeft = '20px';
   subUl.style.margin = '5px 0';
 
+  // 填充二級分類
   for (const subcat in catMap[cat]) {
     const li = document.createElement('li');
     li.textContent = `${subcat} (${catMap[cat][subcat].length})`;
 
-    li.addEventListener('click', () => {
+    li.addEventListener('click', (e) => {
+      e.stopPropagation(); // 防止冒泡導致分類被收起
       const existing = document.getElementById('subcat-posts');
       if (existing) existing.remove();
 
       const postList = document.createElement('ul');
       postList.id = 'subcat-posts';
-
       catMap[cat][subcat].forEach(p => {
         const pLi = document.createElement('li');
         const a = document.createElement('a');
@@ -134,16 +140,28 @@ for (const cat in catMap) {
         pLi.appendChild(a);
         postList.appendChild(pLi);
       });
-
       catDiv.appendChild(postList);
     });
-
     subUl.appendChild(li);
   }
 
   catDiv.appendChild(subUl);
 
+  // 點擊分類展開/收起 + 關閉其它分類
   catHeader.addEventListener('click', () => {
+    const allLists = document.querySelectorAll('.subcat-list');
+    const allArrows = document.querySelectorAll('.cat-header .arrow');
+
+    // 收起其他分類
+    allLists.forEach((ul, i) => {
+      if (ul !== subUl) {
+        ul.style.maxHeight = '0';
+        ul.style.opacity = '0';
+        allArrows[i].style.transform = 'rotate(0deg)';
+      }
+    });
+
+    // 切換當前分類
     const isCollapsed = subUl.style.maxHeight === '' || subUl.style.maxHeight === '0px';
     if (isCollapsed) {
       subUl.style.maxHeight = subUl.scrollHeight + 'px';
