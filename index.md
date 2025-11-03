@@ -31,7 +31,7 @@ classes: wide
   });
 </script>
 
-<!-- 🔹 分类与二级分类展示（前端 JS + 动画 + 修复：折叠时自动关闭文章列表） -->
+<!-- 🔹 分类与二级分类展示（前端 JS + 动画 + 完整修复：切换分类时清除文章列表） -->
 <div id="category-subcategory" style="margin:40px auto;">
   <h3>📂 分类与二级分类（按文章数统计）</h3>
   <div id="cat-subcat-list"></div>
@@ -123,7 +123,7 @@ for (const cat in catMap) {
     li.textContent = `${subcat} (${catMap[cat][subcat].length})`;
 
     li.addEventListener('click', (e) => {
-      e.stopPropagation(); // 防止冒泡導致分類被收起
+      e.stopPropagation(); // 防止點擊冒泡
       const existing = document.getElementById('subcat-posts');
       if (existing) existing.remove();
 
@@ -146,10 +146,14 @@ for (const cat in catMap) {
 
   catDiv.appendChild(subUl);
 
-  // 展開/收起一級分類 + 關閉其它分類 + 移除文章列表
+  // 一級分類展開/收起 + 清除其他展開 + 清除文章列表
   catHeader.addEventListener('click', () => {
     const allLists = document.querySelectorAll('.subcat-list');
     const allArrows = document.querySelectorAll('.cat-header .arrow');
+
+    // 🧹 新增：每次切換分類前，清除現有文章列表
+    const openPosts = document.getElementById('subcat-posts');
+    if (openPosts) openPosts.remove();
 
     // 收起其他分類
     allLists.forEach((ul, i) => {
@@ -171,9 +175,9 @@ for (const cat in catMap) {
       subUl.style.opacity = '0';
       arrow.style.transform = 'rotate(0deg)';
 
-      // 🔹 新增修正：當折疊一級分類時，清除顯示中的文章列表
-      const openPosts = document.getElementById('subcat-posts');
-      if (openPosts) openPosts.remove();
+      // 再保險一次：確保收起時文章消失
+      const openPosts2 = document.getElementById('subcat-posts');
+      if (openPosts2) openPosts2.remove();
     }
   });
 
