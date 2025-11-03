@@ -1,0 +1,39 @@
+# 1. 徹底封鎖所有網路爬蟲，包括 Googlebot 和 Bingbot
+User-agent: *
+Disallow: /
+
+# 2. 針對性地列出並再次封鎖主要的 AI 專用爬蟲 (確保它們不會繞過第 1 條通用指令)
+
+# OpenAI
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+# Google Generative AI
+User-agent: Google-Extended
+Disallow: /
+
+# Anthropic (Claude)
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Disallow: /
+
+# Common Crawl (很多 LLM 模型的資料來源)
+User-agent: CCBot
+Disallow: /
+
+# Meta (Facebook/Threads)
+User-agent: MetaBot
+Disallow: /
+
+# Apple LLM Training
+User-agent: Applebot-Extended
+Disallow: /
