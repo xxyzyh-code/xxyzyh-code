@@ -63,22 +63,19 @@ classes: wide
 <div style="text-align:center; margin-bottom:50px;">
   <h3>📂 分类总览</h3>
   <ul style="list-style:none; padding:0; display:flex; flex-wrap:wrap; justify-content:center; gap:30px;">
-    {% assign cat_map = {} %}
-    {% for post in site.posts %}
-      {% for cat in post.categories %}
-        {% assign cat_map[cat] = cat_map[cat] | default: "" | append: post.subcategories | uniq %}
-      {% endfor %}
-    {% endfor %}
-
     {% for category in site.categories %}
       <li>
         <a href="{{ category[0] | slugify | prepend: '/categories/' }}" style="color:#fff; text-decoration:none; font-weight:bold;">
           {{ category[0] }}
         </a>
         <div class="subcategory-list">
+          {% assign subcats = "" | split: "," %}
           {% for post in category[1] %}
             {% for subcat in post.subcategories %}
-              <a href="{{ subcat | slugify | prepend: '/subcategories/' }}">{{ subcat }}</a>
+              {% unless subcats contains subcat %}
+                <a href="{{ subcat | slugify | prepend: '/subcategories/' }}">{{ subcat }}</a>
+                {% assign subcats = subcats | push: subcat %}
+              {% endunless %}
             {% endfor %}
           {% endfor %}
         </div>
