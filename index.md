@@ -10,24 +10,20 @@ entries_layout: list
 classes: wide
 ---
 
-<div style="text-align:center; margin-bottom:20px;">
+<div style="text-align:center; margin-bottom:40px;">
   <h2>👋 欢迎来到我的个人博客</h2>
   <p style="font-size:1.1em; color:#ccc;">这里是我的写作与思考空间，你可以在下方找到不同主题的内容。</p>
 </div>
 
-<!-- 🔹 全站文章总字数统计 -->
-{% assign total_words = 0 %}
-{% assign total_reading_time = 0 %}
-{% for post in site.posts %}
-  {% assign plain_text = post.content | strip_html | strip_newlines | replace: "&nbsp;", " " %}
-  {% assign words = plain_text | number_of_words %}
-  {% assign total_words = total_words | plus: words %}
-  {% assign reading_time = words | divided_by:200.0 | ceil %}
-  {% assign total_reading_time = total_reading_time | plus: reading_time %}
-{% endfor %}
-
-<div style="text-align:center; margin-bottom:40px; color:#888; font-size:0.9em;">
-  📝 全站文章总字数：{{ total_words }} 字 &nbsp;|&nbsp; ⏱️ 总阅读时间约 {{ total_reading_time }} 分钟
+<!-- 🔹 全站文章总字数 -->
+<div style="text-align:center; margin:20px 0; color:#ccc;">
+  {% assign total_words = 0 %}
+  {% for post in site.posts %}
+    {% assign content_text = post.content | strip_html | strip_newlines | replace: "&nbsp;", " " %}
+    {% assign word_count = content_text | size %}
+    {% assign total_words = total_words | plus: word_count %}
+  {% endfor %}
+  <p>📖 全站文章总字数：<strong>{{ total_words }}</strong> 字</p>
 </div>
 
 <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:20px; margin-bottom:50px;">
@@ -147,13 +143,13 @@ for (const cat in catMap) {
   subUl.style.paddingLeft = '20px';
   subUl.style.margin = '5px 0';
 
-  // 二級分類
+  // 二级分类
   for (const subcat in catMap[cat]) {
     const li = document.createElement('li');
     li.textContent = `${subcat} (${catMap[cat][subcat].length})`;
 
     li.addEventListener('click', (e) => {
-      e.stopPropagation(); // 防止冒泡
+      e.stopPropagation();
       const existing = document.getElementById('subcat-posts');
       if (existing) existing.remove();
 
@@ -174,14 +170,12 @@ for (const cat in catMap) {
         postList.appendChild(pLi);
       });
 
-      // 如果超過 maxShow，增加 "更多" 按鈕
       if(postsArr.length > maxShow){
         const toggle = document.createElement('div');
         toggle.className = 'more-toggle';
         toggle.textContent = '显示更多...';
         toggle.addEventListener('click', () => {
-          const hiddenLis = postList.querySelectorAll('li[style*="display: none"]');
-          hiddenLis.forEach(li => li.style.display = 'list-item');
+          postList.querySelectorAll('li[style*="display: none"]').forEach(li => li.style.display = 'list-item');
           toggle.remove();
         });
         postList.appendChild(toggle);
@@ -194,16 +188,12 @@ for (const cat in catMap) {
 
   catDiv.appendChild(subUl);
 
-  // 一級分類展開/收起 + 清除其他展開 + 清除文章列表
   catHeader.addEventListener('click', () => {
     const allLists = document.querySelectorAll('.subcat-list');
     const allArrows = document.querySelectorAll('.cat-header .arrow');
-
-    // 清除文章列表
     const openPosts = document.getElementById('subcat-posts');
     if (openPosts) openPosts.remove();
 
-    // 收起其他分類
     allLists.forEach((ul,i) => {
       if(ul !== subUl){
         ul.style.maxHeight='0';
@@ -212,22 +202,16 @@ for (const cat in catMap) {
       }
     });
 
-    // 切換當前分類
     const isCollapsed = subUl.style.maxHeight==='' || subUl.style.maxHeight==='0px';
     if(isCollapsed){
       subUl.style.maxHeight = subUl.scrollHeight+'px';
       subUl.style.opacity='1';
       arrow.style.transform='rotate(90deg)';
-
-      // 小 bounce 動畫
-      arrow.animate([{transform:'rotate(0deg)'},{transform:'rotate(110deg)'},{transform:'rotate(90deg)'}],
-        {duration:300, easing:'ease-out'}
-      );
+      arrow.animate([{transform:'rotate(0deg)'},{transform:'rotate(110deg)'},{transform:'rotate(90deg)'}], {duration:300,easing:'ease-out'});
     }else{
       subUl.style.maxHeight='0';
       subUl.style.opacity='0';
       arrow.style.transform='rotate(0deg)';
-
       const openPosts2 = document.getElementById('subcat-posts');
       if(openPosts2) openPosts2.remove();
     }
