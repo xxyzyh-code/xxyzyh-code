@@ -33,26 +33,3 @@ Hello, World — This is my test blog post.
 - `_posts/`：存放你的 Markdown 格式文章  
 
 > 小贴士：写完一篇新文章后，记得命名规则要是 `YYYY-MM-DD-文章名.md`。
-
-<!-- 🔹 写作成绩单：发布日期 + 正文字数 + 阅读时间 -->
-{% assign content_clean = page.content | strip_html | replace: "\r", "" | replace: "\n", "" | replace: "\t", "" %}
-{% assign chars = content_clean | split: "" %}
-{% assign word_count = 0 %}
-
-{% for c in chars %}
-  {% capture unicode %}{{ c | ord }}{% endcapture %}
-  {% if unicode | plus:0 >= 19968 and unicode | plus:0 <= 40959 %}
-    {% assign word_count = word_count | plus: 1 %}
-  {% elsif c >= "a" and c <= "z" %}
-    {% assign word_count = word_count | plus: 1 %}
-  {% elsif c >= "A" and c <= "Z" %}
-    {% assign word_count = word_count | plus: 1 %}
-  {% elsif c >= "0" and c <= "9" %}
-    {% assign word_count = word_count | plus: 1 %}
-  {% endif %}
-{% endfor %}
-
-{% assign reading_time = word_count | divided_by:200.0 | ceil %}
-<p style="color:#888; font-size:0.9em; margin-top: 20px;">
-  📝 字数：{{ word_count }} 字 &nbsp;|&nbsp; ⏱️ 阅读时间：约 {{ reading_time }} 分钟
-</p>
