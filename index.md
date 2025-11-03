@@ -183,4 +183,8 @@ for(const cat in catMap){
   <p style="color:#aaa;">以下是我最近的博客文章，更多内容请查看各个分类。</p>
 </div>
 
-<div style="text-align: center;
+<div style="text-align: center; margin-top: 60px;">
+  <p style="font-size:0.9em; color:#888;">本站访问统计：</p>
+  <img src="https://visitor-badge.laobi.icu/badge?page_id=xxyzyh-code.xxyzyh-code" alt="Visitor Count">
+</div>
+
