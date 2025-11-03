@@ -7,23 +7,23 @@ permalink: /categories/
 <h1>📂 一级分类</h1>
 
 {% assign all_posts = site.posts | sort: 'date' | reverse %}
-{% assign cat_map = {} %}
+{% assign all_categories = "" | split: "" %}
 
 {% for post in all_posts %}
   {% for cat in post.categories %}
-    {% if cat_map[cat] == nil %}
-      {% assign cat_map = cat_map | merge: {{ cat | jsonify }}: [] %}
-    {% endif %}
+    {% unless all_categories contains cat %}
+      {% assign all_categories = all_categories | push: cat %}
+    {% endunless %}
   {% endfor %}
 {% endfor %}
 
 <ul>
-{% for cat in cat_map %}
+{% for cat in all_categories %}
   <li>
-    <h2>{{ cat[0] }}</h2>
+    <h2>{{ cat }}</h2>
     <ul>
       {% for post in all_posts %}
-        {% if post.categories contains cat[0] %}
+        {% if post.categories contains cat %}
           <li><a href="{{ post.url }}">{{ post.title }}</a></li>
         {% endif %}
       {% endfor %}
