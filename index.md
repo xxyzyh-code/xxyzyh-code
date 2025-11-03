@@ -15,18 +15,17 @@ classes: wide
   <p style="font-size:1.1em; color:#ccc;">这里是我的写作与思考空间，你可以在下方找到不同主题的内容。</p>
 </div>
 
-<!-- ====== 全站統計資訊（精確版） ====== -->
-<div id="site-stats" style="text-align:center; margin:30px auto; padding:20px; background:#f5f5f5; border-radius:10px;">
-  <h3>📊 全站统计</h3>
+<!-- ====== 全站統計資訊（穩定版） ====== -->
+<div id="site-stats" style="text-align:center; margin:60px auto; padding:30px; border-top:1px solid #ddd;">
+  <h3>📊 全站統計資訊</h3>
 
   {% assign total_words = 0 %}
-  {% assign total_posts = site.posts | size %}
+  {% assign post_count = site.posts | size %}
 
   {% for post in site.posts %}
-    {%- assign ct = post.content | strip_html | replace: "&nbsp;", " " | replace: "　", " " -%}
-    {%- assign ct = ct | replace: "\r", "" | replace: "\n", "" | replace: "\t", "" -%}
-    {%- assign ct = ct | replace: " ", "" -%}
-    {% assign total_words = total_words | plus: ct | size %}
+    {% assign content_clean = post.content | strip_html | replace: "\r", "" | replace: "\n", "" | replace: "\t", "" | replace: " ", "" | replace: "&nbsp;", "" %}
+    {% assign content_length = content_clean | size %}
+    {% assign total_words = total_words | plus: content_length %}
   {% endfor %}
 
   {% assign total_categories = site.categories | size %}
@@ -35,17 +34,19 @@ classes: wide
   {% assign last_post = sorted_posts | last %}
   {% assign last_updated = last_post.last_modified_at | default: last_post.date | date: "%Y-%m-%d" %}
 
-  <p style="margin:5px 0; color:#666;">📝 文章总数：<strong>{{ total_posts }}</strong> 篇</p>
-  <p style="margin:5px 0; color:#666;">✍️ 全站总字数：<strong>{{ total_words }}</strong> 字</p>
-  {% if total_posts > 0 %}
-    {% assign avg_words = total_words | divided_by: total_posts %}
-  {% else %}
-    {% assign avg_words = 0 %}
+  <p style="margin:5px 0; color:#666;">📝 文章总数：<strong>{{ post_count }}</strong> 篇</p>
+  <p style="margin:5px 0; color:#666;">✍️ 全站总字数：<strong>{{ total_words | number_with_delimiter }}</strong> 字</p>
+
+  {% if post_count > 0 %}
+    {% assign avg_words = total_words | divided_by: post_count %}
+    <p style="margin:5px 0; color:#666;">📈 平均每篇文章字数：<strong>{{ avg_words | round }}</strong> 字</p>
   {% endif %}
-  <p style="margin:5px 0; color:#666;">📈 平均每篇文章字数：<strong>{{ avg_words }}</strong> 字</p>
+
   <p style="margin:5px 0; color:#666;">📂 分类数：<strong>{{ total_categories }}</strong> 个</p>
   <p style="margin:5px 0; color:#666;">🕒 最近更新：<strong>{{ last_updated }}</strong></p>
 </div>
+<!-- ====== End 全站統計資訊 ====== -->
+
 
 <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:20px; margin-bottom:50px;">
   <a href="/about/" style="flex:1 1 150px; max-width:200px; text-align:center; padding:15px; background:#444; color:#fff; text-decoration:none; border-radius:8px; transition:0.3s;">关于我</a>
