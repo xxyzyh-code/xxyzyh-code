@@ -31,81 +31,80 @@ classes: wide
   });
 </script>
 
-<!-- 🔹 分类与二级分类展示（前端 JS 动态展开） -->
+<!-- 🔹 分类与二级分类展示（前端 JS 生成 + 流畅展开/收起动画） -->
 <div id="category-subcategory" style="margin:40px auto;">
   <h3>📂 分类与二级分类（按文章数统计）</h3>
   <div id="cat-subcat-list"></div>
 </div>
 
-<script>
-const posts = [
-  {% for post in site.posts %}
-    {
-      url: "{{ post.url }}",
-      title: "{{ post.title | escape }}",
-      categories: [{% for cat in post.categories %}"{{ cat }}"{% if forloop.last == false %}, {% endif %}{% endfor %}],
-      subcategories: [{% for subcat in post.subcategories %}"{{ subcat }}"{% if forloop.last == false %}, {% endif %}{% endfor %}]
-    }{% if forloop.last == false %}, {% endif %}
-  {% endfor %}
-];
-
-const catMap = {};
-posts.forEach(post => {
-  post.categories.forEach(cat => {
-    if (!catMap[cat]) catMap[cat] = {};
-    post.subcategories.forEach(subcat => {
-      if (!catMap[cat][subcat]) catMap[cat][subcat] = [];
-      catMap[cat][subcat].push({title: post.title, url: post.url});
-    });
-  });
-});
-
-const container = document.getElementById('cat-subcat-list');
-
-for (const cat in catMap) {
-  const catDiv = document.createElement('div');
-  catDiv.style.marginBottom = '15px';
-
-  const catTitle = document.createElement('strong');
-  catTitle.textContent = cat;
-  catTitle.style.cursor = 'pointer';
-  catDiv.appendChild(catTitle);
-
-  const subUl = document.createElement('ul');
-  subUl.style.display = 'none'; // 默认隐藏
-  for (const subcat in catMap[cat]) {
-    const subLi = document.createElement('li');
-    const subTitle = document.createElement('span');
-    subTitle.textContent = `${subcat} (${catMap[cat][subcat].length})`;
-    subTitle.style.cursor = 'pointer';
-
-    const postUl = document.createElement('ul');
-    postUl.style.display = 'none';
-    catMap[cat][subcat].forEach(post => {
-      const li = document.createElement('li');
-      const a = document.createElement('a');
-      a.href = post.url;
-      a.textContent = post.title;
-      li.appendChild(a);
-      postUl.appendChild(li);
-    });
-
-    subTitle.addEventListener('click', () => {
-      postUl.style.display = postUl.style.display === 'none' ? 'block' : 'none';
-    });
-
-    subLi.appendChild(subTitle);
-    subLi.appendChild(postUl);
-    subUl.appendChild(subLi);
+<style>
+  .subcat-list {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    margin: 5px 0 15px 15px;
+    padding-left: 0;
   }
+  .subcat-list.show {
+    opacity: 1;
+    max-height: 500px; /* 根據內容長度調整 */
+  }
+  .cat-title {
+    cursor: pointer;
+    display: block;
+    margin: 10px 0 5px;
+    font-weight: bold;
+  }
+</style>
 
-  catTitle.addEventListener('click', () => {
-    subUl.style.display = subUl.style.display === 'none' ? 'block' : 'none';
+<script>
+  const posts = [
+    {% for post in site.posts %}
+      {
+        url: "{{ post.url }}",
+        categories: [{% for cat in post.categories %}"{{ cat }}"{% if forloop.last == false %}, {% endif %}{% endfor %}],
+        subcategories: [{% for subcat in post.subcategories %}"{{ subcat }}"{% if forloop.last == false %}, {% endif %}{% endfor %}]
+      }{% if forloop.last == false %}, {% endif %}
+    {% endfor %}
+  ];
+
+  const catMap = {};
+
+  posts.forEach(post => {
+    post.categories.forEach(cat => {
+      if (!catMap[cat]) catMap[cat] = {};
+      post.subcategories.forEach(subcat => {
+        if (!catMap[cat][subcat]) catMap[cat][subcat] = 0;
+        catMap[cat][subcat]++;
+      });
+    });
   });
 
-  catDiv.appendChild(subUl);
-  container.appendChild(catDiv);
-}
+  const container = document.getElementById('cat-subcat-list');
+
+  for (const cat in catMap) {
+    const catDiv = document.createElement('div');
+
+    const catTitle = document.createElement('span');
+    catTitle.textContent = cat;
+    catTitle.className = 'cat-title';
+    catDiv.appendChild(catTitle);
+
+    const subUl = document.createElement('ul');
+    subUl.className = 'subcat-list';
+    for (const subcat in catMap[cat]) {
+      const li = document.createElement('li');
+      li.innerHTML = `<a href="/categories/${cat}/subcategories/${subcat}/">${subcat} (${catMap[cat][subcat]})</a>`;
+      subUl.appendChild(li);
+    }
+
+    catDiv.appendChild(subUl);
+    container.appendChild(catDiv);
+
+    // 點擊展開/收起
+    catTitle.addEventListener('click', () => subUl.classList.toggle('show'));
+  }
 </script>
 
 <div style="text-align:center; margin:40px auto;">
