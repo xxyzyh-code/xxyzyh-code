@@ -70,7 +70,7 @@ classes: wide
   </p>
 </div>
 
-<!-- 🔹 分类与二级分类展示 -->
+<!-- 🔹 分类与二级分类展示（前端 JS + 高级动画 + 可折叠文章列表） -->
 <div id="category-subcategory" style="margin:40px auto;">
   <h3>📂 分类与二级分类（按文章数统计）</h3>
   <div id="cat-subcat-list"></div>
@@ -91,13 +91,32 @@ classes: wide
     gap: 5px;
     user-select: none;
   }
-  .cat-header span.arrow { transition: transform 0.3s ease-in-out; display: inline-block; }
+  .cat-header span.arrow {
+    transition: transform 0.3s ease-in-out;
+    display: inline-block;
+  }
   .cat-header:hover { opacity: 0.8; }
-  .subcat-list li { cursor: pointer; transition: background 0.2s; }
+  .subcat-list li {
+    cursor: pointer;
+    transition: background 0.2s;
+  }
   .subcat-list li:hover { background: rgba(0,0,0,0.05); }
-  #subcat-posts { margin-top: 10px; padding-left: 20px; animation: fadeIn 0.4s ease-in-out; }
-  .more-toggle { cursor: pointer; color: #06f; text-decoration: underline; font-size: 0.9em; margin-top: 5px; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+  #subcat-posts {
+    margin-top: 10px;
+    padding-left: 20px;
+    animation: fadeIn 0.4s ease-in-out;
+  }
+  .more-toggle {
+    cursor: pointer;
+    color: #06f;
+    text-decoration: underline;
+    font-size: 0.9em;
+    margin-top: 5px;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 </style>
 
 <script>
@@ -179,8 +198,7 @@ for (const cat in catMap) {
         toggle.className = 'more-toggle';
         toggle.textContent = '显示更多...';
         toggle.addEventListener('click', () => {
-          const hiddenLis = postList.querySelectorAll('li[style*="display: none"]');
-          hiddenLis.forEach(li => li.style.display = 'list-item');
+          postList.querySelectorAll('li[style*="display: none"]').forEach(li => li.style.display = 'list-item');
           toggle.remove();
         });
         postList.appendChild(toggle);
@@ -196,24 +214,29 @@ for (const cat in catMap) {
   catHeader.addEventListener('click', () => {
     const allLists = document.querySelectorAll('.subcat-list');
     const allArrows = document.querySelectorAll('.cat-header .arrow');
-
     const openPosts = document.getElementById('subcat-posts');
     if (openPosts) openPosts.remove();
 
+    // 收起其他分類
     allLists.forEach((ul,i)=>{
-      if(ul !== subUl){ ul.style.maxHeight='0'; ul.style.opacity='0'; allArrows[i].style.transform='rotate(0deg)'; }
+      if(ul!==subUl){
+        ul.style.maxHeight='0';
+        ul.style.opacity='0';
+        allArrows[i].style.transform='rotate(0deg)';
+      }
     });
 
-    const isCollapsed = subUl.style.maxHeight==='' || subUl.style.maxHeight==='0px';
+    // 切換當前分類
+    const isCollapsed = subUl.style.maxHeight === '' || subUl.style.maxHeight === '0px';
     if(isCollapsed){
       subUl.style.maxHeight = subUl.scrollHeight+'px';
-      subUl.style.opacity='1';
-      arrow.style.transform='rotate(90deg)';
-      arrow.animate([{transform:'rotate(0deg)'},{transform:'rotate(110deg)'},{transform:'rotate(90deg)'}],{duration:300, easing:'ease-out'});
-    }else{
-      subUl.style.maxHeight='0';
-      subUl.style.opacity='0';
-      arrow.style.transform='rotate(0deg)';
+      subUl.style.opacity = '1';
+      arrow.style.transform = 'rotate(90deg)';
+    } else {
+      subUl.style.maxHeight = '0';
+      subUl.style.opacity = '0';
+      arrow.style.transform = 'rotate(0deg)';
+
       const openPosts2 = document.getElementById('subcat-posts');
       if(openPosts2) openPosts2.remove();
     }
@@ -221,6 +244,7 @@ for (const cat in catMap) {
 
   container.appendChild(catDiv);
 }
+  
 </script>
 
 <div style="text-align:center; margin:40px auto;">
