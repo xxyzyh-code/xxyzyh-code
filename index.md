@@ -132,11 +132,13 @@ for (const cat in catMap) {
   subUl.style.paddingLeft = '20px';
   subUl.style.margin = '5px 0';
 
+  // 二級分類
   for (const subcat in catMap[cat]) {
     const li = document.createElement('li');
     li.textContent = `${subcat} (${catMap[cat][subcat].length})`;
+
     li.addEventListener('click', (e) => {
-      e.stopPropagation();
+      e.stopPropagation(); // 防止冒泡
       const existing = document.getElementById('subcat-posts');
       if (existing) existing.remove();
 
@@ -168,6 +170,7 @@ for (const cat in catMap) {
         });
         postList.appendChild(toggle);
       }
+
       catDiv.appendChild(postList);
     });
     subUl.appendChild(li);
@@ -175,12 +178,16 @@ for (const cat in catMap) {
 
   catDiv.appendChild(subUl);
 
+  // 一級分類展開/收起 + 清除其他展開 + 清除文章列表
   catHeader.addEventListener('click', () => {
     const allLists = document.querySelectorAll('.subcat-list');
     const allArrows = document.querySelectorAll('.cat-header .arrow');
+
+    // 清除文章列表
     const openPosts = document.getElementById('subcat-posts');
     if (openPosts) openPosts.remove();
 
+    // 收起其他分類
     allLists.forEach((ul,i) => {
       if(ul !== subUl){
         ul.style.maxHeight='0';
@@ -189,17 +196,21 @@ for (const cat in catMap) {
       }
     });
 
+    // 切換當前分類
     const isCollapsed = subUl.style.maxHeight==='' || subUl.style.maxHeight==='0px';
     if(isCollapsed){
       subUl.style.maxHeight = subUl.scrollHeight+'px';
       subUl.style.opacity='1';
       arrow.style.transform='rotate(90deg)';
+
       arrow.animate([{transform:'rotate(0deg)'},{transform:'rotate(110deg)'},{transform:'rotate(90deg)'}],
-        {duration:300, easing:'ease-out'});
+        {duration:300, easing:'ease-out'}
+      );
     }else{
       subUl.style.maxHeight='0';
       subUl.style.opacity='0';
       arrow.style.transform='rotate(0deg)';
+
       const openPosts2 = document.getElementById('subcat-posts');
       if(openPosts2) openPosts2.remove();
     }
@@ -209,40 +220,43 @@ for (const cat in catMap) {
 }
 </script>
 
-<!-- 🔹 全站統計資訊區塊 -->
+<!-- ====== 全站統計資訊（Liquid 精確計算版） ====== -->
 <div id="site-stats" style="text-align:center; margin:60px auto; padding:30px; border-top:1px solid #ddd;">
   <h3>📊 全站統計資訊</h3>
-  <p id="total-posts" style="margin:5px 0; color:#666;"></p>
-  <p id="total-words" style="margin:5px 0; color:#666;"></p>
-  <p id="avg-words" style="margin:5px 0; color:#666;"></p>
-  <p id="total-categories" style="margin:5px 0; color:#666;"></p>
-  <p id="last-updated" style="margin:5px 0; color:#666;"></p>
+
+  {% assign total_words = 0 %}
+  {% assign post_count = site.posts | size %}
+
+  {% for post in site.posts %}
+    {%- assign ct = post.content | strip_html | replace: "&nbsp;", " " | replace: "　", " " -%}
+    {%- assign ct = ct | replace: "\r", "" | replace: "\n", "" | replace: "\t", "" -%}
+    {%- assign ct = ct | replace: " ", "" -%}
+    {%- assign ct = ct | replace: "&amp;", "&" | replace: "&lt;", "<" | replace: "&gt;", ">" -%}
+    {%- assign this_len = ct | size -%}
+    {% assign total_words = total_words | plus: this_len %}
+  {% endfor %}
+
+  {% assign total_categories = site.categories | size %}
+
+  {% assign sorted = site.posts | sort: "date" %}
+  {% assign last_post = sorted | last %}
+  {% assign last_updated = last_post.last_modified_at | default: last_post.date | date: "%Y-%m-%d" %}
+
+  <p style="margin:5px 0; color:#666;">📝 文章总数：<strong>{{ post_count }}</strong> 篇</p>
+  <p style="margin:5px 0; color:#666;">✍️ 全站总字数：<strong>{{ total_words | number_with_delimiter }}</strong> 字</p>
+  {% if post_count > 0 %}
+    {% assign avg_words = total_words | divided_by: post_count %}
+    <p style="margin:5px 0; color:#666;">📈 平均每篇文章字数：<strong>{{ avg_words | round }}</strong> 字</p>
+  {% endif %}
+  <p style="margin:5px 0; color:#666;">📂 分类数：<strong>{{ total_categories }}</strong> 个</p>
+  <p style="margin:5px 0; color:#666;">🕒 最近更新：<strong>{{ last_updated }}</strong></p>
 </div>
+<!-- ====== End 全站統計資訊 ====== -->
 
-<script>
-  const postsData = [
-    {% for post in site.posts %}
-    {
-      content: `{{ post.content | strip_html | strip_newlines | replace: " ", "" }}`,
-      categories: [{% for cat in post.categories %}"{{ cat }}"{% if forloop.last == false %}, {% endif %}{% endfor %}],
-      date: "{{ post.last_modified_at | default: post.date | date: '%Y-%m-%d' }}"
-    }{% if forloop.last == false %}, {% endif %}
-    {% endfor %}
-  ];
-
-  const totalPosts = postsData.length;
-  const totalWords = postsData.reduce((sum, p) => sum + p.content.length, 0);
-  const avgWords = totalPosts ? Math.round(totalWords / totalPosts) : 0;
-  const allCats = new Set(postsData.flatMap(p => p.categories));
-  const totalCategories = allCats.size;
-  const lastUpdated = postsData.sort((a,b) => new Date(b.date) - new Date(a.date))[0]?.date || "未知";
-
-  document.getElementById('total-posts').textContent = `📝 文章總數：${totalPosts} 篇`;
-  document.getElementById('total-words').textContent = `✍️ 全站總字數：約 ${totalWords.toLocaleString()} 字`;
-  document.getElementById('avg-words').textContent = `📈 平均每篇文章字數：約 ${avgWords.toLocaleString()} 字`;
-  document.getElementById('total-categories').textContent = `📂 分類數量：${totalCategories} 個`;
-  document.getElementById('last-updated').textContent = `🕒 最近更新日期：${lastUpdated}`;
-</script>
+<div style="text-align:center; margin:40px auto;">
+  <h3>📝 最新发布</h3>
+  <p style="color:#aaa;">以下是我最近的博客文章，更多内容请查看各个分类。</p>
+</div>
 
 <div style="text-align: center; margin-top: 60px;">
   <p style="font-size:0.9em; color:#888;">本站访问统计：</p>
