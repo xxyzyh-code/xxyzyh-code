@@ -1,5 +1,5 @@
 ---
-layout: archive
+layout: page
 title: "分类"
 permalink: /categories/
 ---
