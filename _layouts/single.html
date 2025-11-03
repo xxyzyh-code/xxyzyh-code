@@ -2,38 +2,63 @@
 layout: default
 ---
 
-<div class="archive">
-  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
-    <header>
-      {% if page.title %}<h1 id="page-title" class="page__title" itemprop="headline">{{ page.title | markdownify | remove: "<p>" | remove: "</p>" }}</h1>{% endif %}
-    </header>
+{% include header.html %}
 
-    <section class="page__content" itemprop="text">
-      {{ content }}
+<div id="main" role="main">
+  {% include sidebar.html %}
 
-      {% assign text_to_count = content | strip_html | strip_newlines | replace: "&nbsp;", " " %}
+  <div class="archive">
+    <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+      {% include page__hero.html %}
+      {% include page__taxonomy.html %}
 
-      {% comment %} 核心清理邏輯：移除所有非中英文字符以得到最準確的字數 {% endcomment %}
-      {% assign text_clean = text_to_count | remove: " " | remove: "	" %}
-      {% assign text_clean = text_clean | remove: "*" | remove: "-" | remove: "`" | remove: ">" | remove: "#" %}
-      {% assign text_clean = text_clean | remove: "，" | remove: "。" | remove: "：" | remove: "；" | remove: "？" | remove: "！" | remove: "、" | remove: "（" | remove: "）" | remove: "《" | remove: "》" %}
-      {% assign text_clean = text_clean | remove: "," | remove: "." | remove: ":" | remove: ";" | remove: "?" | remove: "!" | remove: "&" | remove: "(" | remove: ")" | remove: "—" %}
-      {% assign text_clean = text_clean | remove: "🎉" | remove: "/" %}
+      <div class="page__inner-wrap">
+        {% unless page.header.overlay_color or page.header.overlay_image %}
+          <header>
+            {% if page.title %}<h1 id="page-title" class="page__title" itemprop="headline">{{ page.title | markdownify | remove: "<p>" | remove: "</p>" }}</h1>{% endif %}
+            {% include page__meta.html %}
+          </header>
+        {% endunless %}
 
-      {% assign final_word_count = text_clean | size %}
-      {% assign reading_time = final_word_count | divided_by:350.0 | ceil %}
+        <section class="page__content" itemprop="text">
+          {% if page.toc %}
+            <aside class="sidebar__right">
+              <nav class="toc">
+                <header><h4 class="nav__title"><i class="fas fa-{{ page.toc_icon | default: 'file-alt' }}"></i> {{ page.toc_label | default: site.data.ui-text[site.locale].toc_label }}</h4></header>
+                {% include toc.html sanitize=true html=content h_min=1 h_max=6 class="toc__menu" %}
+              </nav>
+            </aside>
+          {% endif %}
 
-      <p style="color:#888; font-size:0.9em; margin-top: 20px;">
-        📅&nbsp;发布日期：{{ page.date | date: "%Y-%m-%d" }} &nbsp;|&nbsp; 📝&nbsp;字數：{{ final_word_count }} 字 &nbsp;|&nbsp; ⏱️&nbsp;閱讀時間：約 {{ reading_time }} 分鐘
-      </p>
+          {{ content }}
 
-      <div style="text-align: center; margin-top: 30px;">
-        <img src="https://visitor-badge.laobi.icu/badge?page_id=xxyzyh-code.my-first-post" alt="Visitor Count">
+          {% assign text_to_count = content | strip_html | strip_newlines | replace: "&nbsp;", " " %}
+          {% comment %} 核心清理邏輯：移除所有非中英文字符以得到最準確的字數 {% endcomment %}
+          {% assign text_clean = text_to_count | remove: " " | remove: "	" %}
+          {% assign text_clean = text_clean | remove: "*" | remove: "-" | remove: "`" | remove: ">" | remove: "#" %}
+          {% assign text_clean = text_clean | remove: "，" | remove: "。" | remove: "：" | remove: "；" | remove: "？" | remove: "！" | remove: "、" | remove: "（" | remove: "）" | remove: "《" | remove: "》" %}
+          {% assign text_clean = text_clean | remove: "," | remove: "." | remove: ":" | remove: ";" | remove: "?" | remove: "!" | remove: "&" | remove: "(" | remove: ")" | remove: "—" %}
+          {% assign text_clean = text_clean | remove: "🎉" | remove: "/" %}
+          {% assign final_word_count = text_clean | size %}
+          {% assign reading_time = final_word_count | divided_by:350.0 | ceil %}
+
+          <p style="color:#888; font-size:0.9em; margin-top: 20px;">
+            📅&nbsp;发布日期：{{ page.date | date: "%Y-%m-%d" }} &nbsp;|&nbsp; 📝&nbsp;字數：{{ final_word_count }} 字 &nbsp;|&nbsp; ⏱️&nbsp;閱讀時間：約 {{ reading_time }} 分鐘
+          </p>
+
+          <div style="text-align: center; margin-top: 30px;">
+            <img src="https://visitor-badge.laobi.icu/badge?page_id=xxyzyh-code.my-first-post" alt="Visitor Count">
+          </div>
+          </section>
+
+        <footer class="page__meta">
+          {% include post__taxonomy.html %}
+          {% include page__date.html %}
+        </footer>
+
+        {% include post_pagination.html %}
+        
       </div>
-      
-      {% include post_pagination.html %}
-
-    </section>
-
-  </article>
+    </article>
+  </div>
 </div>
