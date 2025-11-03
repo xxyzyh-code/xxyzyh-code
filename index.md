@@ -31,128 +31,113 @@ classes: wide
   });
 </script>
 
-<!-- 🔹 分类与二级分类展示（单开+流畅动画） -->
+<!-- 🔹 分类与二级分类展示（前端 JS + 动画） -->
 <div id="category-subcategory" style="margin:40px auto;">
   <h3>📂 分类与二级分类（按文章数统计）</h3>
   <div id="cat-subcat-list"></div>
 </div>
 
-<style>
-  .cat-title {
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    margin: 10px 0 5px;
-    font-weight: bold;
-    user-select: none;
-  }
-  .cat-title .arrow {
-    display: inline-block;
-    margin-right: 8px;
-    transition: transform 0.3s ease;
-  }
-  .cat-title .arrow.open {
-    transform: rotate(90deg);
-  }
-  .subcat-list {
-    overflow: hidden;
-    transition: height 0.3s ease, opacity 0.3s ease;
-    height: 0;
-    opacity: 0;
-    margin: 0 0 15px 20px;
-    padding-left: 0;
-  }
-  .subcat-list.show {
-    opacity: 1;
-  }
-</style>
-
 <script>
-  const posts = [
-    {% for post in site.posts %}
-      {
-        url: "{{ post.url }}",
-        categories: [{% for cat in post.categories %}"{{ cat }}"{% if forloop.last == false %}, {% endif %}{% endfor %}],
-        subcategories: [{% for subcat in post.subcategories %}"{{ subcat }}"{% if forloop.last == false %}, {% endif %}{% endfor %}]
-      }{% if forloop.last == false %}, {% endif %}
-    {% endfor %}
-  ];
+const posts = [
+  {% for post in site.posts %}
+  {
+    url: "{{ post.url }}",
+    title: "{{ post.title | escape }}",
+    categories: [{% for cat in post.categories %}"{{ cat }}"{% if forloop.last == false %}, {% endif %}{% endfor %}],
+    subcategories: [{% for subcat in post.subcategories %}"{{ subcat }}"{% if forloop.last == false %}, {% endif %}{% endfor %}]
+  }{% if forloop.last == false %}, {% endif %}
+  {% endfor %}
+];
 
-  const catMap = {};
-
-  posts.forEach(post => {
-    post.categories.forEach(cat => {
-      if (!catMap[cat]) catMap[cat] = {};
-      post.subcategories.forEach(subcat => {
-        if (!catMap[cat][subcat]) catMap[cat][subcat] = 0;
-        catMap[cat][subcat]++;
-      });
+const catMap = {};
+posts.forEach(post => {
+  post.categories.forEach(cat => {
+    if (!catMap[cat]) catMap[cat] = {};
+    post.subcategories.forEach(subcat => {
+      if (!catMap[cat][subcat]) catMap[cat][subcat] = [];
+      catMap[cat][subcat].push(post);
     });
   });
+});
 
-  const container = document.getElementById('cat-subcat-list');
+const container = document.getElementById('cat-subcat-list');
 
-  for (const cat in catMap) {
-    const catDiv = document.createElement('div');
+for (const cat in catMap) {
+  const catDiv = document.createElement('div');
+  catDiv.style.marginBottom = '15px';
+  const catTitle = document.createElement('div');
+  catTitle.style.cursor = 'pointer';
+  catTitle.style.userSelect = 'none';
+  catTitle.style.display = 'flex';
+  catTitle.style.alignItems = 'center';
+  catTitle.style.gap = '5px';
 
-    const catTitle = document.createElement('span');
-    catTitle.className = 'cat-title';
+  const arrow = document.createElement('span');
+  arrow.textContent = '▶';
+  arrow.style.transition = 'transform 0.3s ease-in-out';
+  catTitle.appendChild(arrow);
 
-    const arrow = document.createElement('span');
-    arrow.textContent = '▶';
-    arrow.className = 'arrow';
-    catTitle.appendChild(arrow);
+  const titleSpan = document.createElement('strong');
+  titleSpan.textContent = cat;
+  catTitle.appendChild(titleSpan);
 
-    const catName = document.createElement('span');
-    catName.textContent = cat;
-    catTitle.appendChild(catName);
+  catDiv.appendChild(catTitle);
 
-    catDiv.appendChild(catTitle);
+  const subUl = document.createElement('ul');
+  subUl.style.listStyle = 'disc';
+  subUl.style.paddingLeft = '20px';
+  subUl.style.margin = '5px 0';
+  subUl.style.maxHeight = '0';
+  subUl.style.overflow = 'hidden';
+  subUl.style.transition = 'max-height 0.4s ease-in-out';
 
-    const subUl = document.createElement('ul');
-    subUl.className = 'subcat-list';
-    for (const subcat in catMap[cat]) {
-      const li = document.createElement('li');
-      li.innerHTML = `<a href="/categories/${cat}/subcategories/${subcat}/">${subcat} (${catMap[cat][subcat]})</a>`;
-      subUl.appendChild(li);
-    }
-    catDiv.appendChild(subUl);
-    container.appendChild(catDiv);
+  for (const subcat in catMap[cat]) {
+    const li = document.createElement('li');
+    li.style.cursor = 'pointer';
+    li.textContent = `${subcat} (${catMap[cat][subcat].length})`;
 
-    // 點擊展開/收起 + 單開功能 + 箭頭動畫
-    catTitle.addEventListener('click', () => {
-      const isOpen = subUl.classList.contains('show');
+    li.addEventListener('click', () => {
+      // 展示该二级分类下文章标题
+      const existing = document.getElementById('subcat-posts');
+      if (existing) existing.remove();
 
-      // 先關閉其它已展開分類
-      document.querySelectorAll('.subcat-list.show').forEach(other => {
-        if (other !== subUl) {
-          other.style.height = other.scrollHeight + 'px';
-          requestAnimationFrame(() => { other.style.height = '0'; });
-          other.classList.remove('show');
-          const otherArrow = other.previousElementSibling.querySelector('.arrow');
-          if (otherArrow) otherArrow.classList.remove('open');
-        }
+      const postList = document.createElement('ul');
+      postList.id = 'subcat-posts';
+      postList.style.marginTop = '10px';
+      postList.style.paddingLeft = '20px';
+
+      catMap[cat][subcat].forEach(p => {
+        const pLi = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = p.url;
+        a.textContent = p.title;
+        a.style.textDecoration = 'underline';
+        a.style.color = '#06f';
+        pLi.appendChild(a);
+        postList.appendChild(pLi);
       });
 
-      // 展開/收起當前分類
-      if (isOpen) {
-        subUl.style.height = subUl.scrollHeight + 'px';
-        requestAnimationFrame(() => { subUl.style.height = '0'; });
-      } else {
-        subUl.style.height = subUl.scrollHeight + 'px';
-      }
-      subUl.classList.toggle('show');
-      arrow.classList.toggle('open');
-
-      // 動畫結束後自動清除行內高度
-      subUl.addEventListener('transitionend', function handler() {
-        if (subUl.classList.contains('show')) {
-          subUl.style.height = 'auto';
-        }
-        subUl.removeEventListener('transitionend', handler);
-      });
+      catDiv.appendChild(postList);
     });
+
+    subUl.appendChild(li);
   }
+
+  catDiv.appendChild(subUl);
+
+  // 點擊展開/收起動畫
+  catTitle.addEventListener('click', () => {
+    if (subUl.style.maxHeight === '0px' || subUl.style.maxHeight === '') {
+      subUl.style.maxHeight = subUl.scrollHeight + 'px';
+      arrow.style.transform = 'rotate(90deg)';
+    } else {
+      subUl.style.maxHeight = '0';
+      arrow.style.transform = 'rotate(0deg)';
+    }
+  });
+
+  container.appendChild(catDiv);
+}
 </script>
 
 <div style="text-align:center; margin:40px auto;">
