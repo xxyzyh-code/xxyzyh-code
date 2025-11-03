@@ -15,23 +15,6 @@ classes: wide
   <p style="font-size:1.1em; color:#ccc;">这里是我的写作与思考空间，你可以在下方找到不同主题的内容。</p>
 </div>
 
-<!-- ✅ 新增：全站統計資訊（字數、篇數、平均） -->
-<div style="text-align:center; margin:25px 0; color:#ccc; line-height:1.8;">
-  {% assign total_words = 0 %}
-  {% assign post_count = site.posts | size %}
-  {% for post in site.posts %}
-    {% assign content_text = post.content | strip_html | strip_newlines | replace: "&nbsp;", " " %}
-    {% assign word_count = content_text | size %}
-    {% assign total_words = total_words | plus: word_count %}
-  {% endfor %}
-  <p>📚 共 <strong>{{ post_count }}</strong> 篇文章</p>
-  <p>📖 全站总字数：<strong>{{ total_words }}</strong> 字</p>
-  {% if post_count > 0 %}
-    {% assign avg_words = total_words | divided_by: post_count %}
-    <p>✍️ 平均每篇文章字数：<strong>{{ avg_words }}</strong> 字</p>
-  {% endif %}
-</div>
-
 <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:20px; margin-bottom:50px;">
   <a href="/about/" style="flex:1 1 150px; max-width:200px; text-align:center; padding:15px; background:#444; color:#fff; text-decoration:none; border-radius:8px; transition:0.3s;">关于我</a>
   <a href="/contact/" style="flex:1 1 150px; max-width:200px; text-align:center; padding:15px; background:#444; color:#fff; text-decoration:none; border-radius:8px; transition:0.3s;">联系我</a>
@@ -149,11 +132,9 @@ for (const cat in catMap) {
   subUl.style.paddingLeft = '20px';
   subUl.style.margin = '5px 0';
 
-  // 二级分类
   for (const subcat in catMap[cat]) {
     const li = document.createElement('li');
     li.textContent = `${subcat} (${catMap[cat][subcat].length})`;
-
     li.addEventListener('click', (e) => {
       e.stopPropagation();
       const existing = document.getElementById('subcat-posts');
@@ -181,12 +162,12 @@ for (const cat in catMap) {
         toggle.className = 'more-toggle';
         toggle.textContent = '显示更多...';
         toggle.addEventListener('click', () => {
-          postList.querySelectorAll('li[style*="display: none"]').forEach(li => li.style.display = 'list-item');
+          const hiddenLis = postList.querySelectorAll('li[style*="display: none"]');
+          hiddenLis.forEach(li => li.style.display = 'list-item');
           toggle.remove();
         });
         postList.appendChild(toggle);
       }
-
       catDiv.appendChild(postList);
     });
     subUl.appendChild(li);
@@ -213,7 +194,8 @@ for (const cat in catMap) {
       subUl.style.maxHeight = subUl.scrollHeight+'px';
       subUl.style.opacity='1';
       arrow.style.transform='rotate(90deg)';
-      arrow.animate([{transform:'rotate(0deg)'},{transform:'rotate(110deg)'},{transform:'rotate(90deg)'}], {duration:300,easing:'ease-out'});
+      arrow.animate([{transform:'rotate(0deg)'},{transform:'rotate(110deg)'},{transform:'rotate(90deg)'}],
+        {duration:300, easing:'ease-out'});
     }else{
       subUl.style.maxHeight='0';
       subUl.style.opacity='0';
@@ -227,10 +209,40 @@ for (const cat in catMap) {
 }
 </script>
 
-<div style="text-align:center; margin:40px auto;">
-  <h3>📝 最新发布</h3>
-  <p style="color:#aaa;">以下是我最近的博客文章，更多内容请查看各个分类。</p>
+<!-- 🔹 全站統計資訊區塊 -->
+<div id="site-stats" style="text-align:center; margin:60px auto; padding:30px; border-top:1px solid #ddd;">
+  <h3>📊 全站統計資訊</h3>
+  <p id="total-posts" style="margin:5px 0; color:#666;"></p>
+  <p id="total-words" style="margin:5px 0; color:#666;"></p>
+  <p id="avg-words" style="margin:5px 0; color:#666;"></p>
+  <p id="total-categories" style="margin:5px 0; color:#666;"></p>
+  <p id="last-updated" style="margin:5px 0; color:#666;"></p>
 </div>
+
+<script>
+  const postsData = [
+    {% for post in site.posts %}
+    {
+      content: `{{ post.content | strip_html | strip_newlines | replace: " ", "" }}`,
+      categories: [{% for cat in post.categories %}"{{ cat }}"{% if forloop.last == false %}, {% endif %}{% endfor %}],
+      date: "{{ post.last_modified_at | default: post.date | date: '%Y-%m-%d' }}"
+    }{% if forloop.last == false %}, {% endif %}
+    {% endfor %}
+  ];
+
+  const totalPosts = postsData.length;
+  const totalWords = postsData.reduce((sum, p) => sum + p.content.length, 0);
+  const avgWords = totalPosts ? Math.round(totalWords / totalPosts) : 0;
+  const allCats = new Set(postsData.flatMap(p => p.categories));
+  const totalCategories = allCats.size;
+  const lastUpdated = postsData.sort((a,b) => new Date(b.date) - new Date(a.date))[0]?.date || "未知";
+
+  document.getElementById('total-posts').textContent = `📝 文章總數：${totalPosts} 篇`;
+  document.getElementById('total-words').textContent = `✍️ 全站總字數：約 ${totalWords.toLocaleString()} 字`;
+  document.getElementById('avg-words').textContent = `📈 平均每篇文章字數：約 ${avgWords.toLocaleString()} 字`;
+  document.getElementById('total-categories').textContent = `📂 分類數量：${totalCategories} 個`;
+  document.getElementById('last-updated').textContent = `🕒 最近更新日期：${lastUpdated}`;
+</script>
 
 <div style="text-align: center; margin-top: 60px;">
   <p style="font-size:0.9em; color:#888;">本站访问统计：</p>
