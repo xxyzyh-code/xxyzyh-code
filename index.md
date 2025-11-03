@@ -37,6 +37,33 @@ classes: wide
   <div id="cat-subcat-list"></div>
 </div>
 
+<style>
+  .subcat-list {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.5s cubic-bezier(0.77, 0, 0.175, 1), opacity 0.3s ease-in-out;
+    margin: 5px 0 0 20px;
+  }
+  .cat-header {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    user-select: none;
+  }
+  .cat-header span.arrow {
+    transition: transform 0.3s ease-in-out;
+  }
+  .subcat-list li {
+    cursor: pointer;
+  }
+  #subcat-posts {
+    margin-top: 10px;
+    padding-left: 20px;
+  }
+</style>
+
 <script>
 const posts = [
   {% for post in site.posts %}
@@ -65,46 +92,37 @@ const container = document.getElementById('cat-subcat-list');
 for (const cat in catMap) {
   const catDiv = document.createElement('div');
   catDiv.style.marginBottom = '15px';
-  const catTitle = document.createElement('div');
-  catTitle.style.cursor = 'pointer';
-  catTitle.style.userSelect = 'none';
-  catTitle.style.display = 'flex';
-  catTitle.style.alignItems = 'center';
-  catTitle.style.gap = '5px';
+
+  const catHeader = document.createElement('div');
+  catHeader.className = 'cat-header';
 
   const arrow = document.createElement('span');
+  arrow.className = 'arrow';
   arrow.textContent = '▶';
-  arrow.style.transition = 'transform 0.3s ease-in-out';
-  catTitle.appendChild(arrow);
+  catHeader.appendChild(arrow);
 
   const titleSpan = document.createElement('strong');
   titleSpan.textContent = cat;
-  catTitle.appendChild(titleSpan);
+  catHeader.appendChild(titleSpan);
 
-  catDiv.appendChild(catTitle);
+  catDiv.appendChild(catHeader);
 
   const subUl = document.createElement('ul');
+  subUl.className = 'subcat-list';
   subUl.style.listStyle = 'disc';
   subUl.style.paddingLeft = '20px';
   subUl.style.margin = '5px 0';
-  subUl.style.maxHeight = '0';
-  subUl.style.overflow = 'hidden';
-  subUl.style.transition = 'max-height 0.4s ease-in-out';
 
   for (const subcat in catMap[cat]) {
     const li = document.createElement('li');
-    li.style.cursor = 'pointer';
     li.textContent = `${subcat} (${catMap[cat][subcat].length})`;
 
     li.addEventListener('click', () => {
-      // 展示该二级分类下文章标题
       const existing = document.getElementById('subcat-posts');
       if (existing) existing.remove();
 
       const postList = document.createElement('ul');
       postList.id = 'subcat-posts';
-      postList.style.marginTop = '10px';
-      postList.style.paddingLeft = '20px';
 
       catMap[cat][subcat].forEach(p => {
         const pLi = document.createElement('li');
@@ -125,13 +143,15 @@ for (const cat in catMap) {
 
   catDiv.appendChild(subUl);
 
-  // 點擊展開/收起動畫
-  catTitle.addEventListener('click', () => {
-    if (subUl.style.maxHeight === '0px' || subUl.style.maxHeight === '') {
+  catHeader.addEventListener('click', () => {
+    const isCollapsed = subUl.style.maxHeight === '' || subUl.style.maxHeight === '0px';
+    if (isCollapsed) {
       subUl.style.maxHeight = subUl.scrollHeight + 'px';
+      subUl.style.opacity = '1';
       arrow.style.transform = 'rotate(90deg)';
     } else {
       subUl.style.maxHeight = '0';
+      subUl.style.opacity = '0';
       arrow.style.transform = 'rotate(0deg)';
     }
   });
