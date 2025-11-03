@@ -6,6 +6,8 @@ last_modified_at: 2025-11-02
 layout: single
 categories:
   - 随笔
+subcategories:
+  - 流行音乐
 tags:
   - Jekyll
   - 博客搭建
