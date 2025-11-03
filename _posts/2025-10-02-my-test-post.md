@@ -40,7 +40,14 @@ Hello, World — This is my test blog post.
 {% assign word_count = 0 %}
 
 {% for c in chars %}
-  {% if c =~ /[一-龥a-zA-Z0-9]/ %}
+  {% capture unicode %}{{ c | ord }}{% endcapture %}
+  {% if unicode | plus:0 >= 19968 and unicode | plus:0 <= 40959 %}
+    {% assign word_count = word_count | plus: 1 %}
+  {% elsif c >= "a" and c <= "z" %}
+    {% assign word_count = word_count | plus: 1 %}
+  {% elsif c >= "A" and c <= "Z" %}
+    {% assign word_count = word_count | plus: 1 %}
+  {% elsif c >= "0" and c <= "9" %}
     {% assign word_count = word_count | plus: 1 %}
   {% endif %}
 {% endfor %}
