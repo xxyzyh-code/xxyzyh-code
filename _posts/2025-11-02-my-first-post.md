@@ -35,19 +35,13 @@ Hello, World — This is my first blog post.
 > 小贴士：写完一篇新文章后，记得命名规则要是 `YYYY-MM-DD-文章名.md`。
 
 <!-- 🔹 写作成绩单：发布日期 + 正文字数 + 阅读时间 -->
-{% comment %} 
-  這個 Liquid 區塊位於文章末尾，用於計算正文的字數並顯示結果。
-  它必須確保 Liquid 註釋 {% comment %} 標籤全部成對出現，以避免編譯錯誤。
+{% assign content_without_html = page.content | strip_html | strip_newlines | replace: "&nbsp;", " " %}
 
-  注意：我們將計數邏輯放在 HTML 輸出區塊之前，且不讓它被重複計入。
-{% endcomment %}
-
-{% assign text_to_count = page.content | strip_html | strip_newlines | replace: "&nbsp;", " " %}
-
-{% assign text_clean = text_to_count | remove: " " | remove: "	" %}
-{% assign text_clean = text_clean | remove: "*" | remove: "-" | remove: "`" | remove: ">" | remove: "#" %}
+{% comment %} 從這裡開始是清理步驟，移除所有非中英文字符以得到最準確的字數 {% endcomment %}
+{% assign text_clean = content_without_html | remove: "*" | remove: "-" | remove: "`" | remove: ">" | remove: "#" %}
 {% assign text_clean = text_clean | remove: "，" | remove: "。" | remove: "：" | remove: "；" | remove: "？" | remove: "！" | remove: "、" | remove: "（" | remove: "）" | remove: "《" | remove: "》" %}
 {% assign text_clean = text_clean | remove: "," | remove: "." | remove: ":" | remove: ";" | remove: "?" | remove: "!" | remove: "&" | remove: "(" | remove: ")" | remove: "—" %}
+{% assign text_clean = text_clean | remove: " " | remove: "	" %}
 {% assign text_clean = text_clean | remove: "🎉" | remove: "/" %}
 
 {% assign final_word_count = text_clean | size %}
@@ -56,7 +50,7 @@ Hello, World — This is my first blog post.
 <p style="color:#888; font-size:0.9em; margin-top: 20px;">
   📅 发布日期：{{ page.date | date: "%Y-%m-%d" }} &nbsp;|&nbsp; 📝 **字數：{{ final_word_count }} 字** &nbsp;|&nbsp; ⏱️ **閱讀時間：約 {{ reading_time }} 分鐘**
 </p>
-
+​<!-- end list -->
 <div style="text-align: center; margin-top: 30px;">
   <img src="https://visitor-badge.laobi.icu/badge?page_id=xxyzyh-code.my-first-post" alt="Visitor Count">
 </div>
