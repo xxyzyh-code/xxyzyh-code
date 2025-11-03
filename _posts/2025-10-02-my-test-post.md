@@ -4,9 +4,10 @@ excerpt: "这是使用 Minimal Mistakes 主题写下的测试文章。"
 date: 2025-10-02
 last_modified_at: 2025-10-02
 layout: single
-categories:
-  - 诗歌
-  - 中国，外国
+categories: [音乐, 阅读]   # 一级分类
+subcategories:             # 二级分类
+  - 流行音乐
+  - 纯音乐
 tags:
   - 测试
   - 文学创作
