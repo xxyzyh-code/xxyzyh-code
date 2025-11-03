@@ -36,36 +36,29 @@ Hello, World — This is my first blog post.
 
 <!-- 🔹 写作成绩单：发布日期 + 正文字数 + 阅读时间 -->
 {% comment %} 
-  目標：將 Markdown 文件中，所有不屬於正文的 Liquid 程式碼塊和 HTML 替換為空。
-  方法：使用 capture 儲存要替換的長字串，然後再用 replace 替換。
+  🎯 乾淨版本：專注於移除 HTML、空格和標點符號。
+  這個版本將所有複雜的 Liquid/HTML 區塊用 {% comment %} 包裹，確保它們不會被 page.content 計入。
 {% endcomment %}
 
-{% assign raw_content = page.content %}
-
-{% capture stat_block %}
+{% comment %} 這是您在文章末尾的 Liquid 計數與訪客代碼，現在被註釋起來，不會計入 page.content。 {% endcomment %}
+{% comment %} 
 {% assign plain_text = page.content | strip_html | strip_newlines | replace: "&nbsp;", " " %}
 {% assign text_without_spaces = plain_text | remove: " " | remove: "	" %}
-{% assign word_count = text_without_spaces | size %}
-{% assign reading_time = word_count | divided_by:350.0 | ceil %}
-<p style="color:#888; font-size:0.9em; margin-top: 20px;">
-  📅 发布日期：{{ page.date | date: "%Y-%m-%d" }} &nbsp;|&nbsp; 📝 字数：{{ word_count }} 字 &nbsp;|&nbsp; ⏱️ 阅读時間：約 {{ reading_time }} 分鐘
-</p>
-{% endcapture %}
+{% assign word_count_dummy = text_without_spaces | size %}
+{% assign reading_time_dummy = word_count_dummy | divided_by:350.0 | ceil %}
 
-{% capture visitor_block %}
 <div style="text-align: center; margin-top: 30px;">
   <img src="https://visitor-badge.laobi.icu/badge?page_id=xxyzyh-code.my-first-post" alt="Visitor Count">
 </div>
-{% endcapture %}
+{% endcomment %}
 
-{% assign content_safe = raw_content | replace: stat_block, "" | replace: visitor_block, "" %}
 
-{% assign text_clean = content_safe | strip_html | strip_newlines | replace: "&nbsp;", " " %}
+{% assign text_to_count = page.content | strip_html | strip_newlines | replace: "&nbsp;", " " %}
 
+{% assign text_clean = text_to_count | remove: " " | remove: "	" %}
 {% assign text_clean = text_clean | remove: "*" | remove: "-" | remove: "`" | remove: ">" | remove: "#" %}
 {% assign text_clean = text_clean | remove: "，" | remove: "。" | remove: "：" | remove: "；" | remove: "？" | remove: "！" | remove: "、" | remove: "（" | remove: "）" | remove: "《" | remove: "》" %}
 {% assign text_clean = text_clean | remove: "," | remove: "." | remove: ":" | remove: ";" | remove: "?" | remove: "!" | remove: "&" | remove: "(" | remove: ")" | remove: "—" %}
-{% assign text_clean = text_clean | remove: " " | remove: "	" %}
 {% assign text_clean = text_clean | remove: "🎉" | remove: "/" %}
 
 {% assign final_word_count = text_clean | size %}
@@ -75,4 +68,6 @@ Hello, World — This is my first blog post.
   📅 发布日期：{{ page.date | date: "%Y-%m-%d" }} &nbsp;|&nbsp; 📝 字数：{{ final_word_count }} 字 &nbsp;|&nbsp; ⏱️ 阅读時間：約 {{ reading_time }} 分鐘
 </p>
 
-{{ visitor_block }}
+<div style="text-align: center; margin-top: 30px;">
+  <img src="https://visitor-badge.laobi.icu/badge?page_id=xxyzyh-code.my-first-post" alt="Visitor Count">
+</div>
