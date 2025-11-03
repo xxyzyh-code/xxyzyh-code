@@ -2,10 +2,8 @@
 layout: default
 ---
 
-{% include header.html %}
-
 <div id="main" role="main">
-  {% include sidebar.html %}
+  {% include sidebar.html %} 
 
   <div class="archive">
     <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
@@ -59,6 +57,8 @@ layout: default
         {% include post_pagination.html %}
         
       </div>
+      {% include author_profile.html %}
+
     </article>
   </div>
 </div>
