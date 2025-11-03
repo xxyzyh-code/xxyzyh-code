@@ -31,46 +31,56 @@ classes: wide
   });
 </script>
 
-<div style="margin:40px auto;">
-  <h3>📂 分类与二级分类（按文章数排序）</h3>
-  <ul>
-    {% for category in site.categories %}
-      <li>
-        <strong>{{ category[0] }}</strong>
-        <ul>
-          {% assign subcats_counts = "" %}
-          {% for post in category[1] %}
-            {% for subcat in post.subcategories %}
-              {% assign found = false %}
-              {% assign temp_list = subcats_counts | split: "|" %}
-              {% for item in temp_list %}
-                {% if item contains subcat %}
-                  {% assign parts = item | split: ":" %}
-                  {% assign count = parts[1] | plus: 1 %}
-                  {% assign subcats_counts = subcats_counts | replace: item, subcat | append: ":" | append: count %}
-                  {% assign found = true %}
-                {% endif %}
-              {% endfor %}
-              {% unless found %}
-                {% if subcats_counts == "" %}
-                  {% assign subcats_counts = subcat | append: ":1" %}
-                {% else %}
-                  {% assign subcats_counts = subcats_counts | append: "|" | append: subcat | append: ":1" %}
-                {% endif %}
-              {% endunless %}
-            {% endfor %}
-          {% endfor %}
-          {% assign subcats_array = subcats_counts | split: "|" %}
-          {% assign sorted_subcats = subcats_array | sort_natural %}
-          {% for subcat_item in sorted_subcats %}
-            {% assign parts = subcat_item | split: ":" %}
-            <li><a href="/subcategories/{{ parts[0] | slugify }}/">{{ parts[0] }}</a> ({{ parts[1] }})</li>
-          {% endfor %}
-        </ul>
-      </li>
-    {% endfor %}
-  </ul>
+<!-- 🔹 分类与二级分类展示（前端 JS 生成） -->
+<div id="category-subcategory" style="margin:40px auto;">
+  <h3>📂 分类与二级分类（按文章数统计）</h3>
+  <div id="cat-subcat-list"></div>
 </div>
+
+<script>
+  // 收集文章分类数据
+  const posts = [
+    {% for post in site.posts %}
+      {
+        url: "{{ post.url }}",
+        categories: [{% for cat in post.categories %}"{{ cat }}"{% if forloop.last == false %}, {% endif %}{% endfor %}],
+        subcategories: [{% for subcat in post.subcategories %}"{{ subcat }}"{% if forloop.last == false %}, {% endif %}{% endfor %}]
+      }{% if forloop.last == false %}, {% endif %}
+    {% endfor %}
+  ];
+
+  const catMap = {};
+
+  posts.forEach(post => {
+    post.categories.forEach(cat => {
+      if (!catMap[cat]) catMap[cat] = {};
+      post.subcategories.forEach(subcat => {
+        if (!catMap[cat][subcat]) catMap[cat][subcat] = 0;
+        catMap[cat][subcat]++;
+      });
+    });
+  });
+
+  // 生成 HTML
+  const container = document.getElementById('cat-subcat-list');
+  for (const cat in catMap) {
+    const catDiv = document.createElement('div');
+    catDiv.style.marginBottom = '15px';
+    const catTitle = document.createElement('strong');
+    catTitle.textContent = cat;
+    catDiv.appendChild(catTitle);
+
+    const subUl = document.createElement('ul');
+    for (const subcat in catMap[cat]) {
+      const li = document.createElement('li');
+      li.textContent = `${subcat} (${catMap[cat][subcat]})`;
+      subUl.appendChild(li);
+    }
+
+    catDiv.appendChild(subUl);
+    container.appendChild(catDiv);
+  }
+</script>
 
 <div style="text-align:center; margin:40px auto;">
   <h3>📝 最新发布</h3>
