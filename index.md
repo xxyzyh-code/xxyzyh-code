@@ -8,6 +8,7 @@ title: "欢迎来到我的博客首页"
 excerpt: "记录思考、创作与探索的足迹。"
 entries_layout: list
 classes: wide
+robots: "noindex, nofollow"
 ---
 
 <div style="text-align:center; margin-bottom:20px;">
