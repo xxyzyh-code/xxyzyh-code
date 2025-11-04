@@ -1,0 +1,30 @@
+<div id="custom-audio-player">
+    <h3>我的音樂播放器</h3>
+    
+    <audio id="main-audio" controls>
+        <source src="{{ site.data.music[0].url }}" type="audio/mp4">
+        您的瀏覽器不支持 HTML5 音頻。
+    </audio>
+
+    <ul id="playlist">
+    {% for track in site.data.music %}
+        <li data-url="{{ track.url }}" onclick="loadTrack('{{ track.url }}', '{{ track.title }}')">
+            {{ track.title }} - {{ track.artist }}
+        </li>
+    {% endfor %}
+    </ul>
+</div>
+
+<script>
+    const audio = document.getElementById('main-audio');
+    const playerTitle = document.querySelector('#custom-audio-player h3');
+
+    // JavaScript 邏輯：點擊清單項目時載入並播放新歌曲
+    function loadTrack(url, title) {
+        audio.src = url;
+        playerTitle.textContent = `正在播放：${title}`;
+        audio.play();
+    }
+
+    // 可以在這裡加入更多 JS 邏輯來美化介面或實現隨機播放等功能
+</script>
