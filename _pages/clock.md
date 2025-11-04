@@ -8,8 +8,8 @@ header:
   overlay_image: /assets/images/contact-bg.jpg
   
 # 程式夥伴：禁用頂部 Page Header/Hero 區域
-header: false 
-show_title: false 
+header: true
+show_title: true
 ---
 
 <style>
