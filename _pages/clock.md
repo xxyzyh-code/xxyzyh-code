@@ -3,6 +3,11 @@ title: "實時數字時鐘"
 permalink: /clock/
 layout: single
 author_profile: true
+header:
+  overlay_color: "#444"
+  overlay_image: /assets/images/contact-bg.jpg
+  
+# 程式夥伴：禁用頂部 Page Header/Hero 區域
 header: false 
 show_title: false 
 ---
