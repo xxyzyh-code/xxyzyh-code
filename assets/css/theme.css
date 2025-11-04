@@ -129,3 +129,8 @@ body {
 .theme-option:hover {
     background-color: var(--hover-bg);
 }
+
+/* *** 新增：隱藏菜單的規則 (必須確保其存在) *** */
+#theme-menu.hidden-menu {
+    display: none;
+}
