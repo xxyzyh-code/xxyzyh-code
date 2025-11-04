@@ -30,10 +30,10 @@ noindex: true
           {{ content }}
 
           {% comment %}
-            核心逻辑：只有在 layout 为 single 且不是 /about/ 或 /contact/ 页面时，才计算并显示元数据
+            核心逻辑：只有在 layout 为 single 且不是 /about/、/contact/ 或 /clock/ 页面时，才计算并显示元数据
           {% endcomment %}
           {% if page.layout == "single" %}
-            {% unless page.url contains "/about/" or page.url contains "/contact/" %}
+            {% unless page.url contains "/about/" or page.url contains "/contact/" or page.url contains "/clock/" %}
 
               {% assign text_to_count = content | strip_html | strip_newlines | replace: "&nbsp;", " " %}
               {% comment %} 核心清理逻辑：移除所有非中英文字符以得到最准确的字数 {% endcomment %}
@@ -56,9 +56,12 @@ noindex: true
           {% assign form_id = page.path | replace: '/', '-' | remove: 'index.html' | remove: '.md' | remove: '.html' | strip | default: 'homepage' %}
           {% assign unique_id = 'site-' | append: form_id | cgi_escape %}
 
-          <div style="text-align: center; margin-top: 30px;">
-            <img src="https://visitor-badge.laobi.icu/badge?page_id={{ unique_id }}" alt="Visitor Count">
-          </div>
+          {% unless page.url contains "/clock/" %}
+            <div style="text-align: center; margin-top: 30px;">
+              <img src="https://visitor-badge.laobi.icu/badge?page_id={{ unique_id }}" alt="Visitor Count">
+            </div>
+          {% endunless %}
+          
           </section>
 
         <footer class="page__meta">
