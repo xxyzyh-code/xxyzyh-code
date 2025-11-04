@@ -1,8 +1,7 @@
 <div id="custom-audio-player">
     <h3>我的音樂播放器</h3>
     
-    <audio id="main-audio" controls>
-        <source src="{{ site.data.music[0].url }}" type="audio/mp4">
+    <audio id="main-audio" controls src="{{ site.data.music[0].url }}">
         您的瀏覽器不支持 HTML5 音頻。
     </audio>
 
@@ -25,6 +24,5 @@
         playerTitle.textContent = `正在播放：${title}`;
         audio.play();
     }
-
-    // 可以在這裡加入更多 JS 邏輯來美化介面或實現隨機播放等功能
+    // ...
 </script>
