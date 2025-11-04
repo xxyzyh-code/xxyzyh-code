@@ -2,6 +2,9 @@
 layout: page
 title: "二级分类"
 permalink: /subcategories/
+robots: "noindex, nofollow" 
+seo:
+  noindex: true
 ---
 
 <h1>📂 二级分类</h1>
