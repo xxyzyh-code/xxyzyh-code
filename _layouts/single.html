@@ -52,8 +52,10 @@ noindex: true
             {% endunless %}
           {% endif %}
           
+          {% comment %} 程式夥伴：動態生成 page_id 以實現分頁統計 {% endcomment %}
+          {% assign unique_id = page.url | cgi_escape | remove: '/' %}
           <div style="text-align: center; margin-top: 30px;">
-            <img src="https://visitor-badge.laobi.icu/badge?page_id=xxyzyh-code.my-first-post" alt="Visitor Count">
+            <img src="https://visitor-badge.laobi.icu/badge?page_id={{ unique_id }}" alt="Visitor Count">
           </div>
           </section>
 
