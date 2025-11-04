@@ -274,8 +274,18 @@ function initializeTheme() {
     }
 }
 
+// --- 主題事件監聽器 (新增和修正) ---
 
-// --- 主題事件監聽器 (修改為傳遞 isManual = true) ---
+/**
+ * 點擊主題切換按鈕，切換選單顯示
+ */
+themeToggleBtn.addEventListener('click', (event) => {
+    // 阻止事件冒泡，防止被 document 點擊事件立刻關閉
+    event.stopPropagation(); 
+    // 核心邏輯：切換隱藏狀態
+    themeMenu.classList.toggle('hidden-menu');
+});
+
 
 // 點擊選單選項，應用新的主題
 themeOptions.forEach(option => {
@@ -283,9 +293,20 @@ themeOptions.forEach(option => {
         const selectedTheme = e.target.getAttribute('data-theme');
         // *** 關鍵修正：將 isManual 設為 true，強制應用該主題 ***
         applyTheme(selectedTheme, true); 
-        themeMenu.classList.add('hidden-menu');
+        // 選擇後自動收起菜單
+        themeMenu.classList.add('hidden-menu'); 
     });
 });
+
+
+// ** BONUS: 點擊頁面其他地方時，隱藏選單 **
+document.addEventListener('click', (e) => {
+    // 檢查點擊是否在按鈕或選單內部
+    if (!themeMenu.contains(e.target) && !themeToggleBtn.contains(e.target)) {
+        themeMenu.classList.add('hidden-menu');
+    }
+});
+
 
 
 // ** BONUS: 定期檢查時間以應對跨越日夜的時間 (僅用於自動模式) **
