@@ -14,11 +14,13 @@
     <button id="theme-toggle-btn">
         主題 (當前: <span id="current-theme-name">白色 (自動)</span>)
     </button>
-    <div id="theme-menu" class="hidden-menu">
-        <span class="theme-option" data-theme="light">白色</span>
-        <span class="theme-option" data-theme="dark">黑色</span>
-        <span class="theme-option" data-theme="grey">灰色</span>
-    </div>
+<div id="theme-menu" class="hidden-menu">
+    <span class="theme-option" data-theme="light">白色</span>
+    <span class="theme-option" data-theme="dark">黑色</span>
+    <span class="theme-option" data-theme="grey">灰色</span>
+    <span class="theme-option" data-theme="blue">藍色</span>
+    <span class="theme-option" data-theme="green">綠色</span>
+</div>
 </div>
 
     <div id="sleep-timer-area">
@@ -196,19 +198,26 @@ const THEME_STORAGE_KEY = 'userThemePreference';
 const LIGHT_THEME = 'light'; // 內部標籤：白色
 const DARK_THEME = 'dark';   // 內部標籤：黑色
 const GREY_THEME = 'grey';   // 內部標籤：灰色
-
+const BLUE_THEME = 'blue';   // ✅ 新增藍色常量
+const GREEN_THEME = 'green'; // ✅ 新增綠色常量
+    
 /**
  * 設置主題類名並更新按鈕顯示
  * 這是主題的核心函數，所有主題切換都通過它
- * @param {string} desiredTheme - 'light', 'dark', 'grey' (使用者手動選擇的意圖)
+ * @param {string} desiredTheme - 'light', 'dark', 'grey', 'blue', 'green' (使用者手動選擇的意圖)
  * @param {boolean} isManual - 是否為手動選擇 (點擊菜單選項時為 true)
  */
 function applyTheme(desiredTheme, isManual = false) {
     const body = document.body;
     let displayName = '';
     
-    // 1. 清除所有主題類名 (無論是哪個主題，都先清除乾淨)
-    body.classList.remove(DARK_THEME + '-theme', GREY_THEME + '-theme');
+    // 1. 清除所有主題類名 (確保只應用一個主題)
+    body.classList.remove(
+        DARK_THEME + '-theme', 
+        GREY_THEME + '-theme',
+        BLUE_THEME + '-theme',    // ✅ 清除藍色主題類
+        GREEN_THEME + '-theme'    // ✅ 清除綠色主題類
+    );
 
     let themeToApply = desiredTheme;
     let modeText = '(手動)'; // 預設為手動，除非進入自動判斷流程
@@ -233,6 +242,12 @@ function applyTheme(desiredTheme, isManual = false) {
     } else if (themeToApply === GREY_THEME) {
         body.classList.add(GREY_THEME + '-theme');
         displayName = '灰色';
+    } else if (themeToApply === BLUE_THEME) { // ✅ 處理藍色主題
+        body.classList.add(BLUE_THEME + '-theme');
+        displayName = '藍色';
+    } else if (themeToApply === GREEN_THEME) { // ✅ 處理綠色主題
+        body.classList.add(GREEN_THEME + '-theme');
+        displayName = '綠色';
     } else { 
         // themeToApply 是 'light'：強制使用白色 (預設，不加類名)
         displayName = '白色';
