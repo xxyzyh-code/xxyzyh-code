@@ -11,15 +11,16 @@
     </span>
     
     <div id="theme-switcher">
-        <button id="theme-toggle-btn">
-            主題 (當前: <span id="current-theme-name">淺色</span>)
-        </button>
-        <div id="theme-menu" class="hidden-menu">
-            <span class="theme-option" data-theme="light">淺色模式 (自動/白天)</span>
-            <span class="theme-option" data-theme="dark">深色模式 (夜間/黑色)</span>
-            <span class="theme-option" data-theme="grey">夜間模式 (灰色)</span>
-        </div>
+    <button id="theme-toggle-btn">
+        主題 (當前: <span id="current-theme-name">白色 (自動)</span>)
+    </button>
+    <div id="theme-menu" class="hidden-menu">
+        <span class="theme-option" data-theme="light">白色</span>
+        <span class="theme-option" data-theme="dark">黑色</span>
+        <span class="theme-option" data-theme="grey">灰色</span>
     </div>
+</div>
+
     <div id="sleep-timer-area">
         <button id="timer-toggle-btn" onclick="toggleTimerMenu()">
             定時 (未設定)
@@ -189,13 +190,58 @@ function togglePlayMode() {
 }
 
 
-// --- *** 主題切換邏輯 (已移至頂層) *** ---
+// --- *** 主題切換邏輯 (重構為完全手動切換優先) *** ---
 
 const THEME_STORAGE_KEY = 'userThemePreference';
-const LIGHT_THEME = 'light';
-const DARK_THEME = 'dark';
-const GREY_THEME = 'grey';
-const AUTO_THEME_FLAG = 'auto'; // 新增一個標誌用於自動模式追蹤
+const LIGHT_THEME = 'light'; // 內部標籤：白色
+const DARK_THEME = 'dark';   // 內部標籤：黑色
+const GREY_THEME = 'grey';   // 內部標籤：灰色
+
+/**
+ * 設置主題類名並更新按鈕顯示
+ * 這是主題的核心函數，所有主題切換都通過它
+ * @param {string} desiredTheme - 'light', 'dark', 'grey' (使用者手動選擇的意圖)
+ * @param {boolean} isManual - 是否為手動選擇 (點擊菜單選項時為 true)
+ */
+function applyTheme(desiredTheme, isManual = false) {
+    const body = document.body;
+    let displayName = '';
+    
+    // 1. 清除所有主題類名 (無論是哪個主題，都先清除乾淨)
+    body.classList.remove(DARK_THEME + '-theme', GREY_THEME + '-theme');
+
+    let themeToApply = desiredTheme;
+    let modeText = '(手動)'; // 預設為手動，除非進入自動判斷流程
+
+    // 2. 處理儲存：如果是手動選擇，儲存使用者的意圖
+    if (isManual) {
+        localStorage.setItem(THEME_STORAGE_KEY, desiredTheme);
+    } 
+    // 處理頁面載入時的「自動模式」：
+    else if (desiredTheme === LIGHT_THEME) {
+        // 如果是初始載入且儲存的意圖是 'light'，則進入自動模式判斷
+        themeToApply = getSystemThemeBasedOnTime();
+        modeText = '(自動)';
+        // 如果自動判斷結果是淺色，則 themeToApply 仍然是 'light'，無需加 class
+    }
+
+
+    // 3. 根據最終確定的主題 themeToApply 應用類名
+    if (themeToApply === DARK_THEME) {
+        body.classList.add(DARK_THEME + '-theme');
+        displayName = '黑色';
+    } else if (themeToApply === GREY_THEME) {
+        body.classList.add(GREY_THEME + '-theme');
+        displayName = '灰色';
+    } else { 
+        // themeToApply 是 'light'：強制使用白色 (預設，不加類名)
+        displayName = '白色';
+    }
+    
+    // 4. 更新按鈕顯示
+    currentThemeName.textContent = `${displayName} ${modeText}`;
+}
+
 
 /**
  * 根據當地時間判斷應該使用淺色還是深色
@@ -204,49 +250,9 @@ const AUTO_THEME_FLAG = 'auto'; // 新增一個標誌用於自動模式追蹤
  */
 function getSystemThemeBasedOnTime() {
     const hour = new Date().getHours();
+    // 晚上 19 點到早上 7 點之間使用深色 (黑色)
     return (hour >= 19 || hour < 7) ? DARK_THEME : LIGHT_THEME;
 }
-
-/**
- * 設置主題類名並更新按鈕顯示
- * @param {string} desiredTheme - 使用者手動選擇的意圖: 'light' (視為自動), 'dark', 'grey'
- */
-function applyTheme(desiredTheme) {
-    const body = document.body;
-    let actualTheme;
-    let displayName = '';
-    
-    // 儲存使用者的意圖
-    localStorage.setItem(THEME_STORAGE_KEY, desiredTheme);
-
-    // 移除所有主題類名
-    body.classList.remove(DARK_THEME + '-theme', GREY_THEME + '-theme');
-
-    // 根據意圖判斷實際應用哪個主題
-    if (desiredTheme === DARK_THEME) {
-        actualTheme = DARK_THEME;
-        body.classList.add(DARK_THEME + '-theme');
-        displayName = '深色 (手動)';
-    } else if (desiredTheme === GREY_THEME) {
-        actualTheme = GREY_THEME;
-        body.classList.add(GREY_THEME + '-theme');
-        displayName = '夜間 (手動)';
-    } else { 
-        // desiredTheme 是 'light'：視為回到自動模式
-        actualTheme = getSystemThemeBasedOnTime();
-        if (actualTheme === DARK_THEME) {
-            body.classList.add(DARK_THEME + '-theme');
-            displayName = '深色 (自動)';
-        } else {
-            // Light theme (預設，不加類名)
-            displayName = '淺色 (自動)';
-        }
-    }
-    
-    // 更新按鈕顯示
-    currentThemeName.textContent = displayName;
-}
-
 
 /**
  * 初始化主題：從 localStorage 讀取或根據時間自動判斷
@@ -254,70 +260,45 @@ function applyTheme(desiredTheme) {
 function initializeTheme() {
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     
-    if (storedTheme && (storedTheme === DARK_THEME || storedTheme === GREY_THEME)) {
-        // 如果儲存了深色或灰色模式，直接應用手動選擇
-        applyTheme(storedTheme);
+    // 如果儲存了任意主題 (light, dark, grey)，則應用該主題作為手動選擇
+    if (storedTheme) {
+        // 如果儲存的是 light，我們將其視為用戶期望回到自動模式
+        if (storedTheme === LIGHT_THEME) {
+             applyTheme(LIGHT_THEME, false); // false = 讓它進入自動判斷
+        } else {
+             applyTheme(storedTheme, true); // true = 應用手動選擇 (深色或灰色)
+        }
     } else {
-        // 如果沒有儲存或儲存的是 'light' (視為自動模式)，則根據時間判斷
-        // 這裡我們直接呼叫 applyTheme('light')，它會執行自動判斷邏輯
-        applyTheme(LIGHT_THEME); 
+        // 沒有儲存，預設使用自動模式
+        applyTheme(LIGHT_THEME, false);
     }
 }
 
 
-/**
- * 切換主題選單的顯示狀態
- */
-function toggleThemeMenu() {
-    themeMenu.classList.toggle('hidden-menu');
-}
-
-
-// --- 主題事件監聽器 (已移至頂層) ---
-
-// 點擊主題切換按鈕，切換選單顯示
-themeToggleBtn.addEventListener('click', (event) => {
-    // 阻止事件冒泡，防止被 document 點擊事件立刻關閉
-    event.stopPropagation(); 
-    toggleThemeMenu();
-});
+// --- 主題事件監聽器 (修改為傳遞 isManual = true) ---
 
 // 點擊選單選項，應用新的主題
 themeOptions.forEach(option => {
     option.addEventListener('click', (e) => {
         const selectedTheme = e.target.getAttribute('data-theme');
-        applyTheme(selectedTheme);
+        // *** 關鍵修正：將 isManual 設為 true，強制應用該主題 ***
+        applyTheme(selectedTheme, true); 
         themeMenu.classList.add('hidden-menu');
     });
 });
 
-// 點擊頁面其他地方時，隱藏選單
-document.addEventListener('click', (e) => {
-    // 檢查點擊是否在按鈕或選單內部
-    if (!themeMenu.contains(e.target) && !themeToggleBtn.contains(e.target)) {
-        themeMenu.classList.add('hidden-menu');
-    }
-});
 
-
-// ** BONUS: 定期檢查時間以應對跨越日夜的時間 (每小時) **
+// ** BONUS: 定期檢查時間以應對跨越日夜的時間 (僅用於自動模式) **
 setInterval(() => {
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     
-    // 只有當前主題是 'light' (意圖為自動模式) 時，才需要根據時間自動更新
+    // 只有當前儲存的主題是 'light' (意圖為自動模式) 時，才需要根據時間自動更新
     if (storedTheme === LIGHT_THEME) {
-        const currentSystemTheme = getSystemThemeBasedOnTime();
-        
-        // 檢查當前 body 上的主題類名是否與系統主題匹配
-        const isBodyDark = document.body.classList.contains(DARK_THEME + '-theme');
-        const isSystemDark = currentSystemTheme === DARK_THEME;
-        
-        // 如果 body 類名和系統判斷結果不一致，則重新應用 'light' 模式
-        if ((isSystemDark && !isBodyDark) || (!isSystemDark && isBodyDark)) {
-             applyTheme(LIGHT_THEME); 
-        }
+        // 重新執行自動判斷邏輯
+        applyTheme(LIGHT_THEME, false); 
     }
 }, 1000 * 60 * 60); // 每小時檢查一次
+
     
     
 // --- 定時器/統計邏輯 (保持不變) ---
