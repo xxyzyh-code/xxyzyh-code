@@ -1,5 +1,16 @@
+{% comment %}
+程式夥伴：現有的 robots 設置邏輯
+{% endcomment %}
 {% if page.robots %}
     <meta name="robots" content="{{ page.robots }}">
 {% else %}
     <meta name="robots" content="index, follow"> 
+{% endif %}
+
+{% comment %}
+程式夥伴：自訂音樂播放器樣式引入邏輯
+檢查 page.load_player_css 變數，只在音樂頁面載入 custom_player.css。
+{% endcomment %}
+{% if page.load_player_css %}
+  <link rel="stylesheet" href="{{ '/assets/css/custom_player.css' | relative_url }}">
 {% endif %}
