@@ -6,10 +6,6 @@ author_profile: true
 header:
   overlay_color: "#444"
   overlay_image: /assets/images/contact-bg.jpg
-  
-# 程式夥伴：禁用頂部 Page Header/Hero 區域
-header: true
-show_title: true
 ---
 
 <style>
