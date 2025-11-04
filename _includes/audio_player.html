@@ -5,24 +5,35 @@
         您的瀏覽器不支持 HTML5 音頻。
     </audio>
     
-    <div id="player-controls">
-        <span id="mode-button" onclick="togglePlayMode()">
-            [ 模式: 順序 ]
-        </span>
-        
-        <div id="sleep-timer-area">
-            <button id="timer-toggle-btn" onclick="toggleTimerMenu()">
-                定時 (未設定)
-            </button>
-            
-            <div id="timer-menu" class="hidden-menu">
-                <span class="menu-item" onclick="setSleepTimer(10)">10 分鐘後關閉</span>
-                <span class="menu-item" onclick="setSleepTimer(30)">30 分鐘後關閉</span>
-                <span class="menu-item" onclick="setSleepTimer(60)">60 分鐘後關閉</span>
-                <span class="menu-item" onclick="clearSleepTimer()">取消定時</span>
-            </div>
+<div id="player-controls">
+    <span id="mode-button" onclick="togglePlayMode()">
+        [ 模式: 順序 ]
+    </span>
+    
+    <div id="theme-switcher">
+        <button id="theme-toggle-btn">
+            主題 (當前: <span id="current-theme-name">淺色</span>)
+        </button>
+        <div id="theme-menu" class="hidden-menu">
+            <span class="theme-option" data-theme="light">淺色模式 (自動/白天)</span>
+            <span class="theme-option" data-theme="dark">深色模式 (夜間/黑色)</span>
+            <span class="theme-option" data-theme="grey">夜間模式 (灰色)</span>
         </div>
     </div>
+    <div id="sleep-timer-area">
+        <button id="timer-toggle-btn" onclick="toggleTimerMenu()">
+            定時 (未設定)
+        </button>
+        
+        <div id="timer-menu" class="hidden-menu">
+            <span class="menu-item" onclick="setSleepTimer(10)">10 分鐘後關閉</span>
+            <span class="menu-item" onclick="setSleepTimer(30)">30 分鐘後關閉</span>
+            <span class="menu-item" onclick="setSleepTimer(60)">60 分鐘後關閉</span>
+            <span class="menu-item" onclick="clearSleepTimer()">取消定時</span>
+        </div>
+    </div>
+</div>
+    
     
     <div id="stats-bar">
         <span>總時長: <span id="total-listen-time">0 分鐘</span></span>
@@ -52,7 +63,13 @@ const timerMenu = document.getElementById('timer-menu');
 const totalListenTimeSpan = document.getElementById('total-listen-time');
 const remainingTimerSpan = document.getElementById('remaining-timer');
 
-
+// *** 新增主題切換相關 DOM 元素 ***
+const themeToggleBtn = document.getElementById('theme-toggle-btn');
+const themeMenu = document.getElementById('theme-menu');
+const currentThemeName = document.getElementById('current-theme-name');
+const themeOptions = document.querySelectorAll('#theme-menu .theme-option');
+    
+    
 // 1. 準備數據和狀態追蹤
 const trackList = [
 {% for track in site.data.music %}
@@ -166,6 +183,131 @@ function togglePlayMode() {
     
     modeButton.textContent = modeText;
     playerTitle.textContent = titleMessage;
+
+    // --- 主題切換邏輯 ---
+
+const THEME_STORAGE_KEY = 'userThemePreference';
+const LIGHT_THEME = 'light';
+const DARK_THEME = 'dark';
+const GREY_THEME = 'grey';
+
+/**
+ * 根據當地時間判斷應該使用淺色還是深色
+ * (夜間定義：19:00 (含) 到 07:00 (不含))
+ * @returns {string} 'dark' 或 'light'
+ */
+function getSystemThemeBasedOnTime() {
+    const hour = new Date().getHours();
+    return (hour >= 19 || hour < 7) ? DARK_THEME : LIGHT_THEME;
+}
+
+/**
+ * 設置主題類名並更新按鈕顯示
+ * @param {string} theme - 'light', 'dark', 'grey'
+ */
+function applyTheme(theme) {
+    const body = document.body;
+    let actualTheme = theme;
+    let displayName = '';
+
+    // 移除所有主題類名
+    body.classList.remove(DARK_THEME + '-theme', GREY_THEME + '-theme');
+
+    // 判斷實際主題類名並設置顯示名稱
+    if (theme === DARK_THEME) {
+        body.classList.add(DARK_THEME + '-theme');
+        displayName = '深色 (夜)';
+    } else if (theme === GREY_THEME) {
+        body.classList.add(GREY_THEME + '-theme');
+        displayName = '夜間 (灰)';
+    } else {
+        // Light theme (預設，不加類名)
+        const autoTheme = getSystemThemeBasedOnTime();
+        if (autoTheme === DARK_THEME) {
+             // 如果當前時間是晚上，但用戶點擊 'light'，則視為回到自動模式
+            actualTheme = autoTheme;
+            body.classList.add(DARK_THEME + '-theme');
+            displayName = '深色 (自動)';
+        } else {
+            actualTheme = LIGHT_THEME;
+            displayName = '淺色 (自動)';
+        }
+    }
+    
+    // 更新按鈕顯示
+    currentThemeName.textContent = displayName;
+    
+    // 儲存實際應用的主題到 localStorage
+    localStorage.setItem(THEME_STORAGE_KEY, actualTheme);
+}
+
+
+/**
+ * 初始化主題：從 localStorage 讀取或根據時間自動判斷
+ */
+function initializeTheme() {
+    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    
+    if (storedTheme && (storedTheme === DARK_THEME || storedTheme === GREY_THEME)) {
+        // 如果儲存了深色或灰色模式，直接應用手動選擇
+        applyTheme(storedTheme);
+    } else {
+        // 如果沒有儲存或儲存的是 'light' (視為自動模式)，則根據時間判斷
+        const autoTheme = getSystemThemeBasedOnTime();
+        applyTheme(autoTheme); // 會將結果 (light 或 dark) 儲存到 localStorage
+    }
+}
+
+
+/**
+ * 切換主題選單的顯示狀態
+ */
+function toggleThemeMenu() {
+    themeMenu.classList.toggle('hidden-menu');
+}
+
+
+// --- 事件監聽器 ---
+
+// 點擊主題切換按鈕，切換選單顯示
+themeToggleBtn.addEventListener('click', (event) => {
+    // 阻止事件冒泡，防止被 document 點擊事件立刻關閉
+    event.stopPropagation(); 
+    toggleThemeMenu();
+});
+
+// 點擊選單選項，應用新的主題
+themeOptions.forEach(option => {
+    option.addEventListener('click', (e) => {
+        const selectedTheme = e.target.getAttribute('data-theme');
+        applyTheme(selectedTheme);
+        themeMenu.classList.add('hidden-menu');
+    });
+});
+
+// 點擊頁面其他地方時，隱藏選單
+document.addEventListener('click', (e) => {
+    // 檢查點擊是否在按鈕或選單內部
+    if (!themeMenu.contains(e.target) && !themeToggleBtn.contains(e.target)) {
+        themeMenu.classList.add('hidden-menu');
+    }
+});
+
+
+// ** BONUS: 定期檢查時間以應對跨越日夜的時間 (每小時) **
+setInterval(() => {
+    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    const systemTheme = getSystemThemeBasedOnTime();
+
+    // 只有當前主題是時間自動判斷的結果 ('light' 或 'dark') 
+    // 並且時間發生變化時，才自動更新
+    if (storedTheme === LIGHT_THEME || storedTheme === DARK_THEME) {
+        if (storedTheme !== systemTheme) {
+            applyTheme(systemTheme); // 重新應用主題，它會自動更新 localStorage
+        }
+    }
+}, 1000 * 60 * 60); // 每小時檢查一次
+    
     
     // *** 新增：儲存播放模式到 localStorage ***
     saveSettings(); 
