@@ -1,8 +1,13 @@
 ---
 title: "實時時鐘"
 permalink: /clock/
-layout: single  # 使用你網站的單頁布局
+layout: single
 author_profile: false
+
+# 程式夥伴：禁用頂部 Page Header/Hero 區域
+header: false 
+# 禁用 Minimal Mistakes 主題中頂部可能出現的標題
+show_title: false 
 ---
 
 
@@ -10,7 +15,7 @@ author_profile: false
 
 這是一個冥想訓練，放下生活瑣事，放空清潔心靈...
 
-## 實時數字時鐘
+**實時數字時鐘**
 
 <div id="digital-clock" style="font-size: 3em; font-weight: bold; margin: 50px auto; text-align: center;">
   正在載入時鐘...
