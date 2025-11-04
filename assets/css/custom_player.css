@@ -165,3 +165,26 @@
 #playlist li:last-child {
     border-bottom: none;
 }
+
+/* --- 居中播放器和標題的樣式 --- */
+.center-container {
+    /* 設定最大寬度，避免在超寬螢幕上拉得太開 */
+    max-width: 800px; 
+    /* 核心居中技巧：設定左右 margin 為 auto */
+    margin-left: auto;
+    margin-right: auto;
+    /* 核心文字居中：確保 H1/H2 標題居中 */
+    text-align: center;
+    
+    /* 根據您的整體佈局，可能需要一些頂部和底部的間距 */
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+/* 確保播放器本身（一個塊級元素）也被正確居中 */
+#custom-audio-player {
+    /* 這裡只定義居中，其餘樣式已在檔案開頭定義 */
+    margin-left: auto;
+    margin-right: auto;
+}
+
