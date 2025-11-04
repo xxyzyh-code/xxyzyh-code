@@ -1,14 +1,15 @@
 /* ------------------------------------------- */
-/* 檔案: assets/css/custom_player.css (最終版 - 整合折疊定時器與狀態欄) */
+/* 檔案: assets/css/custom_player.css (最終版 - 整合折疊定時器與狀態欄 - 主題兼容修正) */
 /* ------------------------------------------- */
 
 #custom-audio-player {
     /* 讓播放器看起來像一個獨立的區塊 */
-    border: 1px solid #ddd;
+    /* 修正: border-color 和 background-color 已在 theme.css 中定義和應用 */
+    border: 1px solid var(--border-color); /* 使用變數 */
     padding: 15px;
     margin-bottom: 20px;
     border-radius: 5px;
-    background-color: #f9f9f9;
+    background-color: var(--card-bg); /* 使用變數 */
 }
 
 #custom-audio-player h3 {
@@ -16,7 +17,7 @@
     margin-top: 0;
     margin-bottom: 10px;
     font-size: 1.2em;
-    color: #333;
+    color: var(--text-color); /* 使用變數 */
 }
 
 #main-audio {
@@ -29,12 +30,13 @@
 #player-controls {
     /* 使用 Flexbox 將模式按鈕和定時器控制區分開 */
     display: flex;
-    justify-content: space-between; /* 模式按鈕在左，定時器在右 */
+    justify-content: space-between; 
     align-items: center;
     padding-bottom: 10px;
     margin-bottom: 10px;
-    border-bottom: 1px solid #eee;
-    position: relative; /* 確保菜單可以相對於此定位 */
+    /* 修正: border-bottom 使用變數 */
+    border-bottom: 1px solid var(--border-color); 
+    position: relative; 
 }
 
 /* --- 模式按鈕樣式 (微調，確保在 flexbox 中表現良好) --- */
@@ -42,16 +44,18 @@
     cursor: pointer;
     display: inline-block;
     padding: 5px 10px;
-    background-color: #e9ecef;
+    /* 修正: 使用變數 */
+    background-color: var(--hover-bg); 
     border-radius: 3px;
     font-size: 0.9em;
-    color: #495057;
+    color: var(--text-color); /* 使用變數 */
     transition: background-color 0.2s;
-    user-select: none; /* 防止文本被選中 */
+    user-select: none; 
 }
 
 #mode-button:hover {
-    background-color: #dee2e6; /* 懸停時顏色變深 */
+    /* 修正: 使用變數 */
+    background-color: var(--secondary-text); 
 }
 
 
@@ -61,9 +65,9 @@
 }
 
 #timer-toggle-btn {
-    /* 主定時按鈕 */
+    /* 主定時按鈕 - 保持固定顏色，或者也可以換成主題色 */
     padding: 5px 10px;
-    background-color: #007bff;
+    background-color: #007bff; /* 保持強調色 */
     color: white;
     border: 1px solid #007bff;
     border-radius: 3px;
@@ -77,19 +81,20 @@
 #timer-menu {
     /* 折疊菜單容器 */
     position: absolute;
-    top: 100%; /* 放在按鈕下方 */
+    top: 100%; 
     right: 0;
     z-index: 10;
     min-width: 150px;
-    background: white;
-    border: 1px solid #ccc;
+    /* 修正: 使用變數 */
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
     border-radius: 5px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 陰影不變 */
     margin-top: 5px;
 }
 
 #timer-menu.hidden-menu {
-    display: none; /* JavaScript 用於切換顯示/隱藏 */
+    display: none; 
 }
 
 .menu-item {
@@ -97,17 +102,19 @@
     padding: 8px 12px;
     cursor: pointer;
     font-size: 0.9em;
-    color: #333;
-    border-bottom: 1px solid #eee;
+    /* 修正: 使用變數 */
+    color: var(--text-color);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .menu-item:last-child {
     border-bottom: none;
-    color: #dc3545; /* 取消定時使用紅色 */
+    color: #dc3545; /* 取消定時使用紅色 - 保持固定 */
 }
 
 .menu-item:hover {
-    background-color: #f1f1f1;
+    /* 修正: 使用變數 */
+    background-color: var(--hover-bg);
 }
 
 /* --- 總時長與剩餘時間狀態欄 (新增) --- */
@@ -115,42 +122,41 @@
     display: flex;
     justify-content: space-between;
     font-size: 0.85em;
-    color: #6c757d;
+    color: var(--secondary-text); /* 使用變數 */
     padding: 5px 0;
     margin-bottom: 15px;
 }
 
 #remaining-timer {
     font-weight: bold;
-    color: #28a745; /* 綠色突出顯示 */
+    color: #28a745; /* 綠色突出顯示 - 保持固定 */
 }
 
 /* --- 播放列表樣式 (保持不變) --- */
 #playlist {
-    list-style: none; /* 移除點 */
+    list-style: none; 
     padding: 0;
     margin: 0;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--border-color); /* 使用變數 */
 }
 
 #playlist li {
     padding: 10px 5px;
-    border-bottom: 1px dashed #eee;
+    border-bottom: 1px dashed var(--border-color); /* 使用變數 */
     cursor: pointer;
     transition: background-color 0.15s;
     font-size: 0.95em;
 }
 
 #playlist li:hover {
-    background-color: #f1f1f1; /* 懸停效果 */
+    background-color: var(--hover-bg); /* 使用變數 */
 }
 
 #playlist li.playing {
-    /* 當前正在播放的歌曲 */
-    background-color: #e0f7fa; /* 淺藍色背景 */
+    background-color: var(--playing-bg); /* 使用變數 */
     font-weight: bold;
-    color: #007bff; /* 藍色文字 */
-    border-left: 3px solid #007bff; /* 突出左側邊框 */
+    color: var(--playing-text); /* 使用變數 */
+    border-left: 3px solid var(--playing-text); /* 使用變數 */
     padding-left: 7px;
 }
 
