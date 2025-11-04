@@ -4,10 +4,16 @@
     <audio id="main-audio" controls src="{{ site.data.music[0].url }}">
         您的瀏覽器不支持 HTML5 音頻。
     </audio>
-
+    
+    <div id="player-controls">
+        <span id="mode-button" onclick="togglePlayMode()">
+            [ 模式: 順序 ]
+        </span>
+    </div>
+    
     <ul id="playlist">
     {% for track in site.data.music %}
-        <li data-url="{{ track.url }}" onclick="loadTrack('{{ track.url }}', '{{ track.title }}')">
+        <li data-url="{{ track.url }}" onclick="loadTrack('{{ track.url }}', '{{ track.title }}', {{ forloop.index0 }})">
             {{ track.title }} - {{ track.artist }}
         </li>
     {% endfor %}
@@ -15,14 +21,99 @@
 </div>
 
 <script>
-    const audio = document.getElementById('main-audio');
-    const playerTitle = document.querySelector('#custom-audio-player h3');
+// 獲取 DOM 元素
+const audio = document.getElementById('main-audio');
+const playerTitle = document.querySelector('#custom-audio-player h3');
+const playlistItems = document.querySelectorAll('#playlist li'); 
+const modeButton = document.getElementById('mode-button'); // 新增：模式按鈕 DOM 元素
 
-    // JavaScript 邏輯：點擊清單項目時載入並播放新歌曲
-    function loadTrack(url, title) {
-        audio.src = url;
-        playerTitle.textContent = `正在播放：${title}`;
-        audio.play();
+// 1. 準備數據和狀態追蹤
+const trackList = [
+{% for track in site.data.music %}
+    { title: "{{ track.title | escape }}", url: "{{ track.url | escape }}" },
+{% endfor %}
+];
+
+let currentTrackIndex = 0; 
+// 播放模式：0 = 順序播放 (預設), 1 = 單曲循環
+let playMode = 0; 
+
+// --- 輔助函數 ---
+
+// 載入並播放指定索引的歌曲
+function playTrack(index) {
+    if (index >= 0 && index < trackList.length) {
+        currentTrackIndex = index;
+        const track = trackList[index];
+        audio.src = track.url;
+        playerTitle.textContent = `正在播放：${track.title}`;
+        audio.play().catch(error => {
+            console.error("自動播放失敗，可能是瀏覽器限制：", error);
+        });
+        updatePlaylistHighlight();
+    } else if (index === trackList.length) {
+        // 播放到列表結束 (順序播放模式)
+        audio.pause(); 
+        playerTitle.textContent = "播放列表已結束";
+        currentTrackIndex = -1; // 將索引設為結束狀態
+        updatePlaylistHighlight();
     }
-    // ...
+}
+
+// 更新播放列表的高亮狀態
+function updatePlaylistHighlight() {
+    playlistItems.forEach((item, index) => {
+        item.classList.remove('playing');
+        if (index === currentTrackIndex) {
+            item.classList.add('playing');
+        }
+    });
+}
+
+// --- 核心邏輯：控制播放順序 ---
+
+audio.addEventListener('ended', () => {
+    if (playMode === 1) {
+        // 模式 1: 單曲循環 (在當前索引上重新播放)
+        audio.currentTime = 0; 
+        audio.play();
+    } else {
+        // 模式 0: 順序播放 (預設)
+        if (currentTrackIndex < trackList.length - 1) {
+            playTrack(currentTrackIndex + 1); 
+        } else {
+            // 列表結束
+            playTrack(trackList.length); 
+        }
+    }
+});
+
+// --- 模式切換函數 (新增) ---
+
+function togglePlayMode() {
+    // 在 0 (順序播放) 和 1 (單曲循環) 之間切換
+    playMode = (playMode + 1) % 2; 
+    
+    // 更新按鈕的顯示文字
+    if (playMode === 1) {
+        modeButton.textContent = "[ 模式: 循環 ]";
+        // 提示用戶模式已更改
+        playerTitle.textContent = "已切換到單曲循環模式";
+    } else {
+        modeButton.textContent = "[ 模式: 順序 ]";
+        playerTitle.textContent = "已切換到順序播放模式";
+    }
+}
+
+
+// --- 外部呼叫函數 (來自列表點擊) ---
+
+// 為了讓 loadTrack 更有效率，我們在 Liquid 裡傳遞了索引
+function loadTrack(url, title, index) {
+    playTrack(index);
+}
+
+// 初始化：載入並高亮第一首歌
+updatePlaylistHighlight();
+
 </script>
