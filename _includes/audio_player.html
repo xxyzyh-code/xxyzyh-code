@@ -201,8 +201,11 @@ const THEME_STORAGE_KEY = 'userThemePreference';
 const LIGHT_THEME = 'light'; // 內部標籤：白色
 const DARK_THEME = 'dark';   // 內部標籤：黑色
 const GREY_THEME = 'grey';   // 內部標籤：灰色
-const BLUE_THEME = 'blue';   // ✅ 新增藍色常量
-const GREEN_THEME = 'green'; // ✅ 新增綠色常量
+const BLUE_THEME = 'blue';
+const GREEN_THEME = 'green';
+const PURPLE_THEME = 'purple';
+const PINK_THEME = 'pink';
+const RED_THEME = 'red';
     
 /**
  * 設置主題類名並更新按鈕顯示
@@ -218,23 +221,23 @@ function applyTheme(desiredTheme, isManual = false) {
     body.classList.remove(
         DARK_THEME + '-theme', 
         GREY_THEME + '-theme',
-        BLUE_THEME + '-theme',    // ✅ 清除藍色主題類
-        GREEN_THEME + '-theme'    // ✅ 清除綠色主題類
+        BLUE_THEME + '-theme',
+        GREEN_THEME + '-theme',
+        PURPLE_THEME + '-theme', // ✅ 新增清除紫色
+        PINK_THEME + '-theme',   // ✅ 新增清除粉色
+        RED_THEME + '-theme'     // ✅ 新增清除紅色
     );
 
     let themeToApply = desiredTheme;
-    let modeText = '(手動)'; // 預設為手動，除非進入自動判斷流程
+    let modeText = '(手動)'; 
 
-    // 2. 處理儲存：如果是手動選擇，儲存使用者的意圖
+    // 2. 處理儲存/自動模式 (保持不變)
     if (isManual) {
         localStorage.setItem(THEME_STORAGE_KEY, desiredTheme);
     } 
-    // 處理頁面載入時的「自動模式」：
     else if (desiredTheme === LIGHT_THEME) {
-        // 如果是初始載入且儲存的意圖是 'light'，則進入自動模式判斷
         themeToApply = getSystemThemeBasedOnTime();
         modeText = '(自動)';
-        // 如果自動判斷結果是淺色，則 themeToApply 仍然是 'light'，無需加 class
     }
 
 
@@ -245,14 +248,22 @@ function applyTheme(desiredTheme, isManual = false) {
     } else if (themeToApply === GREY_THEME) {
         body.classList.add(GREY_THEME + '-theme');
         displayName = '灰色';
-    } else if (themeToApply === BLUE_THEME) { // ✅ 處理藍色主題
+    } else if (themeToApply === BLUE_THEME) {
         body.classList.add(BLUE_THEME + '-theme');
         displayName = '藍色';
-    } else if (themeToApply === GREEN_THEME) { // ✅ 處理綠色主題
+    } else if (themeToApply === GREEN_THEME) {
         body.classList.add(GREEN_THEME + '-theme');
         displayName = '綠色';
+    } else if (themeToApply === PURPLE_THEME) { // ✅ 處理紫色
+        body.classList.add(PURPLE_THEME + '-theme');
+        displayName = '紫色';
+    } else if (themeToApply === PINK_THEME) { // ✅ 處理粉色
+        body.classList.add(PINK_THEME + '-theme');
+        displayName = '粉色';
+    } else if (themeToApply === RED_THEME) { // ✅ 處理紅色
+        body.classList.add(RED_THEME + '-theme');
+        displayName = '紅色';
     } else { 
-        // themeToApply 是 'light'：強制使用白色 (預設，不加類名)
         displayName = '白色';
     }
     
