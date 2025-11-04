@@ -53,12 +53,33 @@ navigation:
     - title: "搜索"
       url: /search/
 
-defaults:
+
+      defaults:
+  # 1. 针对所有文章 (posts)，无论使用哪个 layout，都默认封锁
   - scope:
       path: ""
+      type: "posts"
     values:
+      # 保持文章布局和作者档案的默认值
       layout: single
       author_profile: true
+      # 🚀 封锁文章的核心：
+      robots: "noindex, nofollow" 
+      seo:
+        noindex: true
+        
+  # 2. 针对所有页面 (pages，包括 /about/, /tags/ 等)，默认封锁
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      # 默认页面布局可以改为 page，或者保持 single
+      layout: single
+      author_profile: true
+      # 🚀 封锁页面的核心：
+      robots: "noindex, nofollow" 
+      seo:
+        noindex: true
 
 search: false   # ❌ 禁用搜索，防止 GitHub Pages 报错
 paginate: 5
