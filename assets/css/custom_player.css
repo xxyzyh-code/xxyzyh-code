@@ -58,24 +58,26 @@
 }
 
 
-/* --- *** 定時器折疊菜單樣式 (修復背景) *** --- */
+/* --- *** 定時器折疊菜單樣式 (使用強調色變數) *** --- */
 #sleep-timer-area {
     position: relative;
 }
 
 #timer-toggle-btn {
-    /* 主定時按鈕 - 保持固定顏色 */
+    /* 主定時按鈕 - 使用主題強調色 */
     padding: 5px 10px;
-    background-color: #007bff; 
+    background-color: var(--accent-color); /* ✅ 替換為強調色變數 */
     color: white;
-    border: 1px solid #007bff;
+    border: 1px solid var(--accent-color); /* ✅ 替換為強調色變數 */
     border-radius: 3px;
     cursor: pointer;
     font-size: 0.9em;
 }
 #timer-toggle-btn:hover {
-    background-color: #0056b3;
+    background-color: var(--accent-hover); /* ✅ 替換為懸停強調色變數 */
+    border-color: var(--accent-hover);
 }
+
 
 #timer-menu {
     /* 折疊菜單容器 */
