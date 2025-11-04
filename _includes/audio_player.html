@@ -370,9 +370,15 @@ function clearSleepTimer() {
     playerTitle.textContent = "已取消定時器";
 }
 
+/**
+ * 更新倒數計時顯示，基於目標結束時間 (endTime) 計算
+ */
 function updateTimerCountdown() {
     if (endTime > 0) {
+        // 關鍵修正：計算當前時間與目標時間的精確差值
         const remainingMs = endTime - Date.now();
+        
+        // 確保剩餘時間不為負數
         const remainingS = Math.max(0, Math.floor(remainingMs / 1000));
         
         const minutes = Math.floor(remainingS / 60);
@@ -381,11 +387,20 @@ function updateTimerCountdown() {
         remainingTimerSpan.textContent = 
             `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
             
+        // 如果時間到期，清除計時器
         if (remainingS === 0) {
             clearSleepTimer(); 
+            
+            // 如果倒數計時已經結束，我們也應該停止音頻
+            // 雖然定時器到期邏輯在 setTimeout 裡，這裡增加一個保險
+            if (!audio.paused) {
+                 audio.pause();
+                 playerTitle.textContent = `定時器到期，已暫停播放`;
+            }
         }
     }
 }
+
 
 audio.addEventListener('play', () => {
     if (listenIntervalId === null) {
