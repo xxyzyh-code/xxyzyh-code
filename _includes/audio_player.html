@@ -277,38 +277,45 @@ function loadTrack(url, title, index) {
 }
 
 
-// --- *** 新增 LocalStorage 邏輯 *** ---
+// --- *** LocalStorage 邏輯 (修正音量儲存) *** ---
 
-// 儲存當前音量和模式
+// 儲存當前音量、靜音狀態和模式
 function saveSettings() {
     try {
+        // 保存音量值
         localStorage.setItem('audioPlayerVolume', audio.volume);
+        // *** 修正：同時保存靜音狀態 ***
+        localStorage.setItem('audioPlayerMuted', audio.muted);
+        // 保存播放模式
         localStorage.setItem('audioPlayerMode', playMode);
     } catch (e) {
         console.warn('LocalStorage is not available or blocked.', e);
     }
 }
 
-// 從儲存中載入音量和模式
+// 從儲存中載入音量、靜音狀態和模式
 function loadSavedSettings() {
     try {
         // 載入音量
         const savedVolume = localStorage.getItem('audioPlayerVolume');
         if (savedVolume !== null) {
-            // 確保音量是 0.0 到 1.0 之間
+            // 確保音量在 0.0 到 1.0 之間
             audio.volume = Math.max(0, Math.min(1, parseFloat(savedVolume)));
+        }
+
+        // *** 修正：載入靜音狀態 ***
+        const savedMuted = localStorage.getItem('audioPlayerMuted');
+        if (savedMuted !== null) {
+             // localStorage 儲存的是字串 'true' 或 'false'
+            audio.muted = (savedMuted === 'true');
         }
 
         // 載入模式
         const savedMode = localStorage.getItem('audioPlayerMode');
         if (savedMode !== null) {
             const mode = parseInt(savedMode);
-            // 確保模式在 0-3 範圍內
             if (mode >= 0 && mode <= 3) {
                 playMode = mode;
-                // 更新模式按鈕 UI
-                // 由於 togglePlayMode 會遞增，我們需要一個專門更新 UI 的函數，
-                // 這裡我們直接呼叫 togglePlayMode 的核心邏輯，確保 UI 更新
                 updateModeUI(); 
             }
         }
@@ -317,7 +324,7 @@ function loadSavedSettings() {
     }
 }
 
-// 專門用於載入設定時更新模式 UI (提取自 togglePlayMode 函數)
+// 專門用於載入設定時更新模式 UI 
 function updateModeUI() {
     let modeText;
     if (playMode === 1) {
@@ -330,11 +337,13 @@ function updateModeUI() {
         modeText = "[ 模式: 順序 ]";
     }
     modeButton.textContent = modeText;
-    // 不更新 playerTitle，避免在載入時刷屏
 }
 
-// 監聽音量變更事件，以便儲存
+// 監聽音量變更和靜音狀態變更事件，以便儲存
+// *** 修正：音量和靜音狀態變更都呼叫 saveSettings ***
 audio.addEventListener('volumechange', saveSettings);
+audio.addEventListener('ratechange', saveSettings); // 某些瀏覽器可能需要
+audio.addEventListener('loadedmetadata', saveSettings); // 首次載入 metadata 後儲存一次
 
 
 // --- 初始化 ---
