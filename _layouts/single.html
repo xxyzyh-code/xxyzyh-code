@@ -52,8 +52,10 @@ noindex: true
             {% endunless %}
           {% endif %}
           
-          {% comment %} 程式夥伴：動態生成 page_id 以實現分頁統計 {% endcomment %}
-          {% assign unique_id = page.url | cgi_escape | remove: '/' %}
+          {% comment %} 程式夥伴：動態生成 page_id 以實現分頁統計 - 修正方案，使用 page.path 確保唯一性並避免舊 ID 衝突 {% endcomment %}
+          {% assign form_id = page.path | replace: '/', '-' | remove: 'index.html' | remove: '.md' | remove: '.html' | strip | default: 'homepage' %}
+          {% assign unique_id = 'site-' | append: form_id | cgi_escape %}
+
           <div style="text-align: center; margin-top: 30px;">
             <img src="https://visitor-badge.laobi.icu/badge?page_id={{ unique_id }}" alt="Visitor Count">
           </div>
