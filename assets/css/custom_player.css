@@ -121,6 +121,29 @@
     background-color: var(--hover-bg);
 }
 
+/* --- *** 新增：播放列表搜尋區塊樣式 *** --- */
+
+#search-area {
+    margin-bottom: 10px; /* 與下方的狀態欄和播放列表保持間距 */
+}
+
+#playlist-search {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color); /* 主題兼容邊框 */
+    border-radius: 5px;
+    font-size: 1em;
+    color: var(--text-color);
+    background-color: var(--card-bg); /* 主題兼容背景 */
+    transition: border-color 0.2s;
+}
+
+#playlist-search:focus {
+    /* 搜尋框獲得焦點時使用強調色邊框 */
+    border-color: var(--accent-color); 
+    outline: none;
+}
+
 /* --- 總時長與剩餘時間狀態欄 (保持不變) --- */
 #stats-bar {
     display: flex;
