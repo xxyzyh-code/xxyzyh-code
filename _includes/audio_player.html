@@ -62,7 +62,7 @@
 
 
 <script>
-// 獲取 DOM 元素
+    // 獲取 DOM 元素
 const audio = document.getElementById('main-audio');
 const playerTitle = document.querySelector('#custom-audio-player h3');
 let playlistItems = document.querySelectorAll('#playlist li'); // 【修改】使用 let 讓排序後可以重新賦值
@@ -84,10 +84,16 @@ const themeOptions = document.querySelectorAll('#theme-menu .theme-option');
     
 // 1. 準備數據和狀態追蹤
 const MASTER_TRACK_LIST = [ 
-{% for track in site.data.music %}
+
     // 增加一個原始索引 (originalIndex)，用於將來回溯或去篩選時定位
-    { title: "{{ track.title | escape }}", artist: "{{ track.artist | escape }}", url: "{{ track.url | escape }}", originalIndex: {{ forloop.index0 }} },
-{% endfor %}
+    { title: "Alive in the summer time", artist: "AI", url: "https://raw.githubusercontent.com/xxyzyh-code/music/main/Alive in the summer time.m4a", originalIndex: 0 },
+
+    // 增加一個原始索引 (originalIndex)，用於將來回溯或去篩選時定位
+    { title: "Breakbeat background", artist: "AI", url: "https://raw.githubusercontent.com/xxyzyh-code/music/main/Breakbeat background.m4a", originalIndex: 1 },
+
+    // 增加一個原始索引 (originalIndex)，用於將來回溯或去篩選時定位
+    { title: "The best moments in life", artist: "AI", url: "https://raw.githubusercontent.com/xxyzyh-code/music/main/The best moments in life.m4a", originalIndex: 2 },
+
 ];
 
 let currentPlaylist = []; 
@@ -252,8 +258,7 @@ function togglePlayMode() {
 }
 
 
-// --- *** 主題切換邏輯 (保持不變) *** ---
-// (此處省略主題切換函數，保持與您提供的版本一致)
+// --- *** 主題切換邏輯 *** ---
 const THEME_STORAGE_KEY = 'userThemePreference';
 const LIGHT_THEME = 'light'; 
 const DARK_THEME = 'dark';   
@@ -350,7 +355,7 @@ function initializeTheme() {
     }
 }
 
-// --- 主題/定時器事件監聽器 (保持不變) ---
+// --- 主題/定時器事件監聽器 ---
 
 themeToggleBtn.addEventListener('click', (event) => {
     event.stopPropagation(); 
@@ -384,7 +389,7 @@ setInterval(() => {
     }
 }, 1000 * 60 * 60); 
     
-// --- 定時器/統計邏輯 (保持不變) ---
+// --- 定時器/統計邏輯 ---
 
 function toggleTimerMenu() {
     timerMenu.classList.toggle('hidden-menu');
@@ -478,7 +483,7 @@ function updateTotalListenTime() {
         `${totalListenMinutes} 分鐘 ${totalListenSeconds} 秒`;
 }
 
-// 【被替換/修改】播放次數追蹤函數 - 第一處
+// 【唯一版本】播放次數追蹤函數 (已包含 LocalStorage 和 GA4 邏輯)
 /**
  * 歌曲播放完成後，1. 增加 LocalStorage 次數； 2. 上傳事件到 GA4
  * 僅在 GA4 代碼載入時 (即在 /music/ 頁面)，才會發送事件。
@@ -508,7 +513,6 @@ function incrementPlayCount() {
             console.log(`GA4 事件發送成功: song_played, 歌曲ID: ${key}, 標題: ${track.title}`);
         } else {
              // 這是預期的行為：當在非 /music/ 頁面載入此腳本時，不會有 gtag 函數
-             // 或是為了確保 /music/ 頁面載入正確，可以保留一個警告
              // console.warn('GA4 追蹤代碼 (gtag) 未載入。事件追蹤已跳過。');
         }
         // ----------------------------------------------------
@@ -547,44 +551,7 @@ function loadTrack(originalIndex) {
     }
 }
 
-
-// 【被替換/修改】播放次數追蹤函數 - 第二處
-/**
- * 歌曲播放完成後，1. 增加 LocalStorage 次數； 2. 上傳事件到 GA4
- * 僅在 GA4 代碼載入時 (即在 /music/ 頁面)，才會發送事件。
- */
-function incrementPlayCount() {
-    if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
-        const track = currentPlaylist[currentTrackIndex];
-        const key = track.originalIndex; // 使用原始索引作為唯一鍵
-        
-        // --- 1. LocalStorage 累加計數 (用於本地排序和顯示 - 保持不動) ---
-        trackPlayCounts[key] = (trackPlayCounts[key] || 0) + 1; 
-        
-        try {
-            // 儲存到 LocalStorage
-            localStorage.setItem(PLAY_COUNT_STORAGE_KEY, JSON.stringify(trackPlayCounts));
-        } catch (e) {
-            console.warn('無法儲存播放次數到 LocalStorage.', e);
-        }
-        
-        // --- 2. 數據傳輸到 GA4 (用於後台總計 - 新增/修改) ---
-        // 檢查 gtag 函數是否存在 (即 GA4 代碼是否載入成功)
-        if (typeof gtag === 'function') {
-            gtag('event', 'song_played', {
-                'song_index': key,           // 歌曲的唯一 ID (數字索引)
-                'song_title': track.title    // 歌曲標題 (更有描述性的資訊)
-            });
-            console.log(`GA4 事件發送成功: song_played, 歌曲ID: ${key}, 標題: ${track.title}`);
-        } else {
-             // 這是預期的行為：當在非 /music/ 頁面載入此腳本時，不會有 gtag 函數
-             // 或是為了確保 /music/ 頁面載入正確，可以保留一個警告
-             // console.warn('GA4 追蹤代碼 (gtag) 未載入。事件追蹤已跳過。');
-        }
-        // ----------------------------------------------------
-    }
-}
-
+// *** 注意：此處已刪除重複的 incrementPlayCount() 函數 ***
 
 // --- *** 搜尋/篩選邏輯 (重構為動態歌單) *** ---
 /**
