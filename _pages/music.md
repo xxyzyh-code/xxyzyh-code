@@ -20,7 +20,8 @@ load_player_css: true
 
     <h1>{{ page.title }}</h1> 
 
-    <h3>歡迎收聽！</h3> 
+    {% assign total_tracks = site.data.music | size %}
+    <h3>本站共收錄 {{ total_tracks }} 首音樂，歡迎收聽！</h3> 
     {% include audio_player.html %}
 
 </div>
