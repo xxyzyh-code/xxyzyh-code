@@ -59,13 +59,11 @@
     </ul>
     
 </div>
-
-
 <script>
     // 獲取 DOM 元素
 const audio = document.getElementById('main-audio');
 const playerTitle = document.querySelector('#custom-audio-player h3');
-let playlistItems = document.querySelectorAll('#playlist li'); // 【修改】使用 let 讓排序後可以重新賦值
+let playlistItems = document.querySelectorAll('#playlist li'); 
 const modeButton = document.getElementById('mode-button'); 
 
 // 新增 DOM 元素
@@ -75,7 +73,7 @@ const totalListenTimeSpan = document.getElementById('total-listen-time');
 const remainingTimerSpan = document.getElementById('remaining-timer');
 const playlistSearchInput = document.getElementById('playlist-search'); 
 
-// *** 主題切換相關 DOM 元素 (頂層定義) ***
+// *** 主題切換相關 DOM 元素 ***
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 const themeMenu = document.getElementById('theme-menu');
 const currentThemeName = document.getElementById('current-theme-name');
@@ -98,8 +96,13 @@ const MASTER_TRACK_LIST = [
 
 let currentPlaylist = []; 
 let currentTrackIndex = 0; 
-// 播放模式：0=順序, 1=循環, 2=隨機, 3=自由(播完即停)
-let playMode = 0; 
+// 【修改點】播放模式：
+// 0=順序停止 (默認)
+// 1=單曲循環
+// 2=隨機播放
+// 3=自由模式 (點擊即切換，播完即停)
+// 4=順序循環
+let playMode = 0; // 默認為順序停止
 
 // 定時器狀態變數
 let sleepTimerId = null; 
@@ -112,15 +115,12 @@ let totalListenMinutes = 0;
 let totalListenSeconds = 0;
 let listenIntervalId = null; 
 
-// 【新增】播放次數追蹤變數
+// 播放次數追蹤變數
 const PLAY_COUNT_STORAGE_KEY = 'audioTrackPlayCounts'; 
 let trackPlayCounts = {}; 
 
 
 // --- *** 防抖輔助函數 *** ---
-/**
- * 防抖函數：限制一個函數在特定時間內只能執行一次
- */
 function debounce(func, delay) {
     let timeoutId;
     return function(...args) {
@@ -134,9 +134,6 @@ function debounce(func, delay) {
 
 // --- *** 歌單重置與初始化 *** ---
 
-/**
- * 將當前播放歌單重設為整個主歌單 (在清除搜尋時使用)
- */
 function resetCurrentPlaylist() {
     currentPlaylist = [...MASTER_TRACK_LIST]; 
 }
@@ -157,6 +154,7 @@ function playTrack(index) {
         });
         updatePlaylistHighlight();
     } else if (index === currentPlaylist.length) { 
+        // 這是舊的“歌單已結束”邏輯，理論上新模式下不會走到這一步
         audio.pause(); 
         playerTitle.textContent = "播放列表已結束";
         currentTrackIndex = -1; 
@@ -168,7 +166,6 @@ function playTrack(index) {
 function getNextRandomIndex() {
     let newIndex;
     do {
-        // 隨機數基於 currentPlaylist 的長度
         newIndex = Math.floor(Math.random() * currentPlaylist.length); 
     } while (newIndex === currentTrackIndex && currentPlaylist.length > 1);
     
@@ -177,16 +174,13 @@ function getNextRandomIndex() {
 
 // 更新播放列表的高亮狀態
 function updatePlaylistHighlight() {
-    // 獲取當前播放歌曲在 Master List 中的原始索引
     const playingOriginalIndex = currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length 
         ? currentPlaylist[currentTrackIndex].originalIndex 
         : -1;
     
-    // 【修改】由於 playlistItems 可能被排序，這裡的 index 已經不是 originalIndex
     playlistItems.forEach(item => {
         item.classList.remove('playing');
         
-        // 從 li 元素的 onclick 屬性中提取 originalIndex
         const onclickAttr = item.getAttribute('onclick');
         const match = onclickAttr.match(/loadTrack\((\d+)\)/);
         const itemOriginalIndex = match ? parseInt(match[1]) : -2;
@@ -201,64 +195,88 @@ function updatePlaylistHighlight() {
 // --- 核心邏輯：控制播放順序/循環/隨機/自由 ---
 
 audio.addEventListener('ended', () => {
-    // 【修改點】在切換下一首歌之前，先記錄當前歌曲播放完成
+    // 記錄當前歌曲播放完成，用於 GA4 和本地計數
     incrementPlayCount(); 
-    updatePlaylistDisplay(); // 每次計數更新後，重新渲染播放次數
-    sortPlaylistByPlayCount(); //實時執行排序：下一首歌曲播放時，列表已經是最新的高人氣排序了！
+    updatePlaylistDisplay(); 
+    sortPlaylistByPlayCount(); 
 
-    
-    if (playMode === 1) {
-        audio.currentTime = 0; 
-        audio.play();
-    } else if (playMode === 2) {
-        const nextIndex = getNextRandomIndex();
-        playTrack(nextIndex);
-    } else if (playMode === 3) {
-        audio.pause();
-        playerTitle.textContent = "自由模式下，當前歌曲播放完畢。";
-        currentTrackIndex = -1; 
-        updatePlaylistHighlight();
-    } 
-    else {
-        if (currentTrackIndex < currentPlaylist.length - 1) { 
-            playTrack(currentTrackIndex + 1); 
-        } else {
-            playTrack(currentPlaylist.length); 
-        }
+    // 處理播放模式
+    switch (playMode) {
+        case 1: // 單曲循環
+            audio.currentTime = 0; 
+            audio.play();
+            break;
+
+        case 2: // 隨機播放
+            const nextIndex = getNextRandomIndex();
+            playTrack(nextIndex);
+            break;
+
+        case 3: // 自由模式 (播完即停)
+            audio.pause();
+            playerTitle.textContent = "自由模式下，當前歌曲播放完畢。";
+            currentTrackIndex = -1; 
+            updatePlaylistHighlight();
+            break;
+
+        case 4: // 【新增】順序循環
+            if (currentTrackIndex < currentPlaylist.length - 1) { 
+                playTrack(currentTrackIndex + 1); // 播放下一首
+            } else {
+                playTrack(0); // 從頭開始
+            }
+            break;
+            
+        case 0: // 【新默認】順序停止 (播完歌單即停)
+        default:
+            if (currentTrackIndex < currentPlaylist.length - 1) { 
+                playTrack(currentTrackIndex + 1); // 播放下一首
+            } else {
+                // 歌單已播完，停止播放
+                audio.pause();
+                playerTitle.textContent = "順序播放完成，已停止。";
+                currentTrackIndex = -1; // 標記為未播放狀態
+                updatePlaylistHighlight();
+            }
+            break;
     }
 });
 
 
 // 模式切換函數
 function togglePlayMode() {
-    playMode = (playMode + 1) % 4; 
+    // 【修改點】總共有 5 種模式 (0, 1, 2, 3, 4)
+    playMode = (playMode + 1) % 5; 
     
-    let modeText;
-    let titleMessage;
+    updateModeUI(); // 呼叫更新 UI 函數
     
-    if (playMode === 1) {
-        modeText = "[ 模式: 循環 ]";
-        titleMessage = "已切換到單曲循環模式";
-    } else if (playMode === 2) {
-        modeText = "[ 模式: 隨機 ]";
-        titleMessage = "已切換到隨機播放模式";
-    } else if (playMode === 3) {
-        modeText = "[ 模式: 自由 ]";
-        titleMessage = "已切換到自由播放模式 (播完即停)";
-    } else {
-        modeText = "[ 模式: 順序 ]";
-        titleMessage = "已切換到順序播放模式";
-    }
-    
-    modeButton.textContent = modeText;
-    playerTitle.textContent = titleMessage;
+    playerTitle.textContent = `已切換到 ${modeButton.textContent.replace('[ 模式: ', '').replace(' ]', '')}`;
 
     // 儲存播放模式到 localStorage
     saveSettings(); 
 }
 
+// 【新增】統一更新模式 UI 的函數
+function updateModeUI() {
+    let modeText;
+    
+    if (playMode === 1) {
+        modeText = "[ 模式: 單曲循環 ]";
+    } else if (playMode === 2) {
+        modeText = "[ 模式: 隨機 ]";
+    } else if (playMode === 3) {
+        modeText = "[ 模式: 自由 ]";
+    } else if (playMode === 4) {
+        modeText = "[ 模式: 順序循環 ]"; // 新增
+    } else {
+        modeText = "[ 模式: 順序停止 ]"; // 0 (默認)
+    }
+    
+    modeButton.textContent = modeText;
+}
 
-// --- *** 主題切換邏輯 *** ---
+
+// --- *** 主題切換邏輯 (與您原來的代碼相同) *** ---
 const THEME_STORAGE_KEY = 'userThemePreference';
 const LIGHT_THEME = 'light'; 
 const DARK_THEME = 'dark';   
@@ -269,14 +287,10 @@ const PURPLE_THEME = 'purple';
 const PINK_THEME = 'pink';
 const RED_THEME = 'red';
     
-/**
- * 設置主題類名並更新按鈕顯示
- */
 function applyTheme(desiredTheme, isManual = false) {
     const body = document.body;
     let displayName = '';
     
-    // 1. 清除所有主題類名 (確保只應用一個主題)
     body.classList.remove(
         DARK_THEME + '-theme', 
         GREY_THEME + '-theme',
@@ -290,7 +304,6 @@ function applyTheme(desiredTheme, isManual = false) {
     let themeToApply = desiredTheme;
     let modeText = '(手動)'; 
 
-    // 2. 處理儲存/自動模式 (保持不變)
     if (isManual) {
         localStorage.setItem(THEME_STORAGE_KEY, desiredTheme);
     } 
@@ -299,7 +312,6 @@ function applyTheme(desiredTheme, isManual = false) {
         modeText = '(自動)';
     }
 
-    // 3. 根據最終確定的主題 themeToApply 應用類名
     if (themeToApply === DARK_THEME) {
         body.classList.add(DARK_THEME + '-theme');
         displayName = '黑色';
@@ -325,22 +337,14 @@ function applyTheme(desiredTheme, isManual = false) {
         displayName = '白色';
     }
     
-    // 4. 更新按鈕顯示
     currentThemeName.textContent = `${displayName} ${modeText}`;
 }
 
-
-/**
- * 根據當地時間判斷應該使用淺色還是深色
- */
 function getSystemThemeBasedOnTime() {
     const hour = new Date().getHours();
     return (hour >= 19 || hour < 7) ? DARK_THEME : LIGHT_THEME;
 }
 
-/**
- * 初始化主題：從 localStorage 讀取或根據時間自動判斷
- */
 function initializeTheme() {
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     
@@ -355,7 +359,7 @@ function initializeTheme() {
     }
 }
 
-// --- 主題/定時器事件監聽器 ---
+// --- 主題/定時器事件監聽器 (與您原來的代碼相同) ---
 
 themeToggleBtn.addEventListener('click', (event) => {
     event.stopPropagation(); 
@@ -389,7 +393,7 @@ setInterval(() => {
     }
 }, 1000 * 60 * 60); 
     
-// --- 定時器/統計邏輯 ---
+// --- 定時器/統計邏輯 (與您原來的代碼相同) ---
 
 function toggleTimerMenu() {
     timerMenu.classList.toggle('hidden-menu');
@@ -458,7 +462,6 @@ function updateTimerCountdown() {
     }
 }
 
-
 audio.addEventListener('play', () => {
     if (listenIntervalId === null) {
         listenIntervalId = setInterval(updateTotalListenTime, 1000);
@@ -483,96 +486,76 @@ function updateTotalListenTime() {
         `${totalListenMinutes} 分鐘 ${totalListenSeconds} 秒`;
 }
 
-// 【唯一版本】播放次數追蹤函數 (已包含 LocalStorage 和 GA4 邏輯)
-/**
- * 歌曲播放完成後，1. 增加 LocalStorage 次數； 2. 上傳事件到 GA4
- * 僅在 GA4 代碼載入時 (即在 /music/ 頁面)，才會發送事件。
- */
+// 播放次數追蹤函數
 function incrementPlayCount() {
     if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
         const track = currentPlaylist[currentTrackIndex];
-        const key = track.originalIndex; // 使用原始索引作為唯一鍵
+        const key = track.originalIndex; 
         
-        // --- 1. LocalStorage 累加計數 (用於本地排序和顯示 - 保持不動) ---
+        // LocalStorage 累加計數
         trackPlayCounts[key] = (trackPlayCounts[key] || 0) + 1; 
         
         try {
-            // 儲存到 LocalStorage
             localStorage.setItem(PLAY_COUNT_STORAGE_KEY, JSON.stringify(trackPlayCounts));
         } catch (e) {
             console.warn('無法儲存播放次數到 LocalStorage.', e);
         }
         
-        // --- 2. 數據傳輸到 GA4 (用於後台總計 - 新增/修改) ---
-        // 檢查 gtag 函數是否存在 (即 GA4 代碼是否載入成功)
+        // 數據傳輸到 GA4 
         if (typeof gtag === 'function') {
             gtag('event', 'song_played', {
-                'song_index': key,           // 歌曲的唯一 ID (數字索引)
-                'song_title': track.title    // 歌曲標題 (更有描述性的資訊)
+                'song_index': key,           
+                'song_title': track.title    
             });
             console.log(`GA4 事件發送成功: song_played, 歌曲ID: ${key}, 標題: ${track.title}`);
-        } else {
-             // 這是預期的行為：當在非 /music/ 頁面載入此腳本時，不會有 gtag 函數
-             // console.warn('GA4 追蹤代碼 (gtag) 未載入。事件追蹤已跳過。');
-        }
-        // ----------------------------------------------------
+        } 
     }
 }
 
 // --- 外部呼叫函數 (來自列表點擊) ---
 
-/**
- * 當用戶點擊播放列表時載入歌曲
- * @param {number} originalIndex - 歌曲在 Master List 中的原始索引
- */
 function loadTrack(originalIndex) { 
-    // 1. 切換到自由模式
+    // 【修改點】點擊歌曲時切換到「自由模式 (3)」，因為用戶明確選擇了要聽什麼
     if (playMode !== 3) {
-        playMode = 3;
-        modeButton.textContent = "[ 模式: 自由 ]";
+        playMode = 3; 
+        updateModeUI();
         saveSettings(); 
     }
     
-    // 2. 查找歌曲在當前播放列表中的索引
+    // 查找歌曲在當前播放列表中的索引
     const newIndex = currentPlaylist.findIndex(track => track.originalIndex === originalIndex);
 
     if (newIndex !== -1) {
-        // 情況 A: 歌曲在篩選後的歌單中，直接播放該歌單中的索引
         playTrack(newIndex);
     } else {
         // 情況 B: 歌曲不在篩選後的歌單中 (使用者點擊了被隱藏的項目)
-        
-        // 這裡我們必須先將歌單重設回 Master List (因為用戶明確點擊了某首歌)
         resetCurrentPlaylist();
         
         // 由於 currentPlaylist 現在與 Master List 相同，原始索引 (originalIndex) 即是當前索引
-        playerTitle.textContent = "已清除篩選，並播放您點選的歌曲";
-        playTrack(originalIndex); 
+        // 找到它在 MASTER_TRACK_LIST 中的索引並播放
+        const masterIndex = MASTER_TRACK_LIST.findIndex(track => track.originalIndex === originalIndex);
+        if (masterIndex !== -1) {
+            playerTitle.textContent = "已清除篩選，並播放您點選的歌曲";
+            playTrack(masterIndex); 
+        }
     }
 }
 
-// *** 注意：此處已刪除重複的 incrementPlayCount() 函數 ***
+// --- *** 搜尋/篩選邏輯 (與您原來的代碼相同) *** ---
 
-// --- *** 搜尋/篩選邏輯 (重構為動態歌單) *** ---
-/**
- * 根據搜尋框的輸入內容，篩選並顯示/隱藏播放列表項目，同時重建 currentPlaylist
- */
 function filterPlaylist() {
     const searchText = playlistSearchInput.value.toLowerCase().trim(); 
     
-    // 1. 篩選 Master List，重建 currentPlaylist
     if (searchText.length > 0) {
         currentPlaylist = MASTER_TRACK_LIST.filter(track => { 
             const itemText = (track.title + ' ' + track.artist).toLowerCase(); 
             return itemText.includes(searchText);
         });
         
-        // --- 核心 Bug 修復邏輯 (統一停止計時) ---
         if (listenIntervalId !== null) {
             clearInterval(listenIntervalId); 
             listenIntervalId = null;
         }
-        // ----------------------------------------
 
         if (currentPlaylist.length === 0) {
             playerTitle.textContent = `未找到與 "${searchText}" 相關的歌曲。`;
@@ -583,32 +566,26 @@ function filterPlaylist() {
              playerTitle.textContent = `已根據篩選建立新歌單 (${currentPlaylist.length} 首)。請點擊播放。`;
              currentTrackIndex = 0; 
              const track = currentPlaylist[currentTrackIndex]; 
-             audio.src = track.url; // 只載入，不播放
-             audio.pause(); // 確保停止正在播放的歌曲
+             audio.src = track.url; 
+             audio.pause(); 
         }
 
     } else {
-        // 搜尋框為空，重設為完整歌單
         resetCurrentPlaylist(); 
         playerTitle.textContent = "我的音樂播放器";
         
-        // --- 核心 Bug 修復邏輯 (統一停止計時) ---
         if (listenIntervalId !== null) {
             clearInterval(listenIntervalId); 
             listenIntervalId = null;
         }
-        // ----------------------------------------
         
-        // 當清除搜尋時，如果播放器處於暫停狀態，則繼續暫停，並載入第一首
         currentTrackIndex = 0; 
         const track = currentPlaylist[currentTrackIndex]; 
         audio.src = track.url;
-        audio.pause(); // 保持暫停狀態
+        audio.pause(); 
     }
 
-    // 2. 更新 HTML 列表的顯示/隱藏狀態
     playlistItems.forEach(item => {
-        // 從 li 元素的內容中提取文本
         const itemText = item.textContent.toLowerCase(); 
         if (itemText.includes(searchText) || searchText.length === 0) {
             item.style.display = ''; 
@@ -617,22 +594,16 @@ function filterPlaylist() {
         }
     });
 
-    // 3. 確保高亮狀態正確 (因為 currentPlaylist 已變，必須更新)
     updatePlaylistHighlight(); 
 }
 
 
-// --- 播放列表顯示與排序邏輯 ---
+// --- 播放列表顯示與排序邏輯 (與您原來的代碼相同) ---
 
-/**
- * 更新播放列表，顯示每首歌的播放次數
- */
 function updatePlaylistDisplay() {
-    // 重新讀取 DOM 列表，因為排序可能會改變順序
     const currentListItems = document.querySelectorAll('#playlist li'); 
     
     currentListItems.forEach(item => {
-        // 從 li 元素的 onclick 屬性中提取 originalIndex
         const onclickAttr = item.getAttribute('onclick');
         const match = onclickAttr.match(/loadTrack\((\d+)\)/);
         const index = match ? parseInt(match[1]) : -1;
@@ -643,20 +614,16 @@ function updatePlaylistDisplay() {
         const originalText = track.title + ' - ' + track.artist;
         const playCount = trackPlayCounts[index] || 0;
         
-        // 清除舊的內容 (確保不重複添加次數)
         item.innerHTML = '';
         
-        // 創建主體文字 (歌名 - 歌手)
         const mainSpan = document.createElement('span');
         mainSpan.textContent = originalText;
         item.appendChild(mainSpan);
         
-        // 創建播放次數小字
         if (playCount > 0) {
             const countSpan = document.createElement('small');
             countSpan.textContent = ` (${playCount} 次播放)`;
             
-            // 內聯樣式實現小字、灰色，不佔用太多空間
             countSpan.style.fontSize = '0.8em'; 
             countSpan.style.color = '#888'; 
             countSpan.style.marginLeft = '10px';
@@ -666,34 +633,25 @@ function updatePlaylistDisplay() {
     });
 }
 
-/**
- * 根據播放次數對播放列表進行排序 (人氣榜)
- */
 function sortPlaylistByPlayCount() {
-    // 1. 建立一個包含播放次數信息的列表副本
     const sortableList = [...MASTER_TRACK_LIST].map(track => {
         const count = trackPlayCounts[track.originalIndex] || 0;
         return { ...track, playCount: count };
     });
 
-    // 2. 排序：播放次數高的在前 (降序)，次數相同的按照原始索引 (升序)
     sortableList.sort((a, b) => {
         if (b.playCount !== a.playCount) {
             return b.playCount - a.playCount;
         }
-        return a.originalIndex - b.originalIndex; // 次數相同時保持原始順序
+        return a.originalIndex - b.originalIndex; 
     });
 
-    // 3. 獲取 HTML 列表元素和原始的 li 元素集合
     const playlistUl = document.getElementById('playlist');
     const originalLiElements = Array.from(playlistUl.querySelectorAll('li'));
 
-    // 4. 清空現有列表
     playlistUl.innerHTML = '';
 
-    // 5. 根據排序後的順序重新附加列表項
     sortableList.forEach(track => {
-        // 找到對應原始索引的 HTML 元素
         const originalIndex = track.originalIndex;
         const liElement = originalLiElements.find(item => {
             const onclickAttr = item.getAttribute('onclick');
@@ -706,16 +664,14 @@ function sortPlaylistByPlayCount() {
         }
     });
     
-    // 6. 重新獲取 playlistItems 引用，確保它們指向新的 DOM 順序
     playlistItems = document.querySelectorAll('#playlist li'); 
 
-    // 7. 重新渲染播放次數和高亮狀態
     updatePlaylistDisplay();
     updatePlaylistHighlight();
 }
 
 
-// --- *** LocalStorage 邏輯 (持久化：模式/主題/音量/靜音/進度/播放次數) *** ---
+// --- *** LocalStorage 邏輯 (與您原來的代碼相同) *** ---
 
 const CURRENT_TRACK_INDEX_KEY = 'audioPlayerIndex';
 const CURRENT_TRACK_TIME_KEY = 'audioPlayerTime';
@@ -724,7 +680,7 @@ function saveSettings() {
     try {
         localStorage.setItem('audioPlayerVolume', audio.volume);
         localStorage.setItem('audioPlayerMuted', audio.muted);
-        localStorage.setItem('audioPlayerMode', playMode);
+        localStorage.setItem('audioPlayerMode', playMode); // 保存新模式 (0-4)
 
         if (currentTrackIndex >= 0) {
             localStorage.setItem(CURRENT_TRACK_INDEX_KEY, currentTrackIndex);
@@ -755,9 +711,10 @@ function loadSavedSettings() {
         }
 
         const savedMode = localStorage.getItem('audioPlayerMode');
+        // 【修改點】檢查模式範圍 (0-4)
         if (savedMode !== null) {
             const mode = parseInt(savedMode);
-            if (mode >= 0 && mode <= 3) {
+            if (mode >= 0 && mode <= 4) { // 新的範圍檢查
                 playMode = mode;
                 updateModeUI(); 
             }
@@ -783,7 +740,6 @@ function loadSavedSettings() {
              localStorage.removeItem(CURRENT_TRACK_TIME_KEY); 
         }
         
-        // 載入播放次數數據
         const savedCounts = localStorage.getItem(PLAY_COUNT_STORAGE_KEY);
         if (savedCounts) {
             trackPlayCounts = JSON.parse(savedCounts);
@@ -794,22 +750,8 @@ function loadSavedSettings() {
     }
 }
 
-function updateModeUI() {
-    let modeText;
-    if (playMode === 1) {
-        modeText = "[ 模式: 循環 ]";
-    } else if (playMode === 2) {
-        modeText = "[ 模式: 隨機 ]";
-    } else if (playMode === 3) {
-        modeText = "[ 模式: 自由 ]";
-    } else {
-        modeText = "[ 模式: 順序 ]";
-    }
-    modeButton.textContent = modeText;
-}
 
-
-// --- *** 事件監聽器區塊 (底部初始化之前) *** ---
+// --- *** 事件監聽器區塊 (與您原來的代碼相同) *** ---
 
 audio.addEventListener('volumechange', saveSettings);
 audio.addEventListener('ratechange', saveSettings); 
@@ -825,21 +767,21 @@ audio.addEventListener('play', saveSettings);
 audio.addEventListener('pause', saveSettings);
 audio.addEventListener('ended', saveSettings);
 
-// ✅ 修正：使用防抖版本來監聽輸入事件，防止在打字時歌曲自動播放
 playlistSearchInput.addEventListener('input', debounce(filterPlaylist, 300));
 
 
 // --- 初始化 ---
 
-// 關鍵：在載入任何東西之前，先建立主歌單
 resetCurrentPlaylist(); 
 
-// 1. 載入儲存的設定（包括播放次數）
 loadSavedSettings();
 
-// 2. 執行排序和顯示播放次數
-sortPlaylistByPlayCount(); // 取代舊的 updatePlaylistHighlight()
+// 如果沒有儲存的模式，確保 UI 顯示默認的 0
+if(playMode === 0 && !localStorage.getItem('audioPlayerMode')) {
+    updateModeUI();
+}
 
-// 3. 初始化主題設定 (自動或手動)
+sortPlaylistByPlayCount(); 
+
 initializeTheme();
 </script>
