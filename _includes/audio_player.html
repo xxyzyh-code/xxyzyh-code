@@ -10,9 +10,9 @@
         [ 模式: 順序 ]
     </span>
     
-    <div id="theme-switcher">
+<div id="theme-switcher">
     <button id="theme-toggle-btn">
-        主題 (當前: <span id="current-theme-name">白色 (自動)</span>)
+        主題：<span id="current-theme-name">白色 (自動)</span>
     </button>
 <div id="theme-menu" class="hidden-menu">
     <span class="theme-option" data-theme="light">白色</span>
@@ -302,14 +302,14 @@ function applyTheme(desiredTheme, isManual = false) {
     );
 
     let themeToApply = desiredTheme;
-    let modeText = '(手動)'; 
+    let modeText = '【手動】'; 
 
     if (isManual) {
         localStorage.setItem(THEME_STORAGE_KEY, desiredTheme);
     } 
     else if (desiredTheme === LIGHT_THEME) {
         themeToApply = getSystemThemeBasedOnTime();
-        modeText = '(自動)';
+        modeText = '【自動】';
     }
 
     if (themeToApply === DARK_THEME) {
