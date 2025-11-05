@@ -512,12 +512,19 @@ function filterPlaylist() {
             return itemText.includes(searchText);
         });
         
+        // --- 核心 Bug 修復邏輯 (統一停止計時) ---
+        if (listenIntervalId !== null) {
+            clearInterval(listenIntervalId); 
+            listenIntervalId = null;
+        }
+        // ----------------------------------------
+
         if (currentPlaylist.length === 0) {
             playerTitle.textContent = `未找到與 "${searchText}" 相關的歌曲。`;
             audio.pause(); 
             currentTrackIndex = -1;
+            
         } else {
-             // ✅ 修正：只載入第一首歌曲，不自動播放！
              playerTitle.textContent = `已根據篩選建立新歌單 (${currentPlaylist.length} 首)。請點擊播放。`;
              currentTrackIndex = 0; 
              const track = currentPlaylist[currentTrackIndex]; 
@@ -529,6 +536,13 @@ function filterPlaylist() {
         // 搜尋框為空，重設為完整歌單
         resetCurrentPlaylist(); 
         playerTitle.textContent = "我的音樂播放器";
+        
+        // --- 核心 Bug 修復邏輯 (統一停止計時) ---
+        if (listenIntervalId !== null) {
+            clearInterval(listenIntervalId); 
+            listenIntervalId = null;
+        }
+        // ----------------------------------------
         
         // 當清除搜尋時，如果播放器處於暫停狀態，則繼續暫停，並載入第一首
         currentTrackIndex = 0; 
@@ -550,6 +564,7 @@ function filterPlaylist() {
     // 3. 確保高亮狀態正確 (因為 currentPlaylist 已變，必須更新)
     updatePlaylistHighlight(); 
 }
+
 
 
 // --- *** LocalStorage 邏輯 (持久化：模式/主題/音量/靜音/進度) *** ---
