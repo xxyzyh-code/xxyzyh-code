@@ -38,15 +38,19 @@
             <span class="menu-item" onclick="clearSleepTimer(); toggleTimerMenu();">取消定時</span>
         </div>
     </div>
+</div> 
+
+<div id="search-area">
+    <input type="text" id="playlist-search" placeholder="🔎 搜尋歌曲或歌手..." aria-label="搜尋歌曲或歌手">
 </div>
     
+<div id="stats-bar">
+    <span>總時長: <span id="total-listen-time">0 分鐘</span></span>
+    <span>剩餘: <span id="remaining-timer">--:--</span></span>
+</div>
     
-    <div id="stats-bar">
-        <span>總時長: <span id="total-listen-time">0 分鐘</span></span>
-        <span>剩餘: <span id="remaining-timer">--:--</span></span>
-    </div>
-    
-    <ul id="playlist">
+<ul id="playlist">
+
     {% for track in site.data.music %}
         <li data-url="{{ track.url }}" onclick="loadTrack('{{ track.url }}', '{{ track.title }}', {{ forloop.index0 }})">
             {{ track.title }} - {{ track.artist }}
@@ -68,6 +72,8 @@ const timerToggleButton = document.getElementById('timer-toggle-btn');
 const timerMenu = document.getElementById('timer-menu');
 const totalListenTimeSpan = document.getElementById('total-listen-time');
 const remainingTimerSpan = document.getElementById('remaining-timer');
+// ✅ JS變動：新增搜尋框 DOM 元素
+const playlistSearchInput = document.getElementById('playlist-search'); 
 
 // *** 主題切換相關 DOM 元素 (頂層定義) ***
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -586,6 +592,31 @@ function updateModeUI() {
     modeButton.textContent = modeText;
 }
 
+// ✅ 新增：搜尋/篩選邏輯
+/**
+ * 根據搜尋框的輸入內容，篩選並顯示/隱藏播放列表項目
+ */
+function filterPlaylist() {
+    // 將輸入轉為小寫，方便不區分大小寫的匹配
+    const searchText = playlistSearchInput.value.toLowerCase(); 
+
+    playlistItems.forEach(item => {
+        // 獲取列表項的完整文字內容 (歌名 - 歌手)
+        const itemText = item.textContent.toLowerCase(); 
+
+        if (itemText.includes(searchText)) {
+            // 如果列表項包含搜尋文字，則顯示它
+            item.style.display = ''; // 恢復預設顯示樣式
+        } else {
+            // 否則隱藏它
+            item.style.display = 'none';
+        }
+    });
+}
+
+
+// --- *** 事件監聽器區塊 (底部初始化之前) *** ---
+
 // 監聽音量變更和靜音狀態變更事件，以便儲存
 // *** 修正：音量和靜音狀態變更都呼叫 saveSettings ***
 audio.addEventListener('volumechange', saveSettings);
@@ -603,6 +634,9 @@ audio.addEventListener('timeupdate', () => {
 audio.addEventListener('play', saveSettings);
 audio.addEventListener('pause', saveSettings);
 audio.addEventListener('ended', saveSettings);
+
+// ✅ 新增：搜尋事件監聽器 (監聽輸入框的 input 事件)
+playlistSearchInput.addEventListener('input', filterPlaylist);
 
 
 // --- 初始化 (已將 initializeTheme 移至此處) ---
