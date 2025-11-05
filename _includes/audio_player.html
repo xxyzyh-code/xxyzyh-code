@@ -478,21 +478,40 @@ function updateTotalListenTime() {
         `${totalListenMinutes} 分鐘 ${totalListenSeconds} 秒`;
 }
 
-// 【新增】播放次數追蹤函數
+// 【被替換/修改】播放次數追蹤函數 - 第一處
+/**
+ * 歌曲播放完成後，1. 增加 LocalStorage 次數； 2. 上傳事件到 GA4
+ * 僅在 GA4 代碼載入時 (即在 /music/ 頁面)，才會發送事件。
+ */
 function incrementPlayCount() {
     if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
         const track = currentPlaylist[currentTrackIndex];
         const key = track.originalIndex; // 使用原始索引作為唯一鍵
         
-        // 增加計數
+        // --- 1. LocalStorage 累加計數 (用於本地排序和顯示 - 保持不動) ---
         trackPlayCounts[key] = (trackPlayCounts[key] || 0) + 1; 
         
-        // 儲存到 LocalStorage
         try {
+            // 儲存到 LocalStorage
             localStorage.setItem(PLAY_COUNT_STORAGE_KEY, JSON.stringify(trackPlayCounts));
         } catch (e) {
             console.warn('無法儲存播放次數到 LocalStorage.', e);
         }
+        
+        // --- 2. 數據傳輸到 GA4 (用於後台總計 - 新增/修改) ---
+        // 檢查 gtag 函數是否存在 (即 GA4 代碼是否載入成功)
+        if (typeof gtag === 'function') {
+            gtag('event', 'song_played', {
+                'song_index': key,           // 歌曲的唯一 ID (數字索引)
+                'song_title': track.title    // 歌曲標題 (更有描述性的資訊)
+            });
+            console.log(`GA4 事件發送成功: song_played, 歌曲ID: ${key}, 標題: ${track.title}`);
+        } else {
+             // 這是預期的行為：當在非 /music/ 頁面載入此腳本時，不會有 gtag 函數
+             // 或是為了確保 /music/ 頁面載入正確，可以保留一個警告
+             // console.warn('GA4 追蹤代碼 (gtag) 未載入。事件追蹤已跳過。');
+        }
+        // ----------------------------------------------------
     }
 }
 
@@ -529,21 +548,40 @@ function loadTrack(originalIndex) {
 }
 
 
-// 【新增】播放次數追蹤函數
+// 【被替換/修改】播放次數追蹤函數 - 第二處
+/**
+ * 歌曲播放完成後，1. 增加 LocalStorage 次數； 2. 上傳事件到 GA4
+ * 僅在 GA4 代碼載入時 (即在 /music/ 頁面)，才會發送事件。
+ */
 function incrementPlayCount() {
     if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
         const track = currentPlaylist[currentTrackIndex];
         const key = track.originalIndex; // 使用原始索引作為唯一鍵
         
-        // 增加計數
+        // --- 1. LocalStorage 累加計數 (用於本地排序和顯示 - 保持不動) ---
         trackPlayCounts[key] = (trackPlayCounts[key] || 0) + 1; 
         
-        // 儲存到 LocalStorage
         try {
+            // 儲存到 LocalStorage
             localStorage.setItem(PLAY_COUNT_STORAGE_KEY, JSON.stringify(trackPlayCounts));
         } catch (e) {
             console.warn('無法儲存播放次數到 LocalStorage.', e);
         }
+        
+        // --- 2. 數據傳輸到 GA4 (用於後台總計 - 新增/修改) ---
+        // 檢查 gtag 函數是否存在 (即 GA4 代碼是否載入成功)
+        if (typeof gtag === 'function') {
+            gtag('event', 'song_played', {
+                'song_index': key,           // 歌曲的唯一 ID (數字索引)
+                'song_title': track.title    // 歌曲標題 (更有描述性的資訊)
+            });
+            console.log(`GA4 事件發送成功: song_played, 歌曲ID: ${key}, 標題: ${track.title}`);
+        } else {
+             // 這是預期的行為：當在非 /music/ 頁面載入此腳本時，不會有 gtag 函數
+             // 或是為了確保 /music/ 頁面載入正確，可以保留一個警告
+             // console.warn('GA4 追蹤代碼 (gtag) 未載入。事件追蹤已跳過。');
+        }
+        // ----------------------------------------------------
     }
 }
 
