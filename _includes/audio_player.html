@@ -335,9 +335,8 @@ document.addEventListener('click', (e) => {
         themeMenu.classList.add('hidden-menu');
     }
 
-    // 2. ✅ 新增：處理定時器菜單
+    // 2. ✅ 處理定時器菜單
     // 檢查點擊是否在定時器菜單或定時器按鈕內部
-    // 確保 timerMenu 和 timerToggleButton 在 DOM 元素範圍內
     if (!timerMenu.contains(e.target) && !timerToggleButton.contains(e.target)) {
         // 只有當菜單是展開狀態（即沒有 hidden-menu 類）時才需要強制關閉
         if (!timerMenu.classList.contains('hidden-menu')) {
@@ -481,36 +480,53 @@ function loadTrack(url, title, index) {
 }
 
 
-// --- *** LocalStorage 邏輯 (修正音量儲存) *** ---
+// --- *** LocalStorage 邏輯 (持久化：模式/主題/音量/靜音/進度) *** ---
 
-// 儲存當前音量、靜音狀態和模式
+// ✅ 新增：LocalStorage 鍵
+const CURRENT_TRACK_INDEX_KEY = 'audioPlayerIndex';
+const CURRENT_TRACK_TIME_KEY = 'audioPlayerTime';
+
+// 儲存當前音量、靜音狀態、模式、索引和進度
 function saveSettings() {
     try {
-        // 保存音量值
+        // 保存音量值和靜音狀態
         localStorage.setItem('audioPlayerVolume', audio.volume);
-        // *** 修正：同時保存靜音狀態 ***
         localStorage.setItem('audioPlayerMuted', audio.muted);
+        
         // 保存播放模式
         localStorage.setItem('audioPlayerMode', playMode);
+
+        // ✅ 新增：保存當前播放的曲目索引
+        if (currentTrackIndex >= 0) {
+            localStorage.setItem(CURRENT_TRACK_INDEX_KEY, currentTrackIndex);
+        } else {
+            localStorage.removeItem(CURRENT_TRACK_INDEX_KEY); // 清除索引，表示列表結束
+        }
+
+        // ✅ 新增：保存當前播放時間（秒數）
+        if (audio.currentTime > 0) {
+             // 只有有進度時才儲存時間
+             localStorage.setItem(CURRENT_TRACK_TIME_KEY, audio.currentTime);
+        } else {
+             // 如果沒有播放進度 (例如 currentTime=0)，則清除
+             localStorage.removeItem(CURRENT_TRACK_TIME_KEY);
+        }
+        
     } catch (e) {
         console.warn('LocalStorage is not available or blocked.', e);
     }
 }
 
-// 從儲存中載入音量、靜音狀態和模式
+// 從儲存中載入音量、靜音狀態、模式、索引和進度
 function loadSavedSettings() {
     try {
-        // 載入音量
+        // 載入音量和靜音狀態
         const savedVolume = localStorage.getItem('audioPlayerVolume');
         if (savedVolume !== null) {
-            // 確保音量在 0.0 到 1.0 之間
             audio.volume = Math.max(0, Math.min(1, parseFloat(savedVolume)));
         }
-
-        // *** 修正：載入靜音狀態 ***
         const savedMuted = localStorage.getItem('audioPlayerMuted');
         if (savedMuted !== null) {
-             // localStorage 儲存的是字串 'true' 或 'false'
             audio.muted = (savedMuted === 'true');
         }
 
@@ -523,6 +539,33 @@ function loadSavedSettings() {
                 updateModeUI(); 
             }
         }
+        
+        // ✅ 新增：載入曲目索引
+        const savedIndex = localStorage.getItem(CURRENT_TRACK_INDEX_KEY);
+        if (savedIndex !== null) {
+            const index = parseInt(savedIndex);
+            if (index >= 0 && index < trackList.length) {
+                currentTrackIndex = index;
+                // 必須先載入曲目，才能設定時間
+                const track = trackList[index];
+                audio.src = track.url;
+                playerTitle.textContent = `上次播放：${track.title}`;
+            }
+        }
+
+        // ✅ 新增：載入播放時間進度
+        const savedTime = localStorage.getItem(CURRENT_TRACK_TIME_KEY);
+        // 只有當曲目索引成功載入時，才嘗試載入時間
+        if (savedTime !== null && currentTrackIndex >= 0) { 
+             const time = parseFloat(savedTime);
+             if (!isNaN(time) && time > 0) {
+                 audio.currentTime = time;
+             }
+             // 無論是否成功載入，播放進度在載入後就應該被清除
+             // 這樣可以確保用戶在聽完後關閉頁面，下次不會跳到歌曲中段
+             localStorage.removeItem(CURRENT_TRACK_TIME_KEY); 
+        }
+        
     } catch (e) {
         console.warn('Failed to load settings from LocalStorage.', e);
     }
@@ -548,6 +591,18 @@ function updateModeUI() {
 audio.addEventListener('volumechange', saveSettings);
 audio.addEventListener('ratechange', saveSettings); // 某些瀏覽器可能需要
 audio.addEventListener('loadedmetadata', saveSettings); // 首次載入 metadata 後儲存一次
+
+// ✅ 新增：實時保存進度 (每 5 秒保存一次，避免頻繁寫入)
+audio.addEventListener('timeupdate', () => {
+    if (!audio.paused && audio.currentTime % 5 < 1) {
+         saveSettings();
+    }
+});
+
+// 確保當歌曲切換/暫停/結束時，新的索引和時間被保存
+audio.addEventListener('play', saveSettings);
+audio.addEventListener('pause', saveSettings);
+audio.addEventListener('ended', saveSettings);
 
 
 // --- 初始化 (已將 initializeTheme 移至此處) ---
