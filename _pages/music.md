@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: analytics
 title: 我的靜態音樂站
 permalink: /music/
 load_player_css: true
