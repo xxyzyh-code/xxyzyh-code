@@ -718,11 +718,22 @@ function updatePlaylistDisplay() {
 }
 
 function sortPlaylistByPlayCount() {
+    
+    // ⭐️ 防禦性檢查：如果 currentPlaylist 不是完整的列表 (例如被篩選過)，則不進行排序
+    if (currentPlaylist.length !== MASTER_TRACK_LIST.length) {
+         // 在篩選狀態下，只更新高光和次數顯示，不進行排序操作。
+         updatePlaylistDisplay(); 
+         updatePlaylistHighlight();
+         return;
+    }
+    
+    // 1. 準備用於排序的增強列表 (基於 MASTER_TRACK_LIST)
     const sortableList = [...MASTER_TRACK_LIST].map(track => {
         const count = trackPlayCounts[track.originalIndex] || 0;
         return { ...track, playCount: count };
     });
 
+    // 2. 執行排序 (按播放次數降序，然後按原始索引升序)
     sortableList.sort((a, b) => {
         if (b.playCount !== a.playCount) {
             return b.playCount - a.playCount;
@@ -730,12 +741,35 @@ function sortPlaylistByPlayCount() {
         return a.originalIndex - b.originalIndex; 
     });
 
+    // 3. 儲存當前播放狀態
+    const currentlyPlayingOriginalIndex = currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length
+        ? currentPlaylist[currentTrackIndex].originalIndex 
+        : -1; 
+        
+    // 4. 關鍵：更新內部播放列表 currentPlaylist 數組
+    currentPlaylist = sortableList; 
+
+    // 5. 重新定位當前歌曲在新列表中的索引
+    if (currentlyPlayingOriginalIndex !== -1) {
+        const newIndex = currentPlaylist.findIndex(track => track.originalIndex === currentlyPlayingOriginalIndex);
+        if (newIndex !== -1) {
+            currentTrackIndex = newIndex;
+        } else {
+            currentTrackIndex = -1;
+        }
+    } else {
+        // 如果當前沒有播放歌曲，則將索引重設為 0
+        currentTrackIndex = 0;
+    }
+
+
+    // 6. 重新排列 DOM 元素 (視覺顯示 - 必須與 currentPlaylist 保持一致)
     const playlistUl = document.getElementById('playlist');
     const originalLiElements = Array.from(playlistUl.querySelectorAll('li'));
 
     playlistUl.innerHTML = '';
 
-    sortableList.forEach(track => {
+    currentPlaylist.forEach(track => { // 使用新的 currentPlaylist 順序
         const originalIndex = track.originalIndex;
         const liElement = originalLiElements.find(item => {
             const onclickAttr = item.getAttribute('onclick');
@@ -753,6 +787,7 @@ function sortPlaylistByPlayCount() {
     updatePlaylistDisplay();
     updatePlaylistHighlight();
 }
+
 
 
 // --- *** LocalStorage 邏輯 *** ---
