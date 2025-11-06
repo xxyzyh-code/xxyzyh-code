@@ -6,25 +6,35 @@
     </audio>
     
 <div id="player-controls">
-    <span id="mode-button" onclick="togglePlayMode()">
-        [ 模式: 順序 ]
-    </span>
-    
-<div id="theme-switcher">
-    <button id="theme-toggle-btn">
-        主題：<span id="current-theme-name">白色 (自動)</span>
-    </button>
-<div id="theme-menu" class="hidden-menu">
-    <span class="theme-option" data-theme="light">白色</span>
-    <span class="theme-option" data-theme="dark">黑色</span>
-    <span class="theme-option" data-theme="grey">灰色</span>
-    <span class="theme-option" data-theme="blue">藍色</span>
-    <span class="theme-option" data-theme="green">綠色</span>
-    <span class="theme-option" data-theme="purple">紫色</span>
-    <span class="theme-option" data-theme="pink">粉色</span>
-    <span class="theme-option" data-theme="red">紅色</span>
-</div>
-</div>
+    <div id="nav-buttons-group">
+        <span id="prev-button" onclick="playPreviousTrack()">
+            ⏪ 上一曲
+        </span>
+
+        <span id="mode-button" onclick="togglePlayMode()">
+            [ 模式: 順序 ]
+        </span>
+        
+        <span id="next-button" onclick="playNextTrack()">
+            下一曲 ⏩
+        </span>
+    </div>
+
+    <div id="theme-switcher">
+        <button id="theme-toggle-btn">
+            主題：<span id="current-theme-name">白色 (自動)</span>
+        </button>
+        <div id="theme-menu" class="hidden-menu">
+            <span class="theme-option" data-theme="light">白色</span>
+            <span class="theme-option" data-theme="dark">黑色</span>
+            <span class="theme-option" data-theme="grey">灰色</span>
+            <span class="theme-option" data-theme="blue">藍色</span>
+            <span class="theme-option" data-theme="green">綠色</span>
+            <span class="theme-option" data-theme="purple">紫色</span>
+            <span class="theme-option" data-theme="pink">粉色</span>
+            <span class="theme-option" data-theme="red">紅色</span>
+        </div>
+    </div>
 
     <div id="sleep-timer-area">
         <button id="timer-toggle-btn" onclick="toggleTimerMenu()">
@@ -39,6 +49,7 @@
         </div>
     </div>
 </div> 
+
 
 <div id="search-area">
     <input type="text" id="playlist-search" placeholder="🔎 搜尋歌曲或歌手..." aria-label="搜尋歌曲或歌手">
@@ -166,6 +177,60 @@ function getNextRandomIndex() {
     return newIndex;
 }
 
+// *** 新增：播放下一曲功能 ***
+function playNextTrack() {
+    if (currentPlaylist.length === 0) return;
+    
+    let nextIndex;
+    
+    if (playMode === 2) { // 隨機模式
+        nextIndex = getNextRandomIndex();
+    } else { // 順序模式 (包括 0, 1, 3, 4)
+        // 確保索引在當前歌單內循環，或者在順序停止時停止
+        if (currentTrackIndex < currentPlaylist.length - 1) {
+            nextIndex = currentTrackIndex + 1;
+        } else if (playMode === 4 || playMode === 1) { // 順序循環 或 單曲循環
+            nextIndex = 0; // 回到第一首
+        } else { // 順序停止 (0) 或 自由模式 (3) - 播完即停
+            // 如果在最後一首點擊下一曲，則停止播放
+            audio.pause();
+            playerTitle.textContent = "已到達列表末尾。";
+            currentTrackIndex = currentPlaylist.length; // 設置一個越界的狀態
+            updatePlaylistHighlight();
+            return;
+        }
+    }
+    
+    playTrack(nextIndex);
+}
+
+// *** 新增：播放上一曲功能 ***
+function playPreviousTrack() {
+    if (currentPlaylist.length === 0) return;
+
+    let prevIndex;
+    
+    if (playMode === 2) { // 隨機模式
+        prevIndex = getNextRandomIndex();
+    } else { // 順序模式 (包括 0, 1, 3, 4)
+        // 確保索引在當前歌單內循環
+        if (currentTrackIndex > 0) {
+            prevIndex = currentTrackIndex - 1;
+        } else if (playMode === 4 || playMode === 1) { // 順序循環 或 單曲循環
+            prevIndex = currentPlaylist.length - 1; // 回到最後一首
+        } else { // 順序停止 (0) 或 自由模式 (3) - 播完即停
+            // 如果在第一首點擊上一曲，則停止播放
+            audio.pause();
+            playerTitle.textContent = "已到達列表開頭。";
+            currentTrackIndex = -1; // 設置一個越界的狀態
+            updatePlaylistHighlight();
+            return;
+        }
+    }
+    
+    playTrack(prevIndex);
+}
+  
 // 更新播放列表的高亮狀態，並增加「自動滾動」功能
 function updatePlaylistHighlight(manualScroll = false) {
     const listItems = document.querySelectorAll('#playlist li');
