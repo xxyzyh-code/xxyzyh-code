@@ -218,9 +218,9 @@ body {
 }
 
 
-/* --- 紅色主題 (Red Theme) --- */
-/* 柔和、溫暖的紅色調 (偏橘紅) */
-.red-theme {
+/* --- 黃色主題 (Yellow Theme) [新名稱] --- */
+/* (這是您提供的柔和暖色調風格，與「黃色」描述更匹配) */
+.yellow-theme {
     /* 主要/背景顏色 */
     --bg-color: #FFF3E0;          /* 非常淺的米黃色/暖色調背景 */
     --text-color: #D84315;       /* 深橘紅色文字 */
@@ -236,4 +236,24 @@ body {
     /* 強調色 */
     --accent-color: #795548;     /* 棕色作為強調色，穩重且與暖色調協調 */
     --accent-hover: #5D4037;
+}
+
+
+/* --- 紅色主題 (Red Theme) [新增的鮮豔紅色] --- */
+.red-theme {
+    /* 主要/背景顏色 */
+    --bg-color: #FFEBEE;         /* 非常淺的粉紅色/基礎紅背景 */
+    --text-color: #B71C1C;       /* 深紅色文字 */
+    --card-bg: #FFFFFF;          
+    --border-color: #EF9A9A;     /* 柔和的紅色邊框 */
+    --secondary-text: #E57373;   /* 次要文字：中紅 */
+    
+    /* 互動顏色 */
+    --hover-bg: #FFCDD2;         /* 淺紅色懸停背景 */
+    --playing-bg: #EF5350;       /* 播放中背景：鮮紅 */
+    --playing-text: #FFFFFF;     /* 播放中的文字：白色 */
+
+    /* 強調色 */
+    --accent-color: #D32F2F;     /* 深紅色作為強調色 */
+    --accent-hover: #C62828;
 }
