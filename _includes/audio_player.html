@@ -93,15 +93,16 @@ const themeOptions = document.querySelectorAll('#theme-menu .theme-option');
     
 // 1. 準備數據和狀態追蹤
 const MASTER_TRACK_LIST = [ 
-    // 假設您的 Jekyll 數據已經在這個位置被渲染，這裡僅為結構保持。
-    // { title: "Alive in the summer time", artist: "AI", url: "...", originalIndex: 0 },
-    // ...
-    // 請注意：此處的 MASTER_TRACK_LIST 在實際 Jekyll 網站中是通過 for 循環填充的，
-    // 但在您提供的單獨 JS 塊中，我們將使用您之前給出的硬編碼數據作為示例。
 
+    // 增加一個原始索引 (originalIndex)，用於將來回溯或去篩選時定位
     { title: "Alive in the summer time", artist: "AI", url: "https://raw.githubusercontent.com/xxyzyh-code/music/main/Alive in the summer time.m4a", originalIndex: 0 },
+
+    // 增加一個原始索引 (originalIndex)，用於將來回溯或去篩選時定位
     { title: "Breakbeat background", artist: "AI", url: "https://raw.githubusercontent.com/xxyzyh-code/music/main/Breakbeat background.m4a", originalIndex: 1 },
+
+    // 增加一個原始索引 (originalIndex)，用於將來回溯或去篩選時定位
     { title: "The best moments in life", artist: "AI", url: "https://raw.githubusercontent.com/xxyzyh-code/music/main/The best moments in life.m4a", originalIndex: 2 },
+
 ];
 
 let currentPlaylist = []; 
@@ -109,13 +110,13 @@ let currentTrackIndex = 0;
 // 播放模式：0=順序停止, 1=單曲循環, 2=隨機播放, 3=自由模式, 4=順序循環
 let playMode = 0; 
 
-// 定時器狀態變數 (省略初始化，見您代碼)
+// 定時器狀態變數
 let sleepTimerId = null; 
 let sleepTime = 0; 
 let endTime = 0; 
 let countdownIntervalId = null; 
 
-// 總時長追蹤變數 (省略初始化，見您代碼)
+// 總時長追蹤變數
 let totalListenMinutes = 0;
 let totalListenSeconds = 0;
 let listenIntervalId = null; 
@@ -146,23 +147,23 @@ function resetCurrentPlaylist() {
 
 // --- 輔助函數 ---
 
-// 載入並播放指定索引的歌曲 (統一入口)
+// 載入並播放指定索引的歌曲
 function playTrack(index) {
     // 確保索引在當前歌單的範圍內
     if (index >= 0 && index < currentPlaylist.length) { 
-        currentTrackIndex = index; // ⭐️ 關鍵 1: 更新當前索引
+        currentTrackIndex = index;
         const track = currentPlaylist[index]; 
         audio.src = track.url;
         playerTitle.textContent = `正在播放：${track.title}`;
         audio.play().catch(error => {
             console.error("自動播放失敗，可能是瀏覽器限制：", error);
         });
-        updatePlaylistHighlight(); // ⭐️ 關鍵 2: 更新高光
+        updatePlaylistHighlight();
     } else if (index === currentPlaylist.length) { 
         audio.pause(); 
         playerTitle.textContent = "播放列表已結束";
         currentTrackIndex = -1; 
-        updatePlaylistHighlight(); // ⭐️ 關鍵 3: 列表結束時清除高光
+        updatePlaylistHighlight();
     }
 }
 
@@ -176,84 +177,91 @@ function getNextRandomIndex() {
     return newIndex;
 }
 
-// *** 播放下一曲功能 (手動切歌) ***
+// *** 修正：播放下一曲功能 ***
 function playNextTrack() {
     if (currentPlaylist.length === 0) return;
     
     let nextIndex;
     
-    if (playMode === 2) { // 隨機模式
+    if (playMode === 1) { // 修正：單曲循環模式，保持當前歌曲
+        nextIndex = currentTrackIndex; 
+    } else if (playMode === 2) { // 隨機模式
         nextIndex = getNextRandomIndex();
-    } else { // 順序模式 (包括 0, 1, 3, 4)
+    } else { // 順序模式 (包括 0, 3, 4)
+        // 確保索引在當前歌單內循環，或者在順序停止時停止
         if (currentTrackIndex < currentPlaylist.length - 1) {
             nextIndex = currentTrackIndex + 1;
-        } else if (playMode === 4 || playMode === 1) { // 順序循環 或 單曲循環
+        } else if (playMode === 4) { // 順序循環
             nextIndex = 0; // 回到第一首
         } else { // 順序停止 (0) 或 自由模式 (3) - 播完即停
+            // 如果在最後一首點擊下一曲，則停止播放
             audio.pause();
             playerTitle.textContent = "已到達列表末尾。";
-            currentTrackIndex = currentPlaylist.length; 
+            currentTrackIndex = currentPlaylist.length; // 設置一個越界的狀態
             updatePlaylistHighlight();
             return;
         }
     }
     
-    // 統一調用 playTrack()
     playTrack(nextIndex);
 }
 
-// *** 播放上一曲功能 (手動切歌) ***
+
+// *** 新增：播放上一曲功能 ***
 function playPreviousTrack() {
     if (currentPlaylist.length === 0) return;
 
     let prevIndex;
     
-    if (playMode === 2) { // 隨機模式
+    if (playMode === 1) { // ⭐️ 修正：單曲循環模式，保持當前歌曲
+        prevIndex = currentTrackIndex; 
+    } else if (playMode === 2) { // 隨機模式
         prevIndex = getNextRandomIndex();
-    } else { // 順序模式 (包括 0, 1, 3, 4)
+    } else { // 順序模式 (包括 0, 3, 4)
         if (currentTrackIndex > 0) {
             prevIndex = currentTrackIndex - 1;
-        } else if (playMode === 4 || playMode === 1) { // 順序循環 或 單曲循環
+        } else if (playMode === 4) { // 順序循環
             prevIndex = currentPlaylist.length - 1; // 回到最後一首
         } else { // 順序停止 (0) 或 自由模式 (3) - 播完即停
+            // ... (停止邏輯，保持不變) ...
             audio.pause();
             playerTitle.textContent = "已到達列表開頭。";
-            currentTrackIndex = -1; 
+            currentTrackIndex = -1;
             updatePlaylistHighlight();
             return;
         }
     }
     
-    // 統一調用 playTrack()
     playTrack(prevIndex);
 }
+
   
-// 更新播放列表的高亮狀態，並增加「自動滾動」功能
+// 更新播放列表的高亮狀態，並增加「自動滾動」功能 (修正版)
 function updatePlaylistHighlight(manualScroll = false) {
     const listItems = document.querySelectorAll('#playlist li');
     
+    // 1. 移除所有項目的高亮狀態
     listItems.forEach(item => {
         item.classList.remove('playing');
     });
 
-    if (currentTrackIndex >= 0 && currentTrackIndex < listItems.length) {
-        // 必須找到列表項中與 currentTrackIndex 對應的元素
-        // 由於 currentPlaylist 可能被篩選或排序，我們必須依賴 loadTrack 傳入的 originalIndex
-        
-        // 找到當前播放歌曲的 originalIndex
+    // 2. 為當前播放的歌曲添加高亮狀態
+    if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
+        // ⭐️ 關鍵：找到當前播放歌曲在 MASTER_TRACK_LIST 中的原始索引
         const playingTrackOriginalIndex = currentPlaylist[currentTrackIndex].originalIndex;
         
-        // 找到 DOM 列表中匹配 originalIndex 的元素
+        // 遍歷當前的 DOM 列表，找到與原始索引匹配的 `<li>` 元素
         const playingItem = Array.from(listItems).find(item => {
             const onclickAttr = item.getAttribute('onclick');
+            // 從 onclick="loadTrack(X)" 中提取原始索引 X
             const match = onclickAttr.match(/loadTrack\((\d+)\)/);
             return match && parseInt(match[1]) === playingTrackOriginalIndex;
         });
 
-
         if (playingItem) {
             playingItem.classList.add('playing');
             
+            // 3. 自動滾動到正在播放的歌曲
             if (!manualScroll) {
                  playingItem.scrollIntoView({
                     behavior: 'smooth', 
@@ -264,10 +272,8 @@ function updatePlaylistHighlight(manualScroll = false) {
     }
 }
 
+// --- 核心邏輯：控制播放順序/循環/隨機/自由 (修正版) ---
 
-// --- 核心邏輯：控制播放順序/循環/隨機/自由 (統一處理 ended 事件) ---
-
-// ⭐️ 關鍵：這個區塊必須是文件中唯一的 ended 監聽器來處理切歌邏輯。
 audio.addEventListener('ended', () => {
     // 1. 執行記錄、排序、儲存等操作
     incrementPlayCount(); 
@@ -276,48 +282,59 @@ audio.addEventListener('ended', () => {
     saveSettings(); 
 
     // 2. 處理播放模式 (必須在 playTrack 之前完成)
-    let nextIndex;
-    
+    let nextIndex = -1; // 使用 -1 作為標記，表示沒有下一首或已處理
+
     if (playMode === 1) { // 單曲循環：不改變索引，直接重播
-        audio.currentTime = 0;
+        audio.currentTime = 0; 
         audio.play();
-        window.location.hash = `song-index-${currentPlaylist[currentTrackIndex].originalIndex}`;
-        return;
-    } else if (playMode === 2) { // 隨機播放
+        // 由於索引不變，高光不需更新。
+        // 確保單曲循環時，高光不會因其他邏輯而意外改變。
+        updatePlaylistHighlight(); 
+        return; // 立即返回，不執行後續的 playTrack 邏輯
+    } 
+    
+    // 計算下一首索引
+    if (playMode === 2) { // 隨機播放
         nextIndex = getNextRandomIndex();
     } else if (playMode === 4) { // 順序循環
         nextIndex = (currentTrackIndex + 1) % currentPlaylist.length;
-    } else { // 順序停止 (0) 及自由模式 (3)
+    } else if (currentTrackIndex < currentPlaylist.length - 1) { 
+        // 順序停止 (0) 或 自由模式 (3) - 還有下一首
         nextIndex = currentTrackIndex + 1;
-    }
-
-    // 3. 呼叫 playTrack 或停止
-    if (nextIndex < currentPlaylist.length) {
-        playTrack(nextIndex); 
-        // 立即更新錨點，使用新歌曲的 originalIndex
-        window.location.hash = `song-index-${currentPlaylist[nextIndex].originalIndex}`;
     } else {
-        // 列表順序播放結束
+        // 順序停止 (0) 或 自由模式 (3) - 已是最後一首，應停止
         audio.pause();
         playerTitle.textContent = "播放列表已結束";
-        currentTrackIndex = -1;
-        updatePlaylistHighlight();
-        window.location.hash = ''; // 清除錨點
+        currentTrackIndex = -1; // 標記為未播放狀態
+        updatePlaylistHighlight(); 
+        window.location.hash = ''; // 歌單結束時清除錨點
+        return; // 停止播放後返回
+    }
+
+    // 3. 呼叫 playTrack 統一處理播放和高光更新
+    if (nextIndex !== -1) {
+        playTrack(nextIndex);
+        // 更新分享連結錨點
+        window.location.hash = `song-index-${currentPlaylist[nextIndex].originalIndex}`;
     }
 });
 
 
-// 模式切換函數 (略 - 保持不變)
+// 模式切換函數
 function togglePlayMode() {
     playMode = (playMode + 1) % 5; 
+    
     updateModeUI();
+    
     playerTitle.textContent = `已切換到 ${modeButton.textContent.replace('[ 模式: ', '').replace(' ]', '')}`;
+
     saveSettings(); 
 }
 
-// 統一更新模式 UI 的函數 (略 - 保持不變)
+// 統一更新模式 UI 的函數
 function updateModeUI() {
     let modeText;
+    
     if (playMode === 1) {
         modeText = "[ 模式: 單曲循環 ]";
     } else if (playMode === 2) {
@@ -329,18 +346,95 @@ function updateModeUI() {
     } else {
         modeText = "[ 模式: 順序停止 ]"; 
     }
+    
     modeButton.textContent = modeText;
 }
 
 
-// --- 主題切換邏輯 (略 - 保持不變) ---
+// --- *** 主題切換邏輯 *** ---
 const THEME_STORAGE_KEY = 'userThemePreference';
 const LIGHT_THEME = 'light'; 
 const DARK_THEME = 'dark';   
-// ... (applyTheme, getSystemThemeBasedOnTime, initializeTheme 函數略) ...
-function applyTheme(desiredTheme, isManual = false) {/* ... */}
-function getSystemThemeBasedOnTime() {/* ... */}
-function initializeTheme() {/* ... */}
+const GREY_THEME = 'grey';   
+const BLUE_THEME = 'blue';
+const GREEN_THEME = 'green';
+const PURPLE_THEME = 'purple';
+const PINK_THEME = 'pink';
+const RED_THEME = 'red';
+    
+function applyTheme(desiredTheme, isManual = false) {
+    const body = document.body;
+    let displayName = '';
+    
+    body.classList.remove(
+        DARK_THEME + '-theme', 
+        GREY_THEME + '-theme',
+        BLUE_THEME + '-theme',
+        GREEN_THEME + '-theme',
+        PURPLE_THEME + '-theme', 
+        PINK_THEME + '-theme',   
+        RED_THEME + '-theme'     
+    );
+
+    let themeToApply = desiredTheme;
+    let modeText = '【手動】';
+
+    if (isManual) {
+        localStorage.setItem(THEME_STORAGE_KEY, desiredTheme);
+    } 
+    else if (desiredTheme === LIGHT_THEME) {
+        themeToApply = getSystemThemeBasedOnTime();
+        modeText = '【自動】';
+    }
+
+    if (themeToApply === DARK_THEME) {
+        body.classList.add(DARK_THEME + '-theme');
+        displayName = '黑色';
+    } else if (themeToApply === GREY_THEME) {
+        body.classList.add(GREY_THEME + '-theme');
+        displayName = '灰色';
+    } else if (themeToApply === BLUE_THEME) {
+        body.classList.add(BLUE_THEME + '-theme');
+        displayName = '藍色';
+    } else if (themeToApply === GREEN_THEME) {
+        body.classList.add(GREEN_THEME + '-theme');
+        displayName = '綠色';
+    } else if (themeToApply === PURPLE_THEME) { 
+        body.classList.add(PURPLE_THEME + '-theme');
+        displayName = '紫色';
+    } else if (themeToApply === PINK_THEME) { 
+        body.classList.add(PINK_THEME + '-theme');
+        displayName = '粉色';
+    } else if (themeToApply === RED_THEME) { 
+        body.classList.add(RED_THEME + '-theme');
+        displayName = '紅色';
+    } else { 
+        displayName = '白色';
+    }
+    
+    currentThemeName.textContent = `${displayName} ${modeText}`;
+}
+
+function getSystemThemeBasedOnTime() {
+    const hour = new Date().getHours();
+    return (hour >= 19 || hour < 7) ? DARK_THEME : LIGHT_THEME;
+}
+
+function initializeTheme() {
+    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    
+    if (storedTheme) {
+        if (storedTheme === LIGHT_THEME) {
+             applyTheme(LIGHT_THEME, false); 
+        } else {
+             applyTheme(storedTheme, true); 
+        }
+    } else {
+        applyTheme(LIGHT_THEME, false);
+    }
+}
+
+// --- 主題/定時器/統計邏輯 ---
 
 themeToggleBtn.addEventListener('click', (event) => {
     event.stopPropagation(); 
@@ -368,20 +462,126 @@ document.addEventListener('click', (e) => {
 
 setInterval(() => {
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    
     if (storedTheme === LIGHT_THEME) {
         applyTheme(LIGHT_THEME, false); 
     }
 }, 1000 * 60 * 60); 
     
-// --- 定時器/統計邏輯 (略 - 保持不變) ---
+function toggleTimerMenu() {
+    timerMenu.classList.toggle('hidden-menu');
+}
 
-function toggleTimerMenu() {/* ... */}
-function setSleepTimer(minutes) {/* ... */}
-function clearSleepTimer() {/* ... */}
-function updateTimerCountdown() {/* ... */}
-function updateTotalListenTime() {/* ... */}
-function incrementPlayCount() {/* ... */}
+function setSleepTimer(minutes) {
+    clearSleepTimer();
+    toggleTimerMenu(); 
 
+    const delayMilliseconds = minutes * 60 * 1000;
+    
+    sleepTime = minutes * 60;
+    endTime = Date.now() + delayMilliseconds;
+
+    sleepTimerId = setTimeout(() => {
+        audio.pause(); 
+        playerTitle.textContent = `定時器到期，已暫停播放 (${minutes} 分鐘)`;
+        clearSleepTimer(); 
+    }, delayMilliseconds);
+    
+    countdownIntervalId = setInterval(updateTimerCountdown, 1000);
+
+    timerToggleButton.textContent = `定時 (${minutes} 分鐘)`;
+    playerTitle.textContent = `定時器已設置：${minutes} 分鐘後自動關閉`;
+
+    if (audio.paused) {
+        audio.play();
+    }
+}
+
+function clearSleepTimer() {
+    if (sleepTimerId !== null) {
+        clearTimeout(sleepTimerId);
+        sleepTimerId = null;
+    }
+    if (countdownIntervalId !== null) {
+        clearInterval(countdownIntervalId);
+        countdownIntervalId = null;
+    }
+    
+    sleepTime = 0;
+    endTime = 0;
+    timerToggleButton.textContent = "定時 (未設定)";
+    remainingTimerSpan.textContent = "--:--";
+    playerTitle.textContent = "已取消定時器";
+}
+
+function updateTimerCountdown() {
+    if (endTime > 0) {
+        const remainingMs = endTime - Date.now();
+        const remainingS = Math.max(0, Math.floor(remainingMs / 1000));
+        
+        const minutes = Math.floor(remainingS / 60);
+        const seconds = remainingS % 60;
+        
+        remainingTimerSpan.textContent = 
+            `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+        if (remainingS === 0) {
+            clearSleepTimer(); 
+            if (!audio.paused) {
+                 audio.pause();
+                 playerTitle.textContent = `定時器到期，已暫停播放`;
+            }
+        }
+    }
+}
+
+audio.addEventListener('play', () => {
+    if (listenIntervalId === null) {
+        listenIntervalId = setInterval(updateTotalListenTime, 1000);
+    }
+});
+
+audio.addEventListener('pause', () => {
+    if (listenIntervalId !== null) {
+        clearInterval(listenIntervalId);
+        listenIntervalId = null;
+    }
+});
+
+function updateTotalListenTime() {
+    totalListenSeconds++;
+    if (totalListenSeconds >= 60) {
+        totalListenMinutes++;
+        totalListenSeconds = 0;
+    }
+    
+    totalListenTimeSpan.textContent = 
+        `${totalListenMinutes} 分鐘 ${totalListenSeconds} 秒`;
+}
+
+// 播放次數追蹤函數
+function incrementPlayCount() {
+    if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
+        const track = currentPlaylist[currentTrackIndex];
+        const key = track.originalIndex; 
+        
+        trackPlayCounts[key] = (trackPlayCounts[key] || 0) + 1; 
+        
+        try {
+            localStorage.setItem(PLAY_COUNT_STORAGE_KEY, JSON.stringify(trackPlayCounts));
+        } catch (e) {
+            console.warn('無法儲存播放次數到 LocalStorage.', e);
+        }
+        
+        if (typeof gtag === 'function') {
+            gtag('event', 'song_played', {
+                'song_index': key,           
+                'song_title': track.title    
+            });
+            console.log(`GA4 事件發送成功: song_played, 歌曲ID: ${key}, 標題: ${track.title}`);
+        } 
+    }
+}
 
 // --- 外部呼叫函數 (來自列表點擊) ---
 
@@ -399,14 +599,14 @@ function loadTrack(originalIndex) {
     const newIndex = currentPlaylist.findIndex(track => track.originalIndex === originalIndex);
 
     if (newIndex !== -1) {
-        playTrack(newIndex); // 統一入口
+        playTrack(newIndex);
     } else {
         resetCurrentPlaylist();
         
         const masterIndex = MASTER_TRACK_LIST.findIndex(track => track.originalIndex === originalIndex);
         if (masterIndex !== -1) {
             playerTitle.textContent = "已清除篩選，並播放您點選的歌曲";
-            playTrack(masterIndex); // 統一入口
+            playTrack(masterIndex); 
         }
     }
     
@@ -414,15 +614,138 @@ function loadTrack(originalIndex) {
     window.location.hash = `song-index-${originalIndex}`;
 }
 
-// --- 搜尋/篩選邏輯 (略 - 保持不變) ---
-function filterPlaylist() {/* ... */}
+// --- *** 搜尋/篩選邏輯 *** ---
 
-// --- 播放列表顯示與排序邏輯 (略 - 保持不變) ---
-function updatePlaylistDisplay() {/* ... */}
-function sortPlaylistByPlayCount() {/* ... */}
+function filterPlaylist() {
+    const searchText = playlistSearchInput.value.toLowerCase().trim(); 
+    
+    if (searchText.length > 0) {
+        currentPlaylist = MASTER_TRACK_LIST.filter(track => { 
+            const itemText = (track.title + ' ' + track.artist).toLowerCase(); 
+            return itemText.includes(searchText);
+        });
+        
+        if (listenIntervalId !== null) {
+            clearInterval(listenIntervalId); 
+            listenIntervalId = null;
+        }
+
+        if (currentPlaylist.length === 0) {
+            playerTitle.textContent = `未找到與 "${searchText}" 相關的歌曲。`;
+            audio.pause(); 
+            currentTrackIndex = -1;
+            
+        } else {
+             playerTitle.textContent = `已根據篩選建立新歌單 (${currentPlaylist.length} 首)。請點擊播放。`;
+             currentTrackIndex = -1; 
+             
+             // 💡 修正：設置為篩選列表的第一首歌 (currentPlaylist[0]) 的 URL，但不設置高光
+             const track = currentPlaylist[0]; 
+             audio.src = track.url; 
+             audio.pause(); 
+        }
+
+    } else {
+        resetCurrentPlaylist(); 
+        playerTitle.textContent = "我的音樂播放器";
+        
+        if (listenIntervalId !== null) {
+            clearInterval(listenIntervalId); 
+            listenIntervalId = null;
+        }
+        
+        currentTrackIndex = 0; 
+        const track = currentPlaylist[currentTrackIndex]; 
+        audio.src = track.url;
+        audio.pause(); 
+    }
+
+    playlistItems.forEach(item => {
+        const itemText = item.textContent.toLowerCase(); 
+        if (itemText.includes(searchText) || searchText.length === 0) {
+            item.style.display = ''; 
+        } else {
+            item.style.display = 'none';
+        }
+    });
+
+    updatePlaylistHighlight(); 
+}
+
+// --- 播放列表顯示與排序邏輯 ---
+
+function updatePlaylistDisplay() {
+    const currentListItems = document.querySelectorAll('#playlist li'); 
+    
+    currentListItems.forEach(item => {
+        const onclickAttr = item.getAttribute('onclick');
+        const match = onclickAttr.match(/loadTrack\((\d+)\)/);
+        const index = match ? parseInt(match[1]) : -1;
+        
+        if (index === -1) return;
+        
+        const track = MASTER_TRACK_LIST[index];
+        const originalText = track.title + ' - ' + track.artist;
+        const playCount = trackPlayCounts[index] || 0;
+        
+        item.innerHTML = '';
+        
+        const mainSpan = document.createElement('span');
+        mainSpan.textContent = originalText;
+        item.appendChild(mainSpan);
+        
+        if (playCount > 0) {
+            const countSpan = document.createElement('small');
+            countSpan.textContent = ` (${playCount} 次播放)`;
+            
+            countSpan.style.fontSize = '0.8em'; 
+            countSpan.style.color = '#888'; 
+            countSpan.style.marginLeft = '10px';
+            
+            item.appendChild(countSpan);
+        }
+    });
+}
+
+function sortPlaylistByPlayCount() {
+    const sortableList = [...MASTER_TRACK_LIST].map(track => {
+        const count = trackPlayCounts[track.originalIndex] || 0;
+        return { ...track, playCount: count };
+    });
+
+    sortableList.sort((a, b) => {
+        if (b.playCount !== a.playCount) {
+            return b.playCount - a.playCount;
+        }
+        return a.originalIndex - b.originalIndex; 
+    });
+
+    const playlistUl = document.getElementById('playlist');
+    const originalLiElements = Array.from(playlistUl.querySelectorAll('li'));
+
+    playlistUl.innerHTML = '';
+
+    sortableList.forEach(track => {
+        const originalIndex = track.originalIndex;
+        const liElement = originalLiElements.find(item => {
+            const onclickAttr = item.getAttribute('onclick');
+            const match = onclickAttr.match(/loadTrack\((\d+)\)/);
+            return match && parseInt(match[1]) === originalIndex;
+        });
+
+        if (liElement) {
+            playlistUl.appendChild(liElement);
+        }
+    });
+    
+    playlistItems = document.querySelectorAll('#playlist li'); 
+
+    updatePlaylistDisplay();
+    updatePlaylistHighlight();
+}
 
 
-// --- LocalStorage 邏輯 (略 - 保持不變) ---
+// --- *** LocalStorage 邏輯 *** ---
 
 const CURRENT_TRACK_INDEX_KEY = 'audioPlayerIndex';
 const CURRENT_TRACK_TIME_KEY = 'audioPlayerTime';
@@ -450,9 +773,98 @@ function saveSettings() {
     }
 }
 
-function loadSavedSettings() {/* ... */}
-function handleUrlAnchor() {/* ... */}
+function loadSavedSettings() {
+    try {
+        const savedVolume = localStorage.getItem('audioPlayerVolume');
+        if (savedVolume !== null) {
+            audio.volume = Math.max(0, Math.min(1, parseFloat(savedVolume)));
+        }
+        const savedMuted = localStorage.getItem('audioPlayerMuted');
+        if (savedMuted !== null) {
+            audio.muted = (savedMuted === 'true');
+        }
 
+        const savedMode = localStorage.getItem('audioPlayerMode');
+        if (savedMode !== null) {
+            const mode = parseInt(savedMode);
+            if (mode >= 0 && mode <= 4) { 
+                playMode = mode;
+                updateModeUI(); 
+            }
+        }
+        
+        const savedIndex = localStorage.getItem(CURRENT_TRACK_INDEX_KEY);
+        if (savedIndex !== null) {
+            const index = parseInt(savedIndex);
+            if (index >= 0 && index < MASTER_TRACK_LIST.length) { 
+                currentTrackIndex = index;
+                const track = MASTER_TRACK_LIST[index]; 
+                audio.src = track.url;
+                playerTitle.textContent = `上次播放：${track.title}`;
+            }
+        }
+
+        const savedTime = localStorage.getItem(CURRENT_TRACK_TIME_KEY);
+        if (savedTime !== null && currentTrackIndex >= 0) { 
+             const time = parseFloat(savedTime);
+             if (!isNaN(time) && time > 0) {
+                 audio.currentTime = time;
+             }
+             localStorage.removeItem(CURRENT_TRACK_TIME_KEY); 
+        }
+        
+        const savedCounts = localStorage.getItem(PLAY_COUNT_STORAGE_KEY);
+        if (savedCounts) {
+            trackPlayCounts = JSON.parse(savedCounts);
+        }
+        
+    } catch (e) {
+        console.warn('Failed to load settings from LocalStorage.', e);
+    }
+}
+
+
+// --- *** URL 錨點處理邏輯 (優化載入速度的最終修訂版) *** ---
+function handleUrlAnchor() {
+    const hash = window.location.hash;
+
+    if (hash.startsWith('#song-index-')) {
+        const parts = hash.split('-');
+        const originalIndex = parseInt(parts[parts.length - 1]);
+
+        if (!isNaN(originalIndex) && originalIndex >= 0 && originalIndex < MASTER_TRACK_LIST.length) {
+            
+            const trackTitle = MASTER_TRACK_LIST[originalIndex].title;
+            
+            // 1. 載入歌曲。這會觸發 loadTrack，loadTrack 會將模式設為 3 並立即嘗試播放。
+            loadTrack(originalIndex); 
+            
+            // 2. 立即將模式設回 0 (分享連結的預期模式)，並更新 UI 和儲存
+            playMode = 0; 
+            updateModeUI();
+            saveSettings();
+            
+            // 3. 設置友好的緩衝提示
+            playerTitle.textContent = `從分享連結載入：${trackTitle} (正在緩衝...)`;
+
+            // 4. 監聽「真正開始播放」事件，以清除緩衝提示
+            const handlePlaying = () => {
+                 // 確保只處理當前歌曲
+                 if (playerTitle.textContent.includes(trackTitle)) { 
+                     playerTitle.textContent = `正在播放：${trackTitle}`;
+                     audio.removeEventListener('playing', handlePlaying);
+                 }
+            };
+            audio.addEventListener('playing', handlePlaying);
+            
+            // 5. 如果瀏覽器阻止了自動播放，通過 play() 的 Promise catch 處理
+            audio.play().catch(error => {
+                 playerTitle.textContent = `從分享載入：${trackTitle} (需點擊播放)`;
+            });
+        }
+    }
+}
+// ------------------------------------
 
 // --- *** 事件監聽器區塊 (底部初始化之前) *** ---
 
@@ -468,8 +880,7 @@ audio.addEventListener('timeupdate', () => {
 
 audio.addEventListener('play', saveSettings);
 audio.addEventListener('pause', saveSettings);
-// ⚠️ 注意：此處不再監聽 'ended' 事件來儲存，因為它已整合到上面的核心邏輯中，以確保順序。
-// audio.addEventListener('ended', saveSettings); // <-- 刪除，避免重複儲存和順序錯亂
+audio.addEventListener('ended', saveSettings);
 
 playlistSearchInput.addEventListener('input', debounce(filterPlaylist, 300));
 
