@@ -32,6 +32,7 @@
             <span class="theme-option" data-theme="green">綠色</span>
             <span class="theme-option" data-theme="purple">紫色</span>
             <span class="theme-option" data-theme="pink">粉色</span>
+            <span class="theme-option" data-theme="yellow">黄色</span>
             <span class="theme-option" data-theme="red">紅色</span>
         </div>
     </div>
@@ -370,6 +371,7 @@ const BLUE_THEME = 'blue';
 const GREEN_THEME = 'green';
 const PURPLE_THEME = 'purple';
 const PINK_THEME = 'pink';
+const YELLOW_THEME = 'yellow';
 const RED_THEME = 'red';
     
 function applyTheme(desiredTheme, isManual = false) {
@@ -382,7 +384,8 @@ function applyTheme(desiredTheme, isManual = false) {
         BLUE_THEME + '-theme',
         GREEN_THEME + '-theme',
         PURPLE_THEME + '-theme', 
-        PINK_THEME + '-theme',   
+        PINK_THEME + '-theme',  
+        YELLOW_THEME + '-theme',
         RED_THEME + '-theme'     
     );
 
@@ -415,6 +418,9 @@ function applyTheme(desiredTheme, isManual = false) {
     } else if (themeToApply === PINK_THEME) { 
         body.classList.add(PINK_THEME + '-theme');
         displayName = '粉色';
+    } else if (themeToApply === YELLOW_THEME) { 
+        body.classList.add(YELLOW_THEME + '-theme');
+        displayName = '黃色';
     } else if (themeToApply === RED_THEME) { 
         body.classList.add(RED_THEME + '-theme');
         displayName = '紅色';
