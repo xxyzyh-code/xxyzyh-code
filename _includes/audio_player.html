@@ -830,7 +830,7 @@ function sortPlaylistByPlayCount() {
             // ⭐️ 關鍵修改：使用本地數據
             count = trackPlayCounts[index] || 0; 
         }
-return { ...track, playCount: count };
+        return { ...track, playCount: count };
     });
     // 2. 執行排序 (按播放次數降序，然後按原始索引升序)
     sortableList.sort((a, b) => {
@@ -904,6 +904,8 @@ function saveSettings() {
         console.warn('LocalStorage is not available or blocked.', e);
     }
 }
+
+// ⭐️ 修正後的 loadSavedSettings 函數
 function loadSavedSettings() {
     try {
         const savedVolume = localStorage.getItem('audioPlayerVolume');
@@ -923,7 +925,21 @@ function loadSavedSettings() {
             }
         }
         
-        // 關鍵修正：當 MASTER_TRACK_LIST 被動態生成後，長度可能會變
+        // 載入播放次數
+        const savedCounts = localStorage.getItem(PLAY_COUNT_STORAGE_KEY);
+        if (savedCounts) {
+            trackPlayCounts = JSON.parse(savedCounts);
+        }
+        
+        // ⭐️ 關鍵修正 1: 載入數據模式，並立即更新 UI
+        const savedDataMode = localStorage.getItem(DATA_MODE_STORAGE_KEY);
+        if (savedDataMode && (savedDataMode === 'local' || savedDataMode === 'global')) {
+            dataMode = savedDataMode;
+        }
+        updateDataModeUI(); // 確保 UI 立即更新，無論是否有保存記錄
+
+        
+        // 載入當前播放索引和時間
         const savedIndex = localStorage.getItem(CURRENT_TRACK_INDEX_KEY);
         if (savedIndex !== null) {
             const index = parseInt(savedIndex);
@@ -953,29 +969,19 @@ function loadSavedSettings() {
              }
              localStorage.removeItem(CURRENT_TRACK_TIME_KEY); 
         }
-        
-        const savedCounts = localStorage.getItem(PLAY_COUNT_STORAGE_KEY);
-        if (savedCounts) {
-            trackPlayCounts = JSON.parse(savedCounts);
-                    // ⭐️ 新增：載入數據模式
-        const savedDataMode = localStorage.getItem(DATA_MODE_STORAGE_KEY);
-        if (savedDataMode && (savedDataMode === 'local' || savedDataMode === 'global')) {
-            dataMode = savedDataMode;
-            updateDataModeUI(); 
-        }
-            // ⭐️ 額外修正：如果新歌單長度變了，要清理掉舊的播放次數記錄
-            const currentKeys = MASTER_TRACK_LIST.map(t => t.originalIndex.toString());
-            let keysToDelete = [];
-            for (const key in trackPlayCounts) {
-                if (!currentKeys.includes(key)) {
-                    keysToDelete.push(key);
-                }
+
+        // 額外修正：如果新歌單長度變了，要清理掉舊的播放次數記錄
+        const currentKeys = MASTER_TRACK_LIST.map(t => t.originalIndex.toString());
+        let keysToDelete = [];
+        for (const key in trackPlayCounts) {
+            if (!currentKeys.includes(key)) {
+                keysToDelete.push(key);
             }
-            keysToDelete.forEach(key => delete trackPlayCounts[key]);
-            
-            // 重新儲存清理後的數據
-            localStorage.setItem(PLAY_COUNT_STORAGE_KEY, JSON.stringify(trackPlayCounts));
         }
+        keysToDelete.forEach(key => delete trackPlayCounts[key]);
+        
+        // 重新儲存清理後的數據
+        localStorage.setItem(PLAY_COUNT_STORAGE_KEY, JSON.stringify(trackPlayCounts));
         
     } catch (e) {
         console.warn('Failed to load settings from LocalStorage.', e);
@@ -1062,20 +1068,21 @@ playlistSearchInput.addEventListener('input', debounce(filterPlaylist, 300));
 async function initializePlayer(isManualToggle = false) {
     // 1. 載入本地設置 (包括 dataMode)
     resetCurrentPlaylist(); 
-    loadSavedSettings();
+    loadSavedSettings(); // 載入 dataMode 並更新 UI
 
     // 2. 只有在模式設定為 'global' 時才發起 API 請求
     if (dataMode === 'global') {
+         // UI 已經更新為「全球統計」，現在獲取數據
          const counts = await fetchGlobalPlayCounts();
          globalTrackPlayCounts = counts; // 將全球數據存入新的全局變量
     } else {
          globalTrackPlayCounts = {}; // 如果是本地模式，則清空全球數據
     }
 
-    // 3. 處理 UI 和邏輯
+    // 3. 處理剩餘邏輯
+    // ⭐️ 修正：這段 UI 更新邏輯不再需要，因為 loadSavedSettings 已經處理了 dataMode 的 UI
     if(!localStorage.getItem('audioPlayerMode') || isManualToggle) {
         updateModeUI();
-        updateDataModeUI();
     }
 
     handleUrlAnchor();
