@@ -4,26 +4,21 @@ import { createClient } from '@supabase/supabase-js';
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 export default async function handler(req, res) {
-  // 執行 SQL 聚合查詢：按 song_id 分組，並對 plays 字段求和
-  const { data, error } = await supabase
-    .from('play_logs')
-    .select('song_id, plays') // Supabase/PostgREST 可以在 select 中使用聚合函數
-    .order('plays', { ascending: false }); // 按播放次數降序排列
+  // ⭐️ 修正：調用 Supabase 數據庫中的 RPC 函數進行聚合
+  const { data, error } = await supabase.rpc('get_global_play_counts');
 
   if (error) {
-    console.error('Error fetching global stats:', error);
+    console.error('Error fetching global stats (RPC):', error);
     return res.status(500).json({ error: error.message });
   }
 
-  // 整理數據格式為 { "s0": 150, "s1": 80, ... }，方便前端合併
+  // 整理數據格式為 { "s0": 150, "s1": 80, ... }，匹配前端需求
   const globalPlayCounts = data.reduce((acc, current) => {
-      // 這裡假設您的 Supabase 配置允許直接返回聚合後的結果
-      acc[current.song_id] = current.plays;
+      // RPC 返回的栏位是 song_id 和 total_plays
+      acc[current.song_id] = current.total_plays; 
       return acc;
   }, {});
-
-  // 注意：如果您的 Supabase/PostgREST 默認配置不允許直接聚合，
-  // 您可能需要在 Supabase 中創建一個 PostgreSQL 視圖 (View) 或 RPC 函數來處理聚合。
   
+  // 返回 JSON 格式的排行榜數據
   res.status(200).json(globalPlayCounts);
 }
