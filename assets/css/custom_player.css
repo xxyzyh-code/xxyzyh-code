@@ -1,5 +1,5 @@
 /* ------------------------------------------- */
-/* 檔案: assets/css/custom_player.css (第二次修正：模式按鈕與菜單透明度) */
+/* 檔案: assets/css/custom_player.css (最終修正：適應新按鈕佈局) */
 /* ------------------------------------------- */
 
 #custom-audio-player {
@@ -27,163 +27,168 @@
 
 /* --- 播放控制區塊調整 --- */
 #player-controls {
-    display: flex;
-    justify-content: space-between; 
-    align-items: center;
+    /* ⭐️ 關鍵修正 1：移除舊的佈局樣式，因為新佈局已在 HTML 內聯樣式中定義 */
     padding-bottom: 10px;
     margin-bottom: 10px;
     border-bottom: 1px solid var(--border-color); /* 主題兼容 */
     position: relative; 
-}
-
-/* --- *** 模式按鈕樣式 (修復邊框和背景) *** --- */
-#mode-button {
-    cursor: pointer;
-    display: inline-block;
-    padding: 5px 10px;
     
-    /* 修正：恢復並使用主題變數 */
-    background-color: var(--hover-bg); 
-    border: 1px solid var(--border-color); /* <--- 新增邊框 */
-    
-    border-radius: 3px;
-    font-size: 0.9em;
-    color: var(--text-color); 
-    transition: background-color 0.2s;
-    user-select: none; 
+    /* 確保舊的 Flexbox 樣式被移除，以接受 HTML 中的 column 佈局 */
+    display: block; /* 或直接移除這三行 */
+    /* justify-content: space-between; */
+    /* align-items: center; */
 }
 
-#mode-button:hover {
-    background-color: var(--secondary-text); 
-}
+/* 舊的 #nav-buttons-group 選擇器已無用，因為按鈕已分離 */
+/* 新的 #nav-main-group、#mode-switcher-group、#aux-controls-group 佈局已在 HTML 內聯樣式中定義 */
 
-/* --- *** 導航按鈕群組樣式 (新增) *** --- */
-#nav-buttons-group {
-    display: flex;
-    gap: 10px; /* 按鈕間距 */
-    align-items: center;
-}
 
-/* --- *** 上一曲/下一曲按鈕樣式 (新增) *** --- */
+/* --- *** 通用按鈕樣式 (應用於所有功能按鈕) *** --- */
+
+/* 1. 導航模式按鈕 */
+#mode-button, 
+/* 2. 上一曲/下一曲按鈕 (它們是 span) */
 #prev-button, 
-#next-button {
-    cursor: pointer;
-    display: inline-block;
-    padding: 5px 10px;
-    
-    /* 複製 mode-button 的樣式 */
-    background-color: var(--hover-bg); 
-    border: 1px solid var(--border-color);
-    
-    border-radius: 3px;
-    font-size: 0.9em;
-    color: var(--text-color); 
-    transition: background-color 0.2s;
-    user-select: none; 
-}
-
-#prev-button:hover,
-#next-button:hover {
-    background-color: var(--secondary-text); 
-}
-
-/* 確保按鈕點擊後樣式立即恢復 */
-#prev-button:focus,
-#prev-button:active,
-#next-button:focus,
-#next-button:active {
-    outline: none; 
-    box-shadow: none; 
-    background-color: var(--secondary-text); 
-}
-
-/* --- *** 定時器折疊菜單樣式 (使用強調色變數) *** --- */
-#sleep-timer-area {
-    position: relative;
-}
-
+#next-button,
+/* 3. 數據模式切換按鈕 (這是 button) */
+#data-mode-toggle-btn,
+/* 4. 主題切換按鈕 */
+#theme-toggle-btn,
+/* 5. 定時器按鈕 */
 #timer-toggle-btn {
-    /* 主定時按鈕 - 使用主題強調色 */
-    padding: 5px 10px;
-    background-color: var(--accent-color); /* ✅ 替換為強調色變數 */
-    color: white;
-    border: 1px solid var(--accent-color); /* ✅ 替換為強調色變數 */
-    border-radius: 3px;
-    cursor: pointer;
+    
+    /* 讓所有按鈕/span 表現得像一個按鈕 */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    
+    /* 視覺樣式 */
+    padding: 8px 15px; /* 統一內邊距，比舊的 5px 更寬敞 */
+    border-radius: 5px;
     font-size: 0.9em;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+/* --- *** 導航與模式按鈕通用樣式 *** --- */
+
+#mode-button, 
+#prev-button, 
+#next-button,
+#theme-toggle-btn {
+    /* 使用通用的次要顏色或邊框 */
+    background-color: var(--card-bg); 
+    border: 1px solid var(--border-color); 
+    color: var(--text-color);
+}
+
+#mode-button:hover, 
+#prev-button:hover, 
+#next-button:hover,
+#theme-toggle-btn:hover {
+    background-color: var(--hover-bg); 
+}
+
+/* --- *** 數據模式按鈕樣式 (使用強調色/次要色) *** --- */
+#data-mode-toggle-btn {
+    /* 讓它在視覺上更突出 */
+    background-color: var(--accent-color); 
+    border: 1px solid var(--accent-color);
+    color: white; 
+}
+#data-mode-toggle-btn:hover {
+    background-color: var(--accent-hover); 
+    border-color: var(--accent-hover);
+}
+/* 數據模式 UI 內部文字 */
+#current-data-mode {
+    font-weight: bold;
+}
+
+/* --- *** 定時器按鈕樣式 (使用與數據模式不同的強調色) *** --- */
+#timer-toggle-btn {
+    /* 保持其獨立的強調色或樣式 */
+    background-color: var(--accent-color); 
+    color: white;
+    border: 1px solid var(--accent-color); 
 }
 #timer-toggle-btn:hover {
-    background-color: var(--accent-hover); /* ✅ 替換為懸停強調色變數 */
+    background-color: var(--accent-hover); 
     border-color: var(--accent-hover);
 }
 
 
+/* --- *** 下拉菜單樣式 (主題和定時器) *** --- */
+
+#theme-menu,
 #timer-menu {
-    /* 折疊菜單容器 */
-    position: absolute;
+    /* 統一菜單視覺效果 */
+    position: absolute; /* HTML 中已設置 relative 容器 */
     top: 100%; 
-    right: 0;
     z-index: 10;
     min-width: 150px;
     
-    /* 修正: 確保背景是卡片背景 */
     background: var(--card-bg);
-    
     border: 1px solid var(--border-color);
     border-radius: 5px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
     margin-top: 5px;
-    
-    /* 新增：為解決可能發生的半透明問題，明確設定背景不透明 */
+    padding: 5px 0; /* 調整內邊距 */
     opacity: 1; 
 }
-
-#timer-menu.hidden-menu {
-    display: none; 
+/* 定時器菜單靠右 */
+#timer-menu {
+    right: 0;
+}
+/* 主題菜單靠左 */
+#theme-menu {
+    left: 0;
 }
 
-.menu-item {
+
+/* --- *** 菜單項目樣式 (通用) *** --- */
+
+.menu-item, .theme-option {
     display: block;
     padding: 8px 12px;
     cursor: pointer;
     font-size: 0.9em;
     color: var(--text-color);
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid transparent; /* 隱藏邊界，只在懸停時顯示 */
 }
 
 .menu-item:last-child {
-    border-bottom: none;
-    color: #dc3545; 
+    color: #dc3545; /* 取消定時的紅色 */
 }
 
-.menu-item:hover {
+.menu-item:hover, .theme-option:hover {
     background-color: var(--hover-bg);
 }
 
-/* --- *** 新增：播放列表搜尋區塊樣式 *** --- */
 
+/* ------------------------------------------- */
+/* --- 以下樣式保持不變 --- */
+/* ------------------------------------------- */
+
+/* --- *** 播放列表搜尋區塊樣式 *** --- */
 #search-area {
-    margin-bottom: 10px; /* 與下方的狀態欄和播放列表保持間距 */
+    margin-bottom: 10px; 
 }
-
 #playlist-search {
     width: 100%;
     padding: 8px 10px;
-    border: 1px solid var(--border-color); /* 主題兼容邊框 */
+    border: 1px solid var(--border-color); 
     border-radius: 5px;
     font-size: 1em;
     color: var(--text-color);
-    background-color: var(--card-bg); /* 主題兼容背景 */
+    background-color: var(--card-bg); 
     transition: border-color 0.2s;
 }
-
 #playlist-search:focus {
-    /* 搜尋框獲得焦點時使用強調色邊框 */
     border-color: var(--accent-color); 
     outline: none;
 }
-
-/* --- 總時長與剩餘時間狀態欄 (保持不變) --- */
+/* --- 總時長與剩餘時間狀態欄 --- */
 #stats-bar {
     display: flex;
     justify-content: space-between;
@@ -192,119 +197,91 @@
     padding: 5px 0;
     margin-bottom: 15px;
 }
-
 #remaining-timer {
     font-weight: bold;
     color: #28a745; 
 }
-
-
-/* --- *** 播放列表樣式 (新增滾動容器) *** --- */
-
+/* --- *** 播放列表樣式 *** --- */
 #playlist {
     list-style: none; 
     padding: 0;
-    margin: 10px 0; /* 讓列表上下有間距 */
-    
-    /* === 核心滾動樣式 === */
-    max-height: 350px;       /* 限制列表的最大高度 */
-    overflow-y: auto;        /* 內容超出時顯示垂直滾動條 */
-    
-    /* 添加視覺輔助，讓滾動區域更清晰 */
-    border: 1px solid var(--border-color); /* 使用主題邊框變數 */
+    margin: 10px 0; 
+    max-height: 350px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color); 
     border-radius: 6px;      
-    background-color: var(--card-bg); /* 使用主題卡片背景變數 */
-    
-    /* 確保滾動條與播放器整體邊緣對齊 */
+    background-color: var(--card-bg); 
     box-sizing: border-box;
 }
-
 #playlist li {
-    padding: 12px 15px;      /* 調整內邊距以適應新的列表容器 */
+    padding: 12px 15px;
     cursor: pointer;
-    
-    /* 使用虛線改為實線，並使用主題邊框色 */
     border-bottom: 1px solid var(--border-color); 
-    
     transition: background-color 0.15s;
     font-size: 0.95em;
 }
-
 #playlist li:hover {
     background-color: var(--hover-bg); 
 }
-
 #playlist li.playing {
     background-color: var(--playing-bg); 
     font-weight: bold;
     color: var(--playing-text); 
     border-left: 3px solid var(--playing-text); 
-    padding-left: 12px; /* 3px 邊框 + 12px 內邊距 = 15px (與非 playing 狀態對齊) */
+    padding-left: 12px;
 }
-
 #playlist li:last-child {
     border-bottom: none;
 }
-
-
-
 /* --- 居中播放器和標題的樣式 --- */
 .center-container {
-    /* 設定最大寬度，避免在超寬螢幕上拉得太開 */
     max-width: 800px; 
-    /* 核心居中技巧：設定左右 margin 為 auto */
     margin-left: auto;
     margin-right: auto;
-    /* 核心文字居中：確保 H1/H2 標題居中 */
     text-align: center;
-    
-    /* 根據您的整體佈局，可能需要一些頂部和底部的間距 */
     padding-top: 20px;
     padding-bottom: 20px;
 }
-
-/* 確保播放器本身（一個塊級元素）也被正確居中 */
 #custom-audio-player {
-    /* 這裡只定義居中，其餘樣式已在檔案開頭定義 */
     margin-left: auto;
     margin-right: auto;
 }
-
-/* --- H1 標題字體大小覆蓋 (確保比 H3 大) --- */
 .center-container h1 {
-    font-size: 2.2em; /* 確保它比播放器內部的 h3 (~1.2em) 大得多 */
+    font-size: 2.2em; 
     margin-bottom: 0.2em;
 }
-
 .center-container h3 {
-    font-size: 1.2em; /* 讓歡迎語句保持適中大小 */
-    color: var(--secondary-text); /* 使用主題次要文字顏色 */
+    font-size: 1.2em; 
+    color: var(--secondary-text); 
 }
-
-/* --- *** 新增：按鈕點擊後樣式立即恢復 (避免視覺殘留) *** --- */
-
-/* 1. 主題切換按鈕 */
-#theme-toggle-btn:focus, 
-#theme-toggle-btn:active {
+/* --- *** 按鈕點擊後樣式立即恢復 *** --- */
+/* 讓所有按鈕的 active/focus 狀態保持一致性 */
+button:focus, button:active,
+span[onclick]:focus, span[onclick]:active {
     outline: none; 
     box-shadow: none; 
-    background-color: var(--hover-bg); 
-    border-color: var(--border-color);
 }
-
-/* 2. 定時器按鈕 */
+/* 清除舊的個別 focus 樣式，統一使用 hover 顏色 */
+#mode-button:focus,
+#mode-button:active,
+#prev-button:focus,
+#prev-button:active,
+#next-button:focus,
+#next-button:active {
+    background-color: var(--hover-bg); 
+}
 #timer-toggle-btn:focus,
 #timer-toggle-btn:active {
-    outline: none; 
-    box-shadow: none; 
     background-color: var(--accent-hover); 
     border-color: var(--accent-hover);
 }
-
-/* 3. ✅ 新增：模式切換按鈕 */
-#mode-button:focus,
-#mode-button:active {
-    outline: none; 
-    box-shadow: none; 
-    background-color: var(--secondary-text); 
+#theme-toggle-btn:focus, 
+#theme-toggle-btn:active {
+    background-color: var(--hover-bg); 
+    border-color: var(--border-color);
+}
+#data-mode-toggle-btn:focus,
+#data-mode-toggle-btn:active {
+    background-color: var(--accent-hover); 
+    border-color: var(--accent-hover);
 }
