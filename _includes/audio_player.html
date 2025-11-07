@@ -5,55 +5,63 @@
         您的瀏覽器不支持 HTML5 音頻。
     </audio>
     
-<div id="player-controls">
-    <div id="nav-buttons-group">
-        <span id="prev-button" onclick="playPreviousTrack()">
-            ⏪ 上一曲
+    <div id="player-controls" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;">
+        
+        <div id="nav-main-group" style="display: flex; justify-content: center; align-items: center; gap: 15px;">
+            <span id="prev-button" onclick="playPreviousTrack()" style="cursor: pointer; font-size: 1.2em;">
+                ⏪ 上一曲
             </span>
-    <div id="data-mode-switcher">
-        <button id="data-mode-toggle-btn" onclick="toggleDataMode()">
-            數據模式: <span id="current-data-mode">[本地統計]</span>
-        </button>
-    </div>
-        <span id="mode-button" onclick="togglePlayMode()">
-            [ 模式: 順序 ]
-        </span>
-        
-        <span id="next-button" onclick="playNextTrack()">
-            下一曲 ⏩
-        </span>
-    </div>
-    <div id="theme-switcher">
-        <button id="theme-toggle-btn">
-            主題：<span id="current-theme-name">白色 (自動)</span>
-        </button>
-        <div id="theme-menu" class="hidden-menu">
-            <span class="theme-option" data-theme="light">白色</span>
-            <span class="theme-option" data-theme="dark">黑色</span>
-            <span class="theme-option" data-theme="grey">灰色</span>
-            <span class="theme-option" data-theme="blue">藍色</span>
-            <span class="theme-option" data-theme="green">綠色</span>
-            <span class="theme-option" data-theme="purple">紫色</span>
-            <span class="theme-option" data-theme="pink">粉色</span>
-            <span class="theme-option" data-theme="yellow">黄色</span>
-            <span class="theme-option" data-theme="red">紅色</span>
+            <span id="mode-button" onclick="togglePlayMode()" style="cursor: pointer;">
+                [ 模式: 順序 ]
+            </span>
+            <span id="next-button" onclick="playNextTrack()" style="cursor: pointer; font-size: 1.2em;">
+                下一曲 ⏩
+            </span>
         </div>
-    </div>
-    <div id="sleep-timer-area">
-        <button id="timer-toggle-btn" onclick="toggleTimerMenu()">
-            定時 (未設定)
-        </button>
         
-        <div id="timer-menu" class="hidden-menu">
-            <span class="menu-item" onclick="setSleepTimer(10)">10 分鐘後關閉</span>
-            <span class="menu-item" onclick="setSleepTimer(30)">30 分鐘後關閉</span>
-            <span class="menu-item" onclick="setSleepTimer(60)">60 分鐘後關閉</span>
-            <span class="menu-item" onclick="clearSleepTimer(); toggleTimerMenu();">取消定時</span>
+        <div id="mode-switcher-group" style="display: flex; justify-content: center; margin-top: 5px;">
+            <div id="data-mode-switcher">
+                <button id="data-mode-toggle-btn" onclick="toggleDataMode()" style="cursor: pointer;">
+                    數據模式: <span id="current-data-mode">[本地統計]</span>
+                </button>
+            </div>
         </div>
-    </div>
-</div> 
 
-<div id="search-area">
+        <div id="aux-controls-group" style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+            
+            <div id="theme-switcher" style="position: relative;">
+                <button id="theme-toggle-btn" style="cursor: pointer;">
+                    主題：<span id="current-theme-name">白色 (自動)</span>
+                </button>
+                <div id="theme-menu" class="hidden-menu" style="position: absolute; z-index: 10; left: 0;">
+                    <span class="theme-option" data-theme="light">白色</span>
+                    <span class="theme-option" data-theme="dark">黑色</span>
+                    <span class="theme-option" data-theme="grey">灰色</span>
+                    <span class="theme-option" data-theme="blue">藍色</span>
+                    <span class="theme-option" data-theme="green">綠色</span>
+                    <span class="theme-option" data-theme="purple">紫色</span>
+                    <span class="theme-option" data-theme="pink">粉色</span>
+                    <span class="theme-option" data-theme="yellow">黄色</span>
+                    <span class="theme-option" data-theme="red">紅色</span>
+                </div>
+            </div>
+            
+            <div id="sleep-timer-area" style="position: relative;">
+                <button id="timer-toggle-btn" onclick="toggleTimerMenu()" style="cursor: pointer;">
+                    定時 (未設定)
+                </button>
+                
+                <div id="timer-menu" class="hidden-menu" style="position: absolute; z-index: 10; right: 0;">
+                    <span class="menu-item" onclick="setSleepTimer(10)">10 分鐘後關閉</span>
+                    <span class="menu-item" onclick="setSleepTimer(30)">30 分鐘後關閉</span>
+                    <span class="menu-item" onclick="setSleepTimer(60)">60 分鐘後關閉</span>
+                    <span class="menu-item" onclick="clearSleepTimer(); toggleTimerMenu();">取消定時</span>
+                </div>
+            </div>
+        </div>
+        
+    </div> 
+    <div id="search-area">
     <input type="text" id="playlist-search" placeholder="🔎 搜尋歌曲或歌手..." aria-label="搜尋歌曲或歌手">
 </div>
     
@@ -70,6 +78,7 @@
     </ul>
     
 </div>
+
 <script>
 // 獲取 DOM 元素
 const audio = document.getElementById('main-audio');
