@@ -189,42 +189,46 @@ function trackPlayToDatabase(song_id) {
     });
 }
 
-// ⭐️ 核心新增: 獲取全球播放數據的異步函數 (使用 Supabase API 邏輯)
+// ------------------------------------
+// ⭐️ 核心修正：獲取全球播放數據的異步函數 (現在是調用您的 /api/stats.js)
+// ------------------------------------
 async function fetchGlobalPlayCounts() {
+    // 1. UI 顯示載入中
     document.getElementById('current-data-mode').textContent = '[載入中...]';
 
-    // 構建 Supabase 查詢 URL: 選擇 'song id' 和 'plays'
-    const apiEndpoint = `${SUPABASE_URL}/rest/v1/${GLOBAL_STATS_TABLE}?select=song id,plays`;
+    // 2. 調用您修正後的 Serverless API
+    const apiEndpoint = '/api/stats';
     
     try {
         const response = await fetch(apiEndpoint, {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json',
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                // Serverless API 會處理認證，前端只需發起標準 GET 請求
+                'Content-Type': 'application/json' 
             }
         });
 
         if (!response.ok) {
-            throw new Error(`API 錯誤! 狀態碼: ${response.status}`);
+            // 處理 Serverless API 返回的非 200 狀態碼
+            const errorBody = await response.json().catch(() => ({ message: 'API 返回非 JSON 錯誤' }));
+            throw new Error(`API 錯誤! 狀態碼: ${response.status}. 詳情: ${errorBody.message}`);
         }
         
-        const data = await response.json();
+        // 3. 接收數據 (Serverless API 已經將數據整理成 { "song_id": plays } 格式)
+        const globalStats = await response.json();
         
-        const globalStats = data.reduce((acc, row) => {
-            // ⭐️ 使用 'song id' 作為鍵，並使用 'plays' 作為值
-            acc[row['song id']] = row.plays; 
-            return acc;
-        }, {});
-        
+        // 4. 返回結果
         return globalStats;
+        
     } catch (error) {
         console.error('獲取全球播放次數失敗:', error);
-        alert(`無法載入全球統計數據。請檢查 RLS 設置。錯誤: ${error.message}`);
-        return {}; 
+        // 如果載入失敗，給用戶彈窗提示，並將狀態設為失敗
+        alert(`無法載入全球統計數據。請檢查後端 API 和 Supabase RLS。錯誤: ${error.message}`);
+        document.getElementById('current-data-mode').textContent = '[載入失敗]'; 
+        return {}; // 載入失敗時返回空對象，防止程序崩潰
     }
 }
+
 // --- *** 防抖輔助函數 *** ---
 function debounce(func, delay) {
     let timeoutId;
