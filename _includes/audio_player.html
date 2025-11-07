@@ -789,10 +789,10 @@ function updatePlaylistDisplay() {
     });
 }
 
-// sortPlaylistByPlayCount 函數 
+// ⭐️ 最終修正：sortPlaylistByPlayCount 函數
 function sortPlaylistByPlayCount() {
     
-    // 如果播放列表不是完整的，則不進行排序，只更新顯示
+    // 如果播放列表不是完整的，或者我們在搜索模式，則不進行排序，只更新顯示
     if (currentPlaylist.length !== MASTER_TRACK_LIST.length) {
          updatePlaylistDisplay(); 
          updatePlaylistHighlight();
@@ -836,12 +836,27 @@ function sortPlaylistByPlayCount() {
         currentTrackIndex = 0;
     }
 
-    // ⭐️ 關鍵修正：使用文檔片段 (Document Fragment) 進行優化的 DOM 重排
+    // ⭐️ 核心修正區塊：確保 DOM 元素存在並正確進行重排
     const playlistUl = document.getElementById('playlist');
-    const fragment = document.createDocumentFragment();
-    const originalLiElements = Array.from(playlistUl.querySelectorAll('li'));
+    let originalLiElements = Array.from(playlistUl.querySelectorAll('li'));
     
-    // 創建原始 Li 元素的映射，以便通過 originalIndex 快速查找
+    // 🔴 檢查：如果列表為空，強制重建 DOM 元素
+    if (originalLiElements.length === 0) {
+        console.warn("DOM 列表為空！正在強制重建所有 LI 元素以避免空白列表。");
+        const fragment = document.createDocumentFragment();
+        MASTER_TRACK_LIST.forEach((track, index) => {
+            const li = document.createElement('li');
+            li.setAttribute('onclick', `loadTrack(${index})`);
+            li.textContent = `${track.title} - ${track.artist}`;
+            fragment.appendChild(li);
+        });
+        playlistUl.innerHTML = '';
+        playlistUl.appendChild(fragment);
+        // 重新獲取元素列表
+        originalLiElements = Array.from(playlistUl.querySelectorAll('li'));
+    }
+    
+    const fragment = document.createDocumentFragment();
     const liMap = new Map();
     originalLiElements.forEach(item => {
         const onclickAttr = item.getAttribute('onclick');
@@ -869,6 +884,7 @@ function sortPlaylistByPlayCount() {
     updatePlaylistDisplay();
     updatePlaylistHighlight();
 }
+
 
 
 // --- *** LocalStorage 邏輯 (保持不變) *** ---
