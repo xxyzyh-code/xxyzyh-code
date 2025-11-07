@@ -1,0 +1,17 @@
+{
+  "functions": {
+    "api/stats.js": {
+      "runtime": "node@20" 
+    },
+    "api/track.js": {
+      "runtime": "node@20" 
+    }
+  },
+  "builds": [
+    {
+      "src": "**/*.html",
+      "use": "@vercel/static-build",
+      "config": { "zeroConfig": true }
+    }
+  ]
+}
