@@ -749,6 +749,10 @@ function filterPlaylist() {
         audio.src = track.url;
         audio.pause(); 
     }
+     // ⭐️ 關鍵修正：無論篩選還是清空，都調用 sortPlaylistByPlayCount
+    // 這樣可以確保在搜索框清空時，如果 dataMode 是 global，列表會被正確排序。
+    sortPlaylistByPlayCount(); 
+     // DOM 元素的隱藏/顯示
     playlistItems.forEach(item => {
         const itemText = item.textContent.toLowerCase(); 
         if (itemText.includes(searchText) || searchText.length === 0) {
@@ -1075,30 +1079,44 @@ audio.addEventListener('pause', () => {
 audio.addEventListener('ended', saveSettings);
 playlistSearchInput.addEventListener('input', debounce(filterPlaylist, 300));
 
-// --- *** 全新異步初始化函數 *** ---
+// --- *** 異步初始化函數 *** ---
 
 async function initializePlayer(isManualToggle = false) {
-    // 1. 載入本地設置 (包括 dataMode)
-    resetCurrentPlaylist(); 
+    // 1. 載入本地設置 (包括 dataMode, currentTrackIndex, 等)
     loadSavedSettings(); 
-
+    
     // 2. 只有在模式設定為 'global' 時才發起 API 請求
     if (dataMode === 'global') {
+         // UI 顯示正在載入
+         document.getElementById('current-data-mode').textContent = '[載入中...]'; 
          const counts = await fetchGlobalPlayCounts();
          globalTrackPlayCounts = counts; 
+         // API 載入完成，顯示正常狀態
          document.getElementById('current-data-mode').textContent = '[全球統計]'; 
     } else {
          globalTrackPlayCounts = {}; 
+         document.getElementById('current-data-mode').textContent = '[本地統計]';
     }
 
-    // 3. 處理剩餘邏輯
+    // 3. ⭐️ 核心修正：檢查是否在篩選狀態
+    if (playlistSearchInput.value.trim().length > 0) {
+        // 如果有搜索文本，我們只需要重新執行篩選。
+        // filterPlaylist() 會自行設置 currentPlaylist 為篩選結果。
+        filterPlaylist(); 
+    } else {
+        // 如果沒有搜索文本，則重置 currentPlaylist 為完整歌單
+        resetCurrentPlaylist(); 
+    }
+    
+    // 4. 處理 UI 
     if(!localStorage.getItem('audioPlayerMode') || isManualToggle) {
         updateModeUI();
     }
     
-    // 4. 排序和顯示
+    // 5. 排序和顯示
     handleUrlAnchor();
-    sortPlaylistByPlayCount(); // 排序現在會根據 dataMode 選擇數據源
+    // sortPlaylistByPlayCount 會處理排序和更新列表顯示
+    sortPlaylistByPlayCount(); 
     initializeTheme();
 }
 
