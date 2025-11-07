@@ -78,91 +78,100 @@
     </ul>
     
 </div>
-
 <script>
+// ------------------------------------
+// ⭐️ 關鍵：Supabase API 配置 (使用您提供的 Key)
+// ------------------------------------
+const SUPABASE_URL = 'https://dpflzangmwahuwyevegp.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwZmx6YW5nbXdhaHV3eWV2ZWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0Mjc0NDYsImV4cCI6MjA3ODAwMzQ0Nn0.bydLBJIGqHcEKDhmw4E7zEqxFxymieS7GlLjL9Zyr90';
+const GLOBAL_STATS_TABLE = 'play_logs'; // 您的表名
+
+// ------------------------------------
 // 獲取 DOM 元素
+// ------------------------------------
 const audio = document.getElementById('main-audio');
 const playerTitle = document.querySelector('#custom-audio-player h3');
 let playlistItems = document.querySelectorAll('#playlist li'); 
 const modeButton = document.getElementById('mode-button'); 
-// 新增 DOM 元素
 const timerToggleButton = document.getElementById('timer-toggle-btn');
 const timerMenu = document.getElementById('timer-menu');
 const totalListenTimeSpan = document.getElementById('total-listen-time');
 const remainingTimerSpan = document.getElementById('remaining-timer');
 const playlistSearchInput = document.getElementById('playlist-search'); 
-// *** 主題切換相關 DOM 元素 ***
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 const themeMenu = document.getElementById('theme-menu');
 const currentThemeName = document.getElementById('current-theme-name');
 const themeOptions = document.querySelectorAll('#theme-menu .theme-option');
     
     
+// ------------------------------------
 // 1. 準備數據和狀態追蹤
-// ⭐️ 關鍵修正 1: 通過 Jekyll 語法動態生成最新的 MASTER_TRACK_LIST
-// 使用 | jsonify 確保輸出為有效的 JSON 數組
-// 此外，我們需要修改 MASTER_TRACK_LIST 結構，以確保包含原始索引 (originalIndex)
+// ------------------------------------
+// ⭐️ 修正：確保 MASTER_TRACK_LIST 使用在 HTML 頂部定義的 trackDataArray
 const MASTER_TRACK_LIST = (function() {
-    const data = {{ site.data.music | jsonify }};
-    return data.map((track, index) => ({
+    // 檢查 trackDataArray 是否存在 (它應該在上面的 <script> 塊中被 Liquid 定義)
+    if (typeof trackDataArray === 'undefined' || trackDataArray.length === 0) {
+        console.error("錯誤: trackDataArray (site.data.music) 數據未找到或為空。");
+        return [];
+    }
+    return trackDataArray.map((track, index) => ({
+        // 確保每個歌曲物件都有一個唯一的 'id' 欄位，與 Supabase 的 'song id' 對應
+        // 如果您的數據中沒有，則這裡使用 's' + index 作為 fallback ID
+        id: track.id || `s${index}`, 
         title: track.title,
         artist: track.artist,
         url: track.url,
-        originalIndex: index // 根據 Jekyll 的 forloop.index0 設置原始索引
+        originalIndex: index 
     }));
 })(); 
 
 let currentPlaylist = []; 
 let currentTrackIndex = 0; 
-// 播放模式：0=順序停止, 1=單曲循環, 2=隨機播放, 3=自由模式, 4=順序循環
 let playMode = 0; 
-// ... (其餘變數保持不變) ...
-// 定時器狀態變數
 let sleepTimerId = null; 
 let sleepTime = 0; 
 let endTime = 0; 
 let countdownIntervalId = null; 
-// 總時長追蹤變數
 let totalListenMinutes = 0;
 let totalListenSeconds = 0;
 let listenIntervalId = null; 
-// 播放次數追蹤變數
+
 const PLAY_COUNT_STORAGE_KEY = 'audioTrackPlayCounts'; 
 let trackPlayCounts = {}; 
-// 數據模式：'local' = 僅使用 LocalStorage 統計, 'global' = 合併全球統計
 let dataMode = 'local';
 const DATA_MODE_STORAGE_KEY = 'audioPlayerDataMode';
-// 數據庫中的全球播放次數（一旦從 API 獲取就會填充）
+// ⭐️ 關鍵：儲存從 API 獲取的全球播放次數
 let globalTrackPlayCounts = {}; 
-// --- *** Supabase/API 相關函數 )*** ---
+
+// --- *** Supabase/API 相關函數 *** ---
+
 // 1. 獲取或生成唯一的匿名用戶 ID
 function getUserId() {
   let id = localStorage.getItem('anon_user_id');
   if (!id) {
-    // 使用瀏覽器內置的 crypto.randomUUID() 創建唯一 ID
     id = crypto.randomUUID(); 
     localStorage.setItem('anon_user_id', id);
   }
   return id;
 }
+
 // 2. 向 Serverless API 發送播放日誌
 function trackPlayToDatabase(song_id) {
-    // 檢查 song_id 是否有效
+    // ... (保持不變，因為這部分假設您已使用 Serverless API) ...
+    // ... (略) ...
     if (typeof song_id === 'undefined' || song_id === null) {
         console.warn("trackPlayToDatabase: Song ID 無效，跳過數據庫記錄。");
         return;
     }
     
-    // 獲取當前用戶 ID
     const user_id = getUserId(); 
     
-    // 發送 POST 請求到您的 Serverless API
-    fetch('/api/track', {
+    // 這裡使用 song_id 本身（即 MASTER_TRACK_LIST 中的 track.id 或 sX）
+    fetch('/api/track', { 
         method: 'POST',
         body: JSON.stringify({
             user_id: user_id,
-            // 這裡使用 's' + originalIndex 作為 song_id，保證唯一性
-            song_id: `s${song_id}` 
+            song_id: song_id // 使用 track.id
         }),
         headers: { 'Content-Type': 'application/json' }
     })
@@ -172,36 +181,44 @@ function trackPlayToDatabase(song_id) {
         }
         return response.json();
     })
-    .then(data => {
-        // console.log(`播放記錄發送成功: Song ID s${song_id}`);
-    })
     .catch(error => {
         console.error('播放記錄發送失敗:', error);
     });
 }
-// ⭐️ 核心新增: 獲取全球播放數據的異步函數
+
+// ⭐️ 核心新增: 獲取全球播放數據的異步函數 (使用 Supabase API 邏輯)
 async function fetchGlobalPlayCounts() {
+    document.getElementById('current-data-mode').textContent = '[載入中...]';
+
+    // 構建 Supabase 查詢 URL: 選擇 'song id' 和 'plays'
+    const apiEndpoint = `${SUPABASE_URL}/rest/v1/${GLOBAL_STATS_TABLE}?select=song id,plays`;
+    
     try {
-        // 假設您的 /api/stats 接口已部署
-        const response = await fetch('/api/stats'); 
-        if (!response.ok) {
-            // 如果服務器返回錯誤，拋出異常
-            throw new Error(`API error! Status: ${response.status}`);
-        }
-        const globalCounts = await response.json();
-        
-        const mappedGlobalCounts = {};
-        for (const key in globalCounts) {
-            // 將 song_id ("s0") 轉換回數字索引 (0)
-            const originalIndex = parseInt(key.substring(1)); 
-            if (!isNaN(originalIndex)) {
-                mappedGlobalCounts[originalIndex] = globalCounts[key];
+        const response = await fetch(apiEndpoint, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
             }
+        });
+
+        if (!response.ok) {
+            throw new Error(`API 錯誤! 狀態碼: ${response.status}`);
         }
-        return mappedGlobalCounts;
+        
+        const data = await response.json();
+        
+        const globalStats = data.reduce((acc, row) => {
+            // ⭐️ 使用 'song id' 作為鍵，並使用 'plays' 作為值
+            acc[row['song id']] = row.plays; 
+            return acc;
+        }, {});
+        
+        return globalStats;
     } catch (error) {
-        console.error('獲取全球播放次數失敗，將使用本地數據。', error);
-        // 如果 API 失敗，返回空對象，以保證播放器正常運作
+        console.error('獲取全球播放次數失敗:', error);
+        alert(`無法載入全球統計數據。請檢查 RLS 設置。錯誤: ${error.message}`);
         return {}; 
     }
 }
@@ -221,10 +238,9 @@ function resetCurrentPlaylist() {
     currentPlaylist = [...MASTER_TRACK_LIST]; 
 }
 
-// --- 輔助函數 (以下所有函數保持不變) ---
-// 載入並播放指定索引的歌曲
+// --- 輔助函數 (保持不變) ---
 function playTrack(index) {
-    // 確保索引在當前歌單的範圍內
+    // ... (保持不變) ...
     if (index >= 0 && index < currentPlaylist.length) { 
         currentTrackIndex = index;
         const track = currentPlaylist[index]; 
@@ -241,7 +257,7 @@ function playTrack(index) {
         updatePlaylistHighlight();
     }
 }
-// 獲取隨機索引
+// ... (getNextRandomIndex, playNextTrack, playPreviousTrack 保持不變) ...
 function getNextRandomIndex() {
     let newIndex;
     do {
@@ -250,28 +266,24 @@ function getNextRandomIndex() {
     
     return newIndex;
 }
-// ... (playNextTrack, playPreviousTrack, updatePlaylistHighlight 保持不變) ...
-// *** 修正：播放下一曲功能 ***
 function playNextTrack() {
     if (currentPlaylist.length === 0) return;
     
     let nextIndex;
     
-    if (playMode === 1) { // 修正：單曲循環模式，保持當前歌曲
+    if (playMode === 1) { 
         nextIndex = currentTrackIndex; 
-    } else if (playMode === 2) { // 隨機模式
+    } else if (playMode === 2) { 
         nextIndex = getNextRandomIndex();
-    } else { // 順序模式 (包括 0, 3, 4)
-        // 確保索引在當前歌單內循環，或者在順序停止時停止
+    } else { 
         if (currentTrackIndex < currentPlaylist.length - 1) {
             nextIndex = currentTrackIndex + 1;
-        } else if (playMode === 4) { // 順序循環
-            nextIndex = 0; // 回到第一首
-        } else { // 順序停止 (0) 或 自由模式 (3) - 播完即停
-            // 如果在最後一首點擊下一曲，則停止播放
+        } else if (playMode === 4) { 
+            nextIndex = 0; 
+        } else { 
             audio.pause();
             playerTitle.textContent = "已到達列表末尾。";
-            currentTrackIndex = currentPlaylist.length; // 設置一個越界的狀態
+            currentTrackIndex = currentPlaylist.length; 
             updatePlaylistHighlight();
             return;
         }
@@ -279,23 +291,20 @@ function playNextTrack() {
     
     playTrack(nextIndex);
 }
-
-// *** 新增：播放上一曲功能 ***
 function playPreviousTrack() {
     if (currentPlaylist.length === 0) return;
     let prevIndex;
     
-    if (playMode === 1) { // ⭐️ 修正：單曲循環模式，保持當前歌曲
+    if (playMode === 1) { 
         prevIndex = currentTrackIndex; 
-    } else if (playMode === 2) { // 隨機模式
+    } else if (playMode === 2) { 
         prevIndex = getNextRandomIndex();
-    } else { // 順序模式 (包括 0, 3, 4)
+    } else { 
         if (currentTrackIndex > 0) {
             prevIndex = currentTrackIndex - 1;
-        } else if (playMode === 4) { // 順序循環
-            prevIndex = currentPlaylist.length - 1; // 回到最後一首
-        } else { // 順序停止 (0) 或 自由模式 (3) - 播完即停
-            // ... (停止邏輯，保持不變) ...
+        } else if (playMode === 4) { 
+            prevIndex = currentPlaylist.length - 1; 
+        } else { 
             audio.pause();
             playerTitle.textContent = "已到達列表開頭。";
             currentTrackIndex = -1;
@@ -306,31 +315,24 @@ function playPreviousTrack() {
     
     playTrack(prevIndex);
 }
-  
-// 更新播放列表的高亮狀態，並增加「自動滾動」功能 (修正版)
 function updatePlaylistHighlight(manualScroll = false) {
     const listItems = document.querySelectorAll('#playlist li');
     
-    // 1. 移除所有項目的高亮狀態
     listItems.forEach(item => {
         item.classList.remove('playing');
     });
-    // 2. 為當前播放的歌曲添加高亮狀態
+    
     if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
-        // ⭐️ 關鍵：找到當前播放歌曲在 MASTER_TRACK_LIST 中的原始索引
         const playingTrackOriginalIndex = currentPlaylist[currentTrackIndex].originalIndex;
         
-        // 遍歷當前的 DOM 列表，找到與原始索引匹配的 `<li>` 元素
         const playingItem = Array.from(listItems).find(item => {
             const onclickAttr = item.getAttribute('onclick');
-            // 從 onclick="loadTrack(X)" 中提取原始索引 X
             const match = onclickAttr.match(/loadTrack\((\d+)\)/);
             return match && parseInt(match[1]) === playingTrackOriginalIndex;
         });
         if (playingItem) {
             playingItem.classList.add('playing');
             
-            // 3. 自動滾動到正在播放的歌曲
             if (!manualScroll) {
                  playingItem.scrollIntoView({
                     behavior: 'smooth', 
@@ -340,59 +342,52 @@ function updatePlaylistHighlight(manualScroll = false) {
         }
     }
 }
-// --- 核心邏輯：控制播放順序/循環/隨機/自由 (修正版) ---
+// --- 核心邏輯：控制播放順序/循環/隨機/自由 (保持不變) ---
 audio.addEventListener('ended', () => {
-    // 1. 執行記錄、排序、儲存等操作
     incrementPlayCount(); 
     updatePlaylistDisplay(); 
     sortPlaylistByPlayCount(); 
     saveSettings(); 
-    // 2. 處理播放模式 (必須在 playTrack 之前完成)
-    let nextIndex = -1; // 使用 -1 作為標記，表示沒有下一首或已處理
-    if (playMode === 1) { // 單曲循環：不改變索引，直接重播
+    
+    let nextIndex = -1; 
+    if (playMode === 1) { 
         audio.currentTime = 0; 
         audio.play();
         updatePlaylistHighlight(); 
         return; 
     } 
     
-    // ⭐️ 修正：處理自由模式 (3) - 播完即停
     if (playMode === 3) { 
         audio.pause();
         playerTitle.textContent = "自由模式下，歌曲播放完畢。";
-        currentTrackIndex = -1; // 標記為未播放狀態
+        currentTrackIndex = -1; 
         updatePlaylistHighlight(); 
-        window.location.hash = ''; // 歌單結束時清除錨點
-        return; // 立即返回，停止後續的播放邏輯
+        window.location.hash = ''; 
+        return; 
     } 
     
-    // 計算下一首索引 (僅針對模式 0, 2, 4)
-    if (playMode === 2) { // 隨機播放
+    if (playMode === 2) { 
         nextIndex = getNextRandomIndex();
-    } else if (playMode === 4) { // 順序循環
+    } else if (playMode === 4) { 
         nextIndex = (currentTrackIndex + 1) % currentPlaylist.length;
-    } else { // 順序停止 (0)
+    } else { 
         if (currentTrackIndex < currentPlaylist.length - 1) { 
-            // 還有下一首
             nextIndex = currentTrackIndex + 1;
         } else {
-            // 已是最後一首，應停止
             audio.pause();
             playerTitle.textContent = "播放列表已結束";
-            currentTrackIndex = -1; // 標記為未播放狀態
+            currentTrackIndex = -1; 
             updatePlaylistHighlight(); 
-            window.location.hash = ''; // 歌單結束時清除錨點
-            return; // 停止播放後返回
+            window.location.hash = ''; 
+            return; 
         }
     }
-    // 3. 呼叫 playTrack 統一處理播放和高光更新
     if (nextIndex !== -1) {
         playTrack(nextIndex);
-        // 更新分享連結錨點
         window.location.hash = `song-index-${currentPlaylist[nextIndex].originalIndex}`;
     }
 });
-// 模式切換函數
+// 模式切換函數 (保持不變)
 function togglePlayMode() {
     playMode = (playMode + 1) % 5; 
     
@@ -401,8 +396,8 @@ function togglePlayMode() {
     playerTitle.textContent = `已切換到 ${modeButton.textContent.replace('[ 模式: ', '').replace(' ]', '')}`;
     saveSettings(); 
 }
-// ⭐️ 新增：切換數據模式
-function toggleDataMode() {
+// ⭐️ 核心修正：切換數據模式函數 (異步處理數據獲取)
+async function toggleDataMode() {
     dataMode = (dataMode === 'local') ? 'global' : 'local';
     
     updateDataModeUI();
@@ -410,10 +405,10 @@ function toggleDataMode() {
     
     playerTitle.textContent = `數據模式已切換為：${(dataMode === 'global' ? '全球統計' : '本地統計')}`;
     
-    // 關鍵：切換模式後，需要重新初始化播放列表和排序
-    initializePlayer(true); // 傳入 true 表示手動切換，強制重新載入
+    // 關鍵：在手動切換時，強制異步重新初始化播放器
+    await initializePlayer(true); 
 }
-// ⭐️ 新增：統一更新數據模式 UI
+// ⭐️ 修正：統一更新數據模式 UI (包含載入狀態)
 function updateDataModeUI() {
     const modeSpan = document.getElementById('current-data-mode');
     if (dataMode === 'global') {
@@ -424,7 +419,7 @@ function updateDataModeUI() {
         modeSpan.style.color = '';
     }
 }
-// 統一更新模式 UI 的函數
+// 統一更新模式 UI 的函數 (保持不變)
 function updateModeUI() {
     let modeText;
     
@@ -443,7 +438,7 @@ function updateModeUI() {
     modeButton.textContent = modeText;
 }
 
-// --- *** 主題切換邏輯 *** ---
+// --- *** 主題切換邏輯 (保持不變) *** ---
 const THEME_STORAGE_KEY = 'userThemePreference';
 const LIGHT_THEME = 'light'; 
 const DARK_THEME = 'dark';   
@@ -459,6 +454,7 @@ function applyTheme(desiredTheme, isManual = false) {
     const body = document.body;
     let displayName = '';
     
+    // ... (主題顏色邏輯保持不變) ...
     body.classList.remove(
         DARK_THEME + '-theme', 
         GREY_THEME + '-theme',
@@ -541,7 +537,11 @@ document.addEventListener('click', (e) => {
     if (!themeMenu.contains(e.target) && !themeToggleBtn.contains(e.target)) {
         themeMenu.classList.add('hidden-menu');
     }
-    if (!timerMenu.contains(e.target) && !timerToggleButton.contains(e.target)) {
+    // ⭐️ 修正定時器菜單：確保點擊外部可以關閉
+    const isTimerMenuClick = timerMenu.contains(e.target);
+    const isTimerButtonClick = timerToggleButton.contains(e.target);
+    
+    if (!isTimerMenuClick && !isTimerButtonClick) {
         if (!timerMenu.classList.contains('hidden-menu')) {
             timerMenu.classList.add('hidden-menu');
         }
@@ -561,6 +561,7 @@ function toggleTimerMenu() {
 function setSleepTimer(minutes) {
     clearSleepTimer();
     toggleTimerMenu(); 
+    // ... (定時器邏輯保持不變) ...
     const delayMilliseconds = minutes * 60 * 1000;
     
     sleepTime = minutes * 60;
@@ -579,6 +580,7 @@ function setSleepTimer(minutes) {
     }
 }
 function clearSleepTimer() {
+    // ... (清除定時器邏輯保持不變) ...
     if (sleepTimerId !== null) {
         clearTimeout(sleepTimerId);
         sleepTimerId = null;
@@ -595,6 +597,7 @@ function clearSleepTimer() {
     playerTitle.textContent = "已取消定時器";
 }
 function updateTimerCountdown() {
+    // ... (更新定時器倒數邏輯保持不變) ...
     if (endTime > 0) {
         const remainingMs = endTime - Date.now();
         const remainingS = Math.max(0, Math.floor(remainingMs / 1000));
@@ -659,57 +662,12 @@ function incrementPlayCount() {
     }
 }
     
-    // --- *** Supabase/API 相關函數 *** ---
-// 1. 獲取或生成唯一的匿名用戶 ID
-function getUserId() {
-  let id = localStorage.getItem('anon_user_id');
-  if (!id) {
-    // 使用瀏覽器內置的 crypto.randomUUID() 創建唯一 ID
-    id = crypto.randomUUID(); 
-    localStorage.setItem('anon_user_id', id);
-  }
-  return id;
-}
-// 2. 向 Serverless API 發送播放日誌
-function trackPlayToDatabase(song_id) {
-    // 檢查 song_id 是否有效
-    if (typeof song_id === 'undefined' || song_id === null) {
-        console.warn("trackPlayToDatabase: Song ID 無效，跳過數據庫記錄。");
-        return;
-    }
-    
-    // 獲取當前用戶 ID
-    const user_id = getUserId(); 
-    
-    // 發送 POST 請求到您的 Serverless API
-    fetch('/api/track', {
-        method: 'POST',
-        body: JSON.stringify({
-            user_id: user_id,
-            // 這裡使用 's' + originalIndex 作為 song_id，保證唯一性
-            song_id: `s${song_id}` 
-        }),
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        // console.log(`播放記錄發送成功: Song ID s${song_id}`);
-    })
-    .catch(error => {
-        console.error('播放記錄發送失敗:', error);
-    });
-}
 // --- 外部呼叫函數 (來自列表點擊) ---
 /**
  * @param {number} originalIndex - 歌曲在 Master List 中的原始索引
  */
 function loadTrack(originalIndex) { 
-    // 點擊歌曲時切換到「自由模式 (3)」
+    // ... (保持不變) ...
     if (playMode !== 3) {
         playMode = 3; 
         updateModeUI();
@@ -729,14 +687,14 @@ function loadTrack(originalIndex) {
         }
     }
     
-    // 點擊後更新 URL 錨點，供分享使用
     window.location.hash = `song-index-${originalIndex}`;
 }
-// --- *** 搜尋/篩選邏輯 *** ---
+// --- *** 搜尋/篩選邏輯 (保持不變) *** ---
 function filterPlaylist() {
     const searchText = playlistSearchInput.value.toLowerCase().trim(); 
     
     if (searchText.length > 0) {
+        // ... (篩選邏輯保持不變) ...
         currentPlaylist = MASTER_TRACK_LIST.filter(track => { 
             const itemText = (track.title + ' ' + track.artist).toLowerCase(); 
             return itemText.includes(searchText);
@@ -755,7 +713,6 @@ function filterPlaylist() {
              playerTitle.textContent = `已根據篩選建立新歌單 (${currentPlaylist.length} 首)。請點擊播放。`;
              currentTrackIndex = -1; 
              
-             // 💡 修正：設置為篩選列表的第一首歌 (currentPlaylist[0]) 的 URL，但不設置高光
              const track = currentPlaylist[0]; 
              audio.src = track.url; 
              audio.pause(); 
@@ -785,6 +742,10 @@ function filterPlaylist() {
     updatePlaylistHighlight(); 
 }
 // --- 播放列表顯示與排序邏輯 ---
+
+/**
+ * ⭐️ 核心修正：使用 track.originalIndex 和 dataMode 進行數據查找
+ */
 function updatePlaylistDisplay() {
     const currentListItems = document.querySelectorAll('#playlist li'); 
     
@@ -797,7 +758,16 @@ function updatePlaylistDisplay() {
         
         const track = MASTER_TRACK_LIST[index];
         const originalText = track.title + ' - ' + track.artist;
-        const playCount = trackPlayCounts[index] || 0;
+        
+        // ⭐️ 關鍵：根據當前模式選擇數據源
+        let playCount = 0;
+        if (dataMode === 'global') {
+            // 在全球模式下，使用 track.id 查找全球統計數據
+            playCount = globalTrackPlayCounts[track.id] || 0; 
+        } else {
+            // 在本地模式下，使用 track.originalIndex 查找本地統計數據
+            playCount = trackPlayCounts[index] || 0; 
+        }
         
         item.innerHTML = '';
         
@@ -807,6 +777,7 @@ function updatePlaylistDisplay() {
         
         if (playCount > 0) {
             const countSpan = document.createElement('small');
+            countSpan.className = 'play-stats'; // 添加類名方便移除
             countSpan.textContent = ` (${playCount} 次播放)`;
             
             countSpan.style.fontSize = '0.8em'; 
@@ -817,45 +788,43 @@ function updatePlaylistDisplay() {
         }
     });
 }
+
 function sortPlaylistByPlayCount() {
     
-    // ⭐️ 防禦性檢查：如果 currentPlaylist 不是完整的列表 (例如被篩選過)，則不進行排序
     if (currentPlaylist.length !== MASTER_TRACK_LIST.length) {
-         // 在篩選狀態下，只更新高光和次數顯示，不進行排序操作。
          updatePlaylistDisplay(); 
          updatePlaylistHighlight();
          return;
     }
     
-    // 1. 準備用於排序的增強列表 (基於 MASTER_TRACK_LIST)
     const sortableList = [...MASTER_TRACK_LIST].map(track => {
         const index = track.originalIndex;
         let count = 0;
         
+        // ⭐️ 關鍵修改：根據 dataMode 獲取排序依據的次數
         if (dataMode === 'global') {
-            // ⭐️ 關鍵修改：使用全球數據
-            count = globalTrackPlayCounts[index] || 0; 
+            // 使用 track.id 查找全球數據
+            count = globalTrackPlayCounts[track.id] || 0; 
         } else {
-            // ⭐️ 關鍵修改：使用本地數據
+            // 使用 track.originalIndex 查找本地數據
             count = trackPlayCounts[index] || 0; 
         }
         return { ...track, playCount: count };
     });
-    // 2. 執行排序 (按播放次數降序，然後按原始索引升序)
+    // ... (其餘排序和 DOM 重排邏輯保持不變) ...
     sortableList.sort((a, b) => {
         if (b.playCount !== a.playCount) {
             return b.playCount - a.playCount;
         }
         return a.originalIndex - b.originalIndex; 
     });
-    // 3. 儲存當前播放狀態
+    
     const currentlyPlayingOriginalIndex = currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length
         ? currentPlaylist[currentTrackIndex].originalIndex 
         : -1; 
         
-    // 4. 關鍵：更新內部播放列表 currentPlaylist 數組
     currentPlaylist = sortableList; 
-    // 5. 重新定位當前歌曲在新列表中的索引
+    
     if (currentlyPlayingOriginalIndex !== -1) {
         const newIndex = currentPlaylist.findIndex(track => track.originalIndex === currentlyPlayingOriginalIndex);
         if (newIndex !== -1) {
@@ -864,15 +833,13 @@ function sortPlaylistByPlayCount() {
             currentTrackIndex = -1;
         }
     } else {
-        // 如果當前沒有播放歌曲，則將索引重設為 0
         currentTrackIndex = 0;
     }
 
-    // 6. 重新排列 DOM 元素 (視覺顯示 - 必須與 currentPlaylist 保持一致)
     const playlistUl = document.getElementById('playlist');
     const originalLiElements = Array.from(playlistUl.querySelectorAll('li'));
     playlistUl.innerHTML = '';
-    currentPlaylist.forEach(track => { // 使用新的 currentPlaylist 順序
+    currentPlaylist.forEach(track => { 
         const originalIndex = track.originalIndex;
         const liElement = originalLiElements.find(item => {
             const onclickAttr = item.getAttribute('onclick');
@@ -889,10 +856,11 @@ function sortPlaylistByPlayCount() {
     updatePlaylistHighlight();
 }
 
-// --- *** LocalStorage 邏輯 *** ---
+// --- *** LocalStorage 邏輯 (保持不變) *** ---
 const CURRENT_TRACK_INDEX_KEY = 'audioPlayerIndex';
 const CURRENT_TRACK_TIME_KEY = 'audioPlayerTime';
 function saveSettings() {
+    // ... (保持不變) ...
     try {
         localStorage.setItem('audioPlayerVolume', audio.volume);
         localStorage.setItem('audioPlayerMuted', audio.muted);
@@ -916,6 +884,7 @@ function saveSettings() {
 
 // ⭐️ 修正後的 loadSavedSettings 函數
 function loadSavedSettings() {
+    // ... (保持不變) ...
     try {
         const savedVolume = localStorage.getItem('audioPlayerVolume');
         if (savedVolume !== null) {
@@ -934,39 +903,34 @@ function loadSavedSettings() {
             }
         }
         
-        // 載入播放次數
         const savedCounts = localStorage.getItem(PLAY_COUNT_STORAGE_KEY);
         if (savedCounts) {
             trackPlayCounts = JSON.parse(savedCounts);
         }
         
-        // ⭐️ 關鍵修正 1: 載入數據模式，並立即更新 UI
         const savedDataMode = localStorage.getItem(DATA_MODE_STORAGE_KEY);
         if (savedDataMode && (savedDataMode === 'local' || savedDataMode === 'global')) {
             dataMode = savedDataMode;
         }
-        updateDataModeUI(); // 確保 UI 立即更新，無論是否有保存記錄
+        updateDataModeUI(); 
 
         
-        // 載入當前播放索引和時間
         const savedIndex = localStorage.getItem(CURRENT_TRACK_INDEX_KEY);
         if (savedIndex !== null) {
             const index = parseInt(savedIndex);
-            // 這裡必須檢查是否在新列表長度內
             if (index >= 0 && index < MASTER_TRACK_LIST.length) { 
                 currentTrackIndex = index;
                 const track = MASTER_TRACK_LIST[index]; 
                 audio.src = track.url;
                 playerTitle.textContent = `上次播放：${track.title}`;
             } else {
-                // 如果舊索引在新列表中不存在，則重置為 0
                 currentTrackIndex = 0; 
                 if (MASTER_TRACK_LIST.length > 0) {
                     const track = MASTER_TRACK_LIST[0]; 
                     audio.src = track.url;
                     playerTitle.textContent = `上次播放的歌曲已更新，現播放：${track.title}`;
                 } else {
-                    currentTrackIndex = -1; // 列表為空
+                    currentTrackIndex = -1; 
                 }
             }
         }
@@ -979,7 +943,6 @@ function loadSavedSettings() {
              localStorage.removeItem(CURRENT_TRACK_TIME_KEY); 
         }
 
-        // 額外修正：如果新歌單長度變了，要清理掉舊的播放次數記錄
         const currentKeys = MASTER_TRACK_LIST.map(t => t.originalIndex.toString());
         let keysToDelete = [];
         for (const key in trackPlayCounts) {
@@ -989,7 +952,6 @@ function loadSavedSettings() {
         }
         keysToDelete.forEach(key => delete trackPlayCounts[key]);
         
-        // 重新儲存清理後的數據
         localStorage.setItem(PLAY_COUNT_STORAGE_KEY, JSON.stringify(trackPlayCounts));
         
     } catch (e) {
@@ -997,8 +959,9 @@ function loadSavedSettings() {
     }
 }
 
-// --- *** URL 錨點處理邏輯 (優化載入速度的最終修訂版) *** ---
+// --- *** URL 錨點處理邏輯 (保持不變) *** ---
 function handleUrlAnchor() {
+    // ... (保持不變) ...
     const hash = window.location.hash;
     if (hash.startsWith('#song-index-')) {
         const parts = hash.split('-');
@@ -1007,19 +970,14 @@ function handleUrlAnchor() {
             
             const trackTitle = MASTER_TRACK_LIST[originalIndex].title;
             
-            // 1. 載入歌曲。這會觸發 loadTrack，loadTrack 會將模式設為 3 並立即嘗試播放。
             loadTrack(originalIndex); 
             
-            // 2. 立即將模式設回 0 (分享連結的預期模式)，並更新 UI 和儲存
             playMode = 0; 
             updateModeUI();
             saveSettings();
             
-            // 3. 設置友好的緩衝提示
             playerTitle.textContent = `從分享連結載入：${trackTitle} (正在緩衝...)`;
-            // 4. 監聽「真正開始播放」事件，以清除緩衝提示
             const handlePlaying = () => {
-                 // 確保只處理當前歌曲
                  if (playerTitle.textContent.includes(trackTitle)) { 
                      playerTitle.textContent = `正在播放：${trackTitle}`;
                      audio.removeEventListener('playing', handlePlaying);
@@ -1027,7 +985,6 @@ function handleUrlAnchor() {
             };
             audio.addEventListener('playing', handlePlaying);
             
-            // 5. 如果瀏覽器阻止了自動播放，通過 play() 的 Promise catch 處理
             audio.play().catch(error => {
                  playerTitle.textContent = `從分享載入：${trackTitle} (需點擊播放)`;
             });
@@ -1044,21 +1001,18 @@ audio.addEventListener('timeupdate', () => {
          saveSettings();
     }
 });
-// 🌟 關鍵修正: 在 'play' 事件中同時處理本地計時和數據庫記錄
 audio.addEventListener('play', () => {
-    // 1. 維護本地總收聽時長
     if (listenIntervalId === null) {
         listenIntervalId = setInterval(updateTotalListenTime, 1000);
     }
     
-    // 2. ⭐️ 核心新增: 發送數據到數據庫
+    // ⭐️ 核心新增: 發送數據到數據庫
     if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
-        const currentSongOriginalIndex = currentPlaylist[currentTrackIndex].originalIndex;
-        // 調用 API 函數
-        trackPlayToDatabase(currentSongOriginalIndex); 
+        // 使用 track.id 作為 song_id 傳入
+        const currentSongId = currentPlaylist[currentTrackIndex].id; 
+        trackPlayToDatabase(currentSongId); 
     }
     
-    // 3. 儲存播放狀態
     saveSettings(); 
 });
 audio.addEventListener('pause', () => {
@@ -1077,19 +1031,19 @@ playlistSearchInput.addEventListener('input', debounce(filterPlaylist, 300));
 async function initializePlayer(isManualToggle = false) {
     // 1. 載入本地設置 (包括 dataMode)
     resetCurrentPlaylist(); 
-    loadSavedSettings(); // 載入 dataMode 並更新 UI
+    loadSavedSettings(); 
 
     // 2. 只有在模式設定為 'global' 時才發起 API 請求
     if (dataMode === 'global') {
-         // UI 已經更新為「全球統計」，現在獲取數據
+         // UI 已經更新為「全球統計」，現在異步獲取數據
          const counts = await fetchGlobalPlayCounts();
          globalTrackPlayCounts = counts; // 將全球數據存入新的全局變量
+         document.getElementById('current-data-mode').textContent = '[全球統計]'; // 載入完成，更新 UI
     } else {
          globalTrackPlayCounts = {}; // 如果是本地模式，則清空全球數據
     }
 
     // 3. 處理剩餘邏輯
-    // ⭐️ 修正：這段 UI 更新邏輯不再需要，因為 loadSavedSettings 已經處理了 dataMode 的 UI
     if(!localStorage.getItem('audioPlayerMode') || isManualToggle) {
         updateModeUI();
     }
