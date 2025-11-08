@@ -932,7 +932,7 @@ function sortPlaylistByPlayCount() {
     playlistItems = document.querySelectorAll('#playlist li'); 
     updatePlaylistDisplay();
     
-    // ⭐️ 關鍵修正：強制重新載入當前歌曲，確保播放器在新的列表順序中
+    // ⭐️ 修正：強制重新載入當前歌曲，確保播放器在新的列表順序中
     if (currentTrackIndex !== -1 && currentTrackIndex < currentPlaylist.length) {
         const track = currentPlaylist[currentTrackIndex];
         // 只有在新的曲目 URL 與當前音源不符時才更改 src
@@ -954,21 +954,26 @@ function sortPlaylistByPlayCount() {
 
 
 
-// --- *** LocalStorage 邏輯 (保持不變) *** ---
-const CURRENT_TRACK_INDEX_KEY = 'audioPlayerIndex';
+// --- *** LocalStorage 邏輯 *** ---
+// ⭐️ 修正 A: 更改鍵名，儲存歌曲的原始索引
+const CURRENT_TRACK_INDEX_KEY = 'audioPlayerOriginalIndex';
 const CURRENT_TRACK_TIME_KEY = 'audioPlayerTime';
+
 function saveSettings() {
-    // ... (保持不變) ...
     try {
         localStorage.setItem('audioPlayerVolume', audio.volume);
         localStorage.setItem('audioPlayerMuted', audio.muted);
         localStorage.setItem('audioPlayerMode', playMode);
         localStorage.setItem(DATA_MODE_STORAGE_KEY, dataMode);  
-        if (currentTrackIndex >= 0) {
-            localStorage.setItem(CURRENT_TRACK_INDEX_KEY, currentTrackIndex);
+        
+        // ⭐️ 修正 A: 儲存歌曲在 MASTER_TRACK_LIST 中的原始索引
+        if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
+            const track = currentPlaylist[currentTrackIndex];
+            localStorage.setItem(CURRENT_TRACK_INDEX_KEY, track.originalIndex);
         } else {
             localStorage.removeItem(CURRENT_TRACK_INDEX_KEY); 
         }
+        
         if (audio.currentTime > 0) {
              localStorage.setItem(CURRENT_TRACK_TIME_KEY, audio.currentTime);
         } else {
@@ -982,7 +987,6 @@ function saveSettings() {
 
 // ⭐️ 修正後的 loadSavedSettings 函數
 function loadSavedSettings() {
-    // ... (保持不變) ...
     try {
         const savedVolume = localStorage.getItem('audioPlayerVolume');
         if (savedVolume !== null) {
@@ -1013,14 +1017,22 @@ function loadSavedSettings() {
         updateDataModeUI(); 
 
         
-        const savedIndex = localStorage.getItem(CURRENT_TRACK_INDEX_KEY);
-        if (savedIndex !== null) {
-            const index = parseInt(savedIndex);
-            if (index >= 0 && index < MASTER_TRACK_LIST.length) { 
-                currentTrackIndex = index;
-                const track = MASTER_TRACK_LIST[index]; 
+        // ⭐️ 修正 B: 載入並定位原始索引
+        const savedOriginalIndex = localStorage.getItem(CURRENT_TRACK_INDEX_KEY);
+        
+        if (savedOriginalIndex !== null) {
+            const originalIndex = parseInt(savedOriginalIndex);
+            
+            // 檢查原始索引是否有效
+            if (originalIndex >= 0 && originalIndex < MASTER_TRACK_LIST.length) { 
+                
+                const track = MASTER_TRACK_LIST[originalIndex]; 
                 audio.src = track.url;
                 playerTitle.textContent = `上次播放：${track.title}`;
+                
+                // 關鍵：設定一個標記，讓 initializePlayer 知道要播放哪首歌
+                window.__LAST_PLAYED_ORIGINAL_INDEX = originalIndex;
+                
             } else {
                 currentTrackIndex = 0; 
                 if (MASTER_TRACK_LIST.length > 0) {
@@ -1032,6 +1044,7 @@ function loadSavedSettings() {
                 }
             }
         }
+        
         const savedTime = localStorage.getItem(CURRENT_TRACK_TIME_KEY);
         if (savedTime !== null && currentTrackIndex >= 0) { 
              const time = parseFloat(savedTime);
@@ -1127,7 +1140,7 @@ playlistSearchInput.addEventListener('input', debounce(filterPlaylist, 300));
 // --- *** 異步初始化函數 *** ---
 
 async function initializePlayer(isManualToggle = false) {
-    // 1. 載入本地設置 (包括 dataMode, currentTrackIndex, 等)
+    // 1. 載入本地設置 (包括 dataMode, __LAST_PLAYED_ORIGINAL_INDEX, 等)
     loadSavedSettings(); 
     
     // 2. 只有在模式設定為 'global' 時才發起 API 請求
@@ -1158,10 +1171,35 @@ async function initializePlayer(isManualToggle = false) {
         updateModeUI();
     }
     
-    // 5. 排序和顯示
+    // 5. 排序
     handleUrlAnchor();
     // sortPlaylistByPlayCount 會處理排序和更新列表顯示
     sortPlaylistByPlayCount(); 
+    
+    // ⭐️ 修正 C: 在排序後，根據儲存的 originalIndex 重新定位 currentTrackIndex
+    if (window.__LAST_PLAYED_ORIGINAL_INDEX !== undefined) {
+        const lastPlayedOriginalIndex = window.__LAST_PLAYED_ORIGINAL_INDEX;
+        
+        // 在新排序/篩選後的 currentPlaylist 中查找歌曲
+        const newIndex = currentPlaylist.findIndex(track => track.originalIndex === lastPlayedOriginalIndex);
+        
+        if (newIndex !== -1) {
+            currentTrackIndex = newIndex; // 設置正確的索引！
+        } else {
+            // 如果歌曲在當前列表中找不到（例如被篩選掉了），預設為第一首
+            currentTrackIndex = 0;
+        }
+        
+        // 清除標記
+        delete window.__LAST_PLAYED_ORIGINAL_INDEX; 
+        
+        // 確保 audio.src 和標題正確（sortPlaylistByPlayCount 已經在結尾做了，但此處再次確認）
+        const track = currentPlaylist[currentTrackIndex];
+        audio.src = track.url; 
+        playerTitle.textContent = `上次播放：${track.title}`;
+        updatePlaylistHighlight();
+    }
+    
     initializeTheme();
 }
 
