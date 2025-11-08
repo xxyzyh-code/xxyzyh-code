@@ -1,17 +1,17 @@
 {
   "functions": {
-    "api/**/*.js": { 
+    "functions/**/*.js": { 
       "runtime": "node@20"
     }
   },
   "rewrites": [
     { 
       "source": "/api/stats", 
-      "destination": "/api/stats.js" 
+      "destination": "/functions/stats.js" 
     },
     { 
       "source": "/api/stats/", 
-      "destination": "/api/stats.js" 
+      "destination": "/functions/stats.js" 
     }
   ]
 }
