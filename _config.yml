@@ -25,14 +25,15 @@ include:
 
 # 🚀 【關鍵變動】：新增 'api/' 到排除列表，阻止 Jekyll 處理這個資料夾
 exclude:
+  - vendor/
+  - node_modules/
   - Gemfile
   - Gemfile.lock
-  - node_modules
-  - vendor/bundle/
-  - api/ 
+  - package.json
+  - package-lock.json
   - README.md
-  # 建議也排除您的 Vercel 配置文件，以防萬一
-  - vercel.json 
+  - functions/
+  - api/ 
 
 author:
   xxyzyh:
