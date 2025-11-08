@@ -241,10 +241,14 @@ async function fetchGlobalPlayCounts() {
         console.error('獲取全球播放次數失敗:', error);
         
         // 彈窗顯示更精確的錯誤信息
-        alert(`無法載入全球統計數據。錯誤: ${error.message}`);
+        alert(`無法載入全球統計數據。錯誤: ${error.message}。已自動切換到本地模式。`);
         
-        document.getElementById('current-data-mode').textContent = '[載入失敗]'; 
-        return {}; 
+        // ⭐️ 關鍵修正：切換回本地模式並更新 UI
+        dataMode = 'local';
+        updateDataModeUI(); 
+        saveSettings();
+        
+        return {}; // 失敗時返回空對象
     }
 }
 
