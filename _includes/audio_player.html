@@ -931,6 +931,24 @@ function sortPlaylistByPlayCount() {
     // 7. 更新全局引用的 playlistItems
     playlistItems = document.querySelectorAll('#playlist li'); 
     updatePlaylistDisplay();
+    
+    // ⭐️ 關鍵修正：強制重新載入當前歌曲，確保播放器在新的列表順序中
+    if (currentTrackIndex !== -1 && currentTrackIndex < currentPlaylist.length) {
+        const track = currentPlaylist[currentTrackIndex];
+        // 只有在新的曲目 URL 與當前音源不符時才更改 src
+        if (audio.src !== track.url) {
+             // 重新設定音源 (通常不需要，因為 URL 不變，但這是最保險的做法)
+             audio.src = track.url; 
+        }
+        
+        // ⭐️ 核心修正：更新標題以反映新的播放位置（可選，用於調試）
+        if (!audio.paused) {
+            playerTitle.textContent = `正在播放：${track.title} (歌單已排序)`;
+        } else {
+            playerTitle.textContent = `上次播放：${track.title} (歌單已排序)`;
+        }
+    }
+    
     updatePlaylistHighlight();
 }
 
