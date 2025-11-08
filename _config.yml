@@ -23,6 +23,17 @@ include:
   - _pages
   - _data
 
+# 🚀 【關鍵變動】：新增 'api/' 到排除列表，阻止 Jekyll 處理這個資料夾
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - api/ 
+  - README.md
+  # 建議也排除您的 Vercel 配置文件，以防萬一
+  - vercel.json 
+
 author:
   xxyzyh:
     name: "小写博客主人"
@@ -74,7 +85,7 @@ defaults:
     values:
       layout: single
       author_profile: true
-      # 🚀 封锁页面的核心：
+      # 🚀 封鎖頁面的核心：
       robots: "noindex, nofollow" 
       seo:
         noindex: true
@@ -88,7 +99,7 @@ defaults:
       author_profile: true
 
 
-search: false   # ❌ 禁用搜索，防止 GitHub Pages 报错
+search: true   # ⚠️ 請注意，這裡的 `search: false` 已經被後面的 `search: true` 覆蓋。
 paginate: 5
 paginate_path: "/page:num/"
 
