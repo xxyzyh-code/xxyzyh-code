@@ -1,4 +1,4 @@
-// api/track.js (已修正支援 title 欄位)
+// api/track.js (已修正 INSERT/UPDATE 語句以解決 400 Bad Request)
 const { createClient } = require('@supabase/supabase-js');
 
 // 由於 Vercel Serverless Function 環境變數的載入方式，
@@ -17,7 +17,7 @@ module.exports = async (req, res) => {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     
-    // ⭐️ 核心修改 1: 從請求體中取出 title
+    // ⭐️ 從請求體中取出 user_id, song_id, title
     const { user_id, song_id, title } = body; 
 
     // 檢查關鍵數據是否存在
@@ -42,10 +42,11 @@ module.exports = async (req, res) => {
       // 2. 找到記錄，更新播放次數
       const { error: updateError } = await supabase
         .from('play_logs')
-        // ⭐️ 核心修改 2: UPDATE 邏輯只更新 plays 和 last_played
+        // 核心修正 A: UPDATE 邏輯
         .update({ plays: existing.plays + 1, last_played: new Date().toISOString() })
-        .eq('id', existing.id);
-        
+        .eq('id', existing.id)
+        .select('*'); // 👈 新增：強制 SDK 完整執行並返回數據，避免 400 錯誤
+
       if (updateError) {
         console.error('Supabase update error:', updateError);
         return res.status(500).json({ error: 'Database update error' });
@@ -55,14 +56,15 @@ module.exports = async (req, res) => {
       // 3. 未找到記錄，插入新記錄
       const { error: insertError } = await supabase
         .from('play_logs')
-        // ⭐️ 核心修改 3: INSERT 邏輯包含 title
+        // 核心修正 B: INSERT 邏輯包含 title
         .insert([{ 
             user_id, 
             song_id, 
             title, // 必須包含 title 欄位
             plays: 1, 
             last_played: new Date().toISOString() 
-        }]);
+        }])
+        .select('*'); // 👈 新增：強制 SDK 完整執行並返回數據，避免 400 錯誤
 
       if (insertError) {
         console.error('Supabase insert error:', insertError);
