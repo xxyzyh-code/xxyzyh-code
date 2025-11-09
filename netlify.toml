@@ -1,13 +1,17 @@
 [build]
-  command = "bundle exec jekyll build"
+  # 💡 關鍵變動：將建構命令替換為 'true'，
+  # 告訴 Netlify：檔案已經預先建構完成，無需再執行耗時的 Jekyll build。
+  command = "true"
   publish = "_site"
+  functions = "netlify/functions"
 
 [build.environment]
+  # 這些環境變數仍然有用，用於確保 Function 執行環境穩定
   BUNDLE_WITHOUT = ""
   LANG = "C.UTF-8"
   LC_ALL = "C.UTF-8"
 
-# 函數重寫規則
+# Functions 重新導向規則 (此區塊必須保留，因為它告訴 Netlify 如何路由 /api 請求)
 [[redirects]]
   from = "/api/stats"
   to = "/.netlify/functions/api-stats"
