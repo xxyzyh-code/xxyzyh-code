@@ -3,6 +3,11 @@
 const { createClient } = require('@supabase/supabase-js');
 
 // 💡 注意：Netlify Functions 使用 Node.js process.env 
+
+// 檢查環境變數是否載入成功 (用於偵錯)
+console.log('SUPABASE_URL loaded:', !!process.env.SUPABASE_URL);
+console.log('SUPABASE_ANON_KEY loaded:', !!process.env.SUPABASE_ANON_KEY);
+
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 // ⚠️ 建議：將 SUPABASE_KEY 改為 SUPABASE_ANON_KEY 以明確其用途，並在 Netlify UI 中設定。
 
@@ -21,11 +26,12 @@ exports.handler = async function(event, context) {
 
     if (error) {
       console.error('Error fetching global stats (RPC):', error);
+      // 如果 Supabase 客戶端初始化錯誤，這裡的 error.message 可能會是 undefined
       return {
         statusCode: 500,
         body: JSON.stringify({ 
           error: 'Error fetching global stats (RPC)',
-          details: error.message 
+          details: error.message || 'Unknown database error' 
         }),
         headers: { 'Content-Type': 'application/json' }
       };
@@ -47,10 +53,10 @@ exports.handler = async function(event, context) {
     };
     
   } catch (e) {
-      console.error('API execution error:', e.message);
+      console.error('API execution error (Catch block):', e.message);
       return {
         statusCode: 500,
-        body: JSON.stringify({ success: false, error: 'Internal Server Error' }),
+        body: JSON.stringify({ success: false, error: 'Internal Server Error: ' + e.message }),
         headers: { 'Content-Type': 'application/json' }
       };
   }
