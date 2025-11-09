@@ -1,115 +1,8 @@
-// uiModule.js - 延遲 DOM 引用修正版
-
-import {
-    THEMES,
-    MEDITATION_INTERVAL_MIN,
-    MEDITATION_MESSAGES,
-    MEDITATION_MUSIC,
-    MEDITATION_PROMPT_DURATION,
-    ALARM_SOUNDS,
-    WEATHER_API_KEY,
-    WEATHER_API_URL,
-    WEATHER_API_LANG,
-    WEATHER_UNITS,
-    WEATHER_GEOLOCATION_TIMEOUT,
-    WEATHER_LOCATION_FAIL_MESSAGE,
-    WEATHER_FETCH_FAIL_MESSAGE
-} from './config.js';
+// uiModule.js
 
 // V. 主題切換與儲存邏輯
-function setTheme(themeName) {
-    // ... 邏輯保持不變
-}
-function loadTheme() {
-    // ... 邏輯保持不變
-}
+const THEMES = ['default', 'neon-theme', 'dos-theme'];
 
-// VI. 冥想引導模式邏輯
-let meditationTimer = null; 
-let isMeditationEnabled = false; 
-
-// 程式夥伴：將 DOM 變數聲明為 null，並在初始化時賦值
-let modal = null;
-let modalText = null;
-let closeModalBtn = null;
-let audio = null; // meditation-audio
-let toggleBtn = null; // meditation-toggle-btn
-let meditationSelector = null;
-
-
-function showMeditationPrompt() {
-    // ... 邏輯保持不變
-}
-
-function closeMeditationPrompt() {
-    // ... 邏輯保持不變
-}
-
-function toggleMeditationMode() {
-    // ... 邏輯保持不變
-}
-
-// VII. 天氣資訊邏輯
-function fetchWeather() {
-    // ... 邏輯保持不變
-}
-
-async function getWeatherData(lat, lon) {
-    // ... 邏輯保持不變
-}
-
-// VIII. 音訊選擇與儲存邏輯
-// 程式夥伴：將 DOM 變數聲明為 null
-let alarmSelector = null;
-let alarmAudioElement = null; // alarm-audio
-
-
-/**
- * @description 渲染下拉選單的選項，載入偏好並設置監聽器。
- */
-function initializeAudioSelector(selector, options, storageKey, audioElement) {
-    // ... 邏輯保持不變
-}
-
-/**
- * @description 啟動所有 UI 相關的模組。
- * 程式夥伴：在啟動時獲取所有 DOM 元素
- */
-export function initializeUIModule() {
-    // 獲取 DOM 元素 - 確保它們在 DOMContentLoaded 後被獲取
-    modal = document.getElementById('meditation-modal');
-    modalText = document.getElementById('meditation-text');
-    closeModalBtn = document.getElementById('close-modal-btn');
-    audio = document.getElementById('meditation-audio');
-    toggleBtn = document.getElementById('meditation-toggle-btn');
-    meditationSelector = document.getElementById('meditation-selector');
-    
-    alarmSelector = document.getElementById('alarm-selector');
-    alarmAudioElement = document.getElementById('alarm-audio');
-    
-    // 啟動主題功能
-    loadTheme(); 
-    // 這裡我們必須在外部獲取按鈕
-    document.getElementById('theme-default-btn').addEventListener('click', () => setTheme('default'));
-    document.getElementById('theme-neon-btn').addEventListener('click', () => setTheme('neon-theme'));
-    document.getElementById('theme-dos-btn').addEventListener('click', () => setTheme('dos-theme'));
-
-    // 啟動冥想功能事件監聽器
-    toggleBtn.addEventListener('click', toggleMeditationMode);
-    closeModalBtn.addEventListener('click', closeMeditationPrompt); 
-
-    // 啟動音訊選擇器 (在 DOM 準備好後)
-    initializeAudioSelector(alarmSelector, ALARM_SOUNDS, 'alarmSoundPath', alarmAudioElement);
-    initializeAudioSelector(meditationSelector, MEDITATION_MUSIC, 'meditationMusicPath', audio);
-
-    // 啟動天氣功能
-    fetchWeather(); 
-
-    console.log("UI Module: UI/主題/冥想/音訊選擇功能已啟動。");
-}
-
-// 程式夥伴：現在需要在模組的全局作用域重新定義一次變量，以供所有函數使用
-// V. 主題切換與儲存邏輯 (為了簡潔，這裡只顯示需要訪問 DOM 的函數)
 function setTheme(themeName) {
     const body = document.body;
     THEMES.forEach(theme => {
@@ -129,25 +22,48 @@ function loadTheme() {
     setTheme(savedTheme);
 }
 
+// VI. 冥想引導模式邏輯
+const MEDITATION_INTERVAL_MIN = 60; 
+const MEDITATION_MESSAGES = [
+    "閉上眼睛，深呼吸三次，感受當下的寧靜。",
+    "輕輕放下你的肩膀和下巴，放鬆五秒。",
+    "專注於你的呼吸，忘卻時間，重新連結自己。",
+    "放下生活瑣事，讓心靈放空、清潔。",
+    "現在，保持微笑三秒鐘，感受積極的能量。"
+];
+const MEDITATION_MUSIC = [
+    { name: '柔和輕音', path: 'assets/audio/gentle_music.mp3' },
+    { name: '大自然雨聲', path: 'assets/audio/rain_sound.mp3' },
+    { name: '寧靜鋼琴', path: 'assets/audio/piano_loop.mp3' }
+];
+
+let meditationTimer = null; 
+let isMeditationEnabled = false; 
+const modal = document.getElementById('meditation-modal');
+const modalText = document.getElementById('meditation-text');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const audio = document.getElementById('meditation-audio');
+const toggleBtn = document.getElementById('meditation-toggle-btn');
+const meditationSelector = document.getElementById('meditation-selector');
+
 function showMeditationPrompt() {
     const randomIndex = Math.floor(Math.random() * MEDITATION_MESSAGES.length);
     modalText.textContent = MEDITATION_MESSAGES[randomIndex];
     
     modal.style.display = 'flex'; 
 
+    // 播放當前選擇的音樂
     audio.play().catch(error => {
         console.log("冥想音訊自動播放失敗:", error);
     });
 
-    setTimeout(closeMeditationPrompt, MEDITATION_PROMPT_DURATION); 
+    setTimeout(closeMeditationPrompt, 30000); 
 }
 
 function closeMeditationPrompt() {
-    if (modal) modal.style.display = 'none';
-    if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-    }
+    modal.style.display = 'none';
+    audio.pause();
+    audio.currentTime = 0;
 }
 
 function toggleMeditationMode() {
@@ -157,6 +73,7 @@ function toggleMeditationMode() {
         toggleBtn.textContent = '🧘‍♀️ 關閉冥想';
         toggleBtn.style.backgroundColor = '#dc3545';
         
+        // 確保播放當前選擇的音樂
         audio.load(); 
         audio.play().catch(error => console.log("冥想音樂播放失敗:", error));
 
@@ -170,37 +87,113 @@ function toggleMeditationMode() {
     }
 }
 
+// VII. 天氣資訊邏輯
+const API_KEY = 'be0d16a112a34af758f9a6a22e133de3'; // 💡 備註：這個 API Key 應在伺服器端保護
+const WEATHER_API_URL = 'https://api.openweathermap.org/data/2.5/weather';
+
+function fetchWeather() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                getWeatherData(position.coords.latitude, position.coords.longitude);
+            },
+            (error) => {
+                document.getElementById('weather-location').textContent = '定位失敗 🌍';
+                document.getElementById('weather-temp-desc').textContent = '請檢查權限或網路。';
+                console.error('Geolocation Error:', error);
+            },
+            { timeout: 10000 }
+        );
+    } else {
+        document.getElementById('weather-location').textContent = '瀏覽器不支援定位。';
+    }
+}
+
+async function getWeatherData(lat, lon) {
+    const url = `${WEATHER_API_URL}?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=zh_tw`;
+    
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        const temp = Math.round(data.main.temp); 
+        const description = data.weather[0].description;
+        const iconCode = data.weather[0].icon;
+        const locationName = data.name;
+
+        document.getElementById('weather-location').textContent = `${locationName}`;
+        document.getElementById('weather-temp-desc').innerHTML = `${temp}°C, ${description}`;
+        document.getElementById('weather-icon').innerHTML = `<img src="https://openweathermap.org/img/wn/${iconCode}@2x.png" alt="${description}">`;
+
+    } catch (error) {
+        document.getElementById('weather-temp-desc').textContent = '載入天氣數據失敗 😓';
+        console.error('Weather Fetch Error:', error);
+    }
+}
+
+// VIII. 音訊選擇與儲存邏輯
+const ALARM_SOUNDS = [
+    { name: '經典鈴聲', path: 'assets/audio/alarm_bell.mp3' },
+    { name: '輕柔鐘聲', path: 'assets/audio/gentle_chime.mp3' },
+    { name: '電子蜂鳴', path: 'assets/audio/electronic_beep.mp3' }
+];
+const alarmSelector = document.getElementById('alarm-selector');
+const alarmAudio = document.getElementById('alarm-audio');
+
+
+/**
+ * @description 渲染下拉選單的選項，載入偏好並設置監聽器。
+ */
 function initializeAudioSelector(selector, options, storageKey, audioElement) {
     // 1. 渲染選項
     selector.innerHTML = options.map((item, index) => 
         `<option value="${item.path}">${item.name}</option>`
     ).join('');
+
     // 2. 載入儲存的偏好 (如果有)
     const savedPath = localStorage.getItem(storageKey);
     let selectedPath = savedPath || options[0].path; 
 
     // 3. 設置當前選擇並更新 <audio> 的 src
     selector.value = selectedPath;
-    if (audioElement) audioElement.src = selectedPath;
+    audioElement.src = selectedPath;
 
     // 4. 添加事件監聽器
     selector.addEventListener('change', (e) => {
         const newPath = e.target.value;
-        if (audioElement) audioElement.src = newPath;
+        audioElement.src = newPath;
         localStorage.setItem(storageKey, newPath);
         
         // 如果是冥想音樂且正在播放，需要重新載入並播放新音源
-        if (audioElement && audioElement.id === 'meditation-audio' && !audioElement.paused) {
+        if (audioElement.id === 'meditation-audio' && !audioElement.paused) {
             audioElement.load();
             audioElement.play();
         }
     });
 }
 
-function fetchWeather() {
-    // ... 邏輯保持不變
-}
+/**
+ * @description 啟動所有 UI 相關的模組。
+ */
+export function initializeUIModule() {
+    // 啟動主題功能
+    loadTheme(); 
+    document.getElementById('theme-default-btn').addEventListener('click', () => setTheme('default'));
+    document.getElementById('theme-neon-btn').addEventListener('click', () => setTheme('neon-theme'));
+    document.getElementById('theme-dos-btn').addEventListener('click', () => setTheme('dos-theme'));
 
-async function getWeatherData(lat, lon) {
-    // ... 邏輯保持不變
+    // 啟動冥想功能事件監聽器
+    toggleBtn.addEventListener('click', toggleMeditationMode);
+    closeModalBtn.addEventListener('click', closeMeditationPrompt); 
+
+    // 啟動音訊選擇器 (在 DOM 準備好後)
+    initializeAudioSelector(alarmSelector, ALARM_SOUNDS, 'alarmSoundPath', alarmAudio);
+    initializeAudioSelector(meditationSelector, MEDITATION_MUSIC, 'meditationMusicPath', audio);
+
+    // 啟動天氣功能
+    fetchWeather(); 
+
+    console.log("UI Module: UI/主題/冥想/音訊選擇功能已啟動。");
 }
