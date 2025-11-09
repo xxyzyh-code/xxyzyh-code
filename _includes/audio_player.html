@@ -379,7 +379,7 @@ audio.addEventListener('ended', () => {
     sortPlaylistByPlayCount(); 
     saveSettings(); 
     
-    let nextIndex = -1; 
+    let nextIndex; 
     if (playMode === 1) { 
         audio.currentTime = 0; 
         audio.play();
@@ -412,7 +412,7 @@ audio.addEventListener('ended', () => {
             return; 
         }
     }
-    if (nextIndex !== -1) {
+    if (nextIndex !== undefined && nextIndex !== -1) {
         playTrack(nextIndex);
         window.location.hash = `song-index-${currentPlaylist[nextIndex].originalIndex}`;
     }
@@ -551,10 +551,15 @@ function initializeTheme() {
         applyTheme(LIGHT_THEME, false);
     }
 }
-// --- 主題/定時器/統計邏輯 (保持不變) ---
-themeToggleBtn.addEventListener('click', (event) => {
-    event.stopPropagation(); 
+// --- 主題/定時器/統計邏輯 ---
+// ⭐️ 修正 A：移除 stopPropagation，並在點擊主題按鈕時關閉定時器菜單
+themeToggleBtn.addEventListener('click', () => {
     themeMenu.classList.toggle('hidden-menu');
+    
+    // 確保定時器菜單關閉
+    if (!timerMenu.classList.contains('hidden-menu')) {
+        timerMenu.classList.add('hidden-menu');
+    }
 });
 themeOptions.forEach(option => {
     option.addEventListener('click', (e) => {
@@ -563,18 +568,20 @@ themeOptions.forEach(option => {
         themeMenu.classList.add('hidden-menu'); 
     });
 });
+// ⭐️ 修正 C：簡化和統一全局點擊監聽器
 document.addEventListener('click', (e) => {
-    if (!themeMenu.contains(e.target) && !themeToggleBtn.contains(e.target)) {
+    const target = e.target;
+
+    // 1. 處理主題菜單的外部點擊關閉
+    // 如果點擊目標不在主題菜單內，也不在主題按鈕上，則關閉菜單
+    if (!themeMenu.contains(target) && !themeToggleBtn.contains(target)) {
         themeMenu.classList.add('hidden-menu');
     }
-    // ⭐️ 修正定時器菜單：確保點擊外部可以關閉
-    const isTimerMenuClick = timerMenu.contains(e.target);
-    const isTimerButtonClick = timerToggleButton.contains(e.target);
-    
-    if (!isTimerMenuClick && !isTimerButtonClick) {
-        if (!timerMenu.classList.contains('hidden-menu')) {
-            timerMenu.classList.add('hidden-menu');
-        }
+
+    // 2. 處理定時器菜單的外部點擊關閉
+    // 如果點擊目標不在定時器菜單內，也不在定時器按鈕上，則關閉菜單
+    if (!timerMenu.contains(target) && !timerToggleButton.contains(target)) {
+        timerMenu.classList.add('hidden-menu');
     }
 });
 setInterval(() => {
@@ -585,8 +592,14 @@ setInterval(() => {
     }
 }, 1000 * 60 * 60); 
     
+// ⭐️ 修正 B：在點擊定時器按鈕時明確關閉主題菜單
 function toggleTimerMenu() {
     timerMenu.classList.toggle('hidden-menu');
+    
+    // 確保主題菜單關閉
+    if (!themeMenu.classList.contains('hidden-menu')) {
+        themeMenu.classList.add('hidden-menu');
+    }
 }
 function setSleepTimer(minutes) {
     clearSleepTimer();
@@ -1070,7 +1083,7 @@ function loadSavedSettings() {
     }
 }
 
-// --- *** URL 錨點處理邏輯 (修正 II) *** ---
+// --- *** URL 錨點處理邏輯 *** ---
 function handleUrlAnchor(isInitialLoad = false) {
     const hash = window.location.hash;
     
@@ -1170,12 +1183,10 @@ async function initializePlayer(isManualToggle = false) {
         resetCurrentPlaylist(); 
     }
     
-    // 4. 處理 UI (修正 A)
+    // 4. 處理 UI 
     updateModeUI(); // 確保 UI 反映 loadSavedSettings 中載入的 playMode
     
     // 5. 排序
-    // handleUrlAnchor() 🔴 修正 I: 此處移除，改在 DOMContentLoaded 中呼叫
-    // sortPlaylistByPlayCount 會處理排序和更新列表顯示
     sortPlaylistByPlayCount(); 
     
     // ⭐️ 修正 C: 在排序後，根據儲存的 originalIndex 重新定位 currentTrackIndex
@@ -1205,7 +1216,7 @@ async function initializePlayer(isManualToggle = false) {
     initializeTheme();
 }
 
-// ⭐️ 關鍵修正 2: 修正 DOMContentLoaded 閉合 (修正 III)
+// ⭐️ 關鍵修正 2: 修正 DOMContentLoaded 閉合 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. 在 DOM 準備就緒後，確保全局 playlistItems 變量被正確賦值
     playlistItems = document.querySelectorAll('#playlist li'); 
