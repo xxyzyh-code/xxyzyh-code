@@ -1,4 +1,4 @@
-// timeModule.js
+// timeModule.js - 修正版
 
 /**
  * @description 計算並顯示農曆日期和節氣。
@@ -7,17 +7,23 @@ function updateLunarDate() {
     const now = new Date();
     const lunarElement = document.getElementById('lunar-date');
     
-    // 檢查外部函式庫是否已載入 (從 CDN 引入)
-    if (typeof calendarConverter === 'undefined') {
+    // 程式夥伴修正：從 window 全域物件檢查和獲取函式庫
+    // 確保即使在 ES 模組環境中也能正確引用同步載入的函式庫
+    const converter = window.calendarConverter; 
+
+    if (typeof converter === 'undefined') {
         if (lunarElement) {
-            lunarElement.textContent = '載入農曆函式庫中...';
+            // 由於路徑已修正，如果還沒載入，可能真的有問題，但我們保留這個提示
+            lunarElement.textContent = '農曆函式庫載入失敗或不可用。';
         }
+        console.error("Lunar Date Error: window.calendarConverter is undefined.");
         return;
     }
 
-    const lunarData = calendarConverter.solar2lunar(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    // 程式邏輯不變，使用 converter 變數
+    const lunarData = converter.solar2lunar(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    
     let displayString = '';
-
     displayString += `${lunarData.IMonthCn}${lunarData.IDayCn}`;
     displayString += ` (${lunarData.gzYear})`;
 
