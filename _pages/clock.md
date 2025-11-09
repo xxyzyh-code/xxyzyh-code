@@ -8,6 +8,8 @@ header:
   overlay_image: /assets/images/contact-bg.jpg
 ---
 
+<script src="https://cdn.jsdelivr.net/npm/calendar-converter@1.0.0/dist/calendar-converter.min.js"></script>
+
 <link rel="stylesheet" href="/assets/css/clock_styles.css">
 
 <div style="text-align: center;">
@@ -28,6 +30,7 @@ header:
     <div>
         <div id="digital-clock">正在載入時鐘...</div>
         <div id="current-date">正在載入日期...</div>
+        <div id="lunar-date" style="font-size: 1.2em; margin-top: 5px;">載入農曆...</div>
     </div>
 
     <div id="pomodoro-timer">
@@ -39,13 +42,16 @@ header:
         </div>
         
         <p id="timer-mode">模式：工作 (25:00)</p>
-        <div id="timer-display">25:00</div> <div id="control-buttons">
+        <div id="timer-display">25:00</div> 
+
+        <div id="control-buttons">
             <button id="start-btn">啟動</button>
             <button id="pause-btn" disabled>暫停</button>
             <button id="reset-btn">重置</button>
         </div>
         <div id="status-message">準備開始！</div>
     </div>
+    
     <div id="weather-info">
         <h3>📍 當地天氣</h3>
         <p id="weather-location">正在定位...</p>
@@ -77,16 +83,60 @@ header:
 </audio>
 
 <script>
-// 程式夥伴：整合了時鐘更新、日期顯示、日夜模式切換、番茄鐘、天氣及冥想邏輯
+// 程式夥伴：整合了時鐘更新、日期顯示、日夜模式切換、番茄鐘、天氣、冥想及農曆邏輯
 
 // ===================================
 // I. 數字時鐘與日期邏輯
 // ===================================
+
+/**
+ * @description 計算並顯示農曆日期和節氣。
+ */
+function updateLunarDate() {
+    const now = new Date();
+    const lunarElement = document.getElementById('lunar-date');
+
+    // 檢查外部函式庫是否已載入
+    if (typeof calendarConverter === 'undefined') {
+        if (lunarElement) {
+            lunarElement.textContent = '載入農曆函式庫中...';
+        }
+        return;
+    }
+
+    // 呼叫函式庫進行轉換 (使用 calendarConverter.solar2lunar 函式)
+    const lunarData = calendarConverter.solar2lunar(now.getFullYear(), now.getMonth() + 1, now.getDate());
+
+    let displayString = '';
+
+    // 1. 農曆日期
+    // 範例：九月 十六
+    displayString += `${lunarData.IMonthCn}${lunarData.IDayCn}`;
+
+    // 2. 加入年份天干地支
+    displayString += ` (${lunarData.gzYear})`;
+
+    // 3. 節氣 (如果當天是節氣)
+    if (lunarData.isTerm) {
+        displayString += ` | ${lunarData.Term}`;
+    }
+
+    if (lunarElement) {
+        lunarElement.textContent = displayString;
+    }
+}
+
+
+/**
+ * @description 更新數字時鐘和公曆日期，並處理日夜模式切換。
+ */
 function updateClock() {
     const now = new Date();
-    const currentHour = now.getHours();
+    const currentHour = now.getHours(); // 獲取當前小時 (0-23)
     const body = document.body;
-    const isDayTime = currentHour >= 6 && currentHour < 18;
+
+    // 1. 日夜模式切換邏輯 (樣式定義在外部 CSS 文件中)
+    const isDayTime = currentHour >= 6 && currentHour < 18; // 白天 (06:00 - 17:59)
 
     if (isDayTime) {
         body.classList.remove('night-mode');
@@ -94,22 +144,33 @@ function updateClock() {
         body.classList.add('night-mode');
     }
 
+    // 2. 時鐘更新邏輯
     let hours = currentHour;
     let minutes = now.getMinutes();
     let seconds = now.getSeconds();
+
+    // 補零函數
     const pad = (num) => num < 10 ? '0' + num : num;
+
     const timeString = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+
+    // 更新時鐘內容
     const clockElement = document.getElementById('digital-clock');
     if (clockElement) {
         clockElement.textContent = timeString;
     }
 
+    // 3. 公曆日期更新邏輯
     const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
     const dateString = now.toLocaleDateString('zh-TW', dateOptions); 
+    
     const dateElement = document.getElementById('current-date');
     if (dateElement) {
         dateElement.textContent = dateString;
     }
+
+    // 4. 農曆和節氣更新
+    updateLunarDate();
 }
 
 // ===================================
@@ -127,12 +188,11 @@ const statusMessage = document.getElementById('status-message');
 const startBtn = document.getElementById('start-btn');
 const pauseBtn = document.getElementById('pause-btn');
 const resetBtn = document.getElementById('reset-btn');
-// 新增：提醒相關 DOM 元素
+
+// 提醒相關 DOM 元素與變數
 const soundToggle = document.getElementById('sound-toggle');
 const alarmAudio = document.getElementById('alarm-audio');
-// 全域變數，用於追蹤振動狀態
 let vibrationInterval = null; 
-
 // 振動模式：[持續時間, 間隔時間, 持續時間, ...] (毫秒)
 const VIBRATE_PATTERN = [1000, 500, 500, 500]; 
 
@@ -145,7 +205,7 @@ function playAlarm() {
         alarmAudio.play().catch(e => console.error("音訊播放失敗:", e));
     }
 
-    // 2. 振動提醒 (強制，不允許用戶關閉)
+    // 2. 振動提醒 (強制，直到用戶手動停止)
     if ('vibrate' in navigator) {
         
         let patternIndex = 0;
@@ -194,7 +254,7 @@ function formatTime(seconds) {
 
 function startTimer() {
     if (isRunning) return;
-    stopAlarm(); 
+    stopAlarm(); // 確保開始新一輪計時前，停止所有警報
     isRunning = true;
     statusMessage.textContent = isWorkMode ? '專注工作 🧠' : '享受休息時光 ☕';
     startBtn.disabled = true;
@@ -208,7 +268,7 @@ function startTimer() {
             clearInterval(timerInterval); 
             isRunning = false;
             
-            playAlarm(); 
+            playAlarm(); // 呼叫提醒函數 (聲音和振動)
             
             isWorkMode = !isWorkMode;
             totalSeconds = isWorkMode ? WORK_TIME : BREAK_TIME;
@@ -231,7 +291,7 @@ function pauseTimer() {
 }
 
 function resetTimer() {
-    stopAlarm(); 
+    stopAlarm(); // 確保在重置時停止所有警報
     clearInterval(timerInterval);
     isRunning = false;
     totalSeconds = isWorkMode ? WORK_TIME : BREAK_TIME;
@@ -324,10 +384,10 @@ function loadTheme() {
 
 
 // ===================================
-// VI. 冥想引導模式邏輯 (新增)
+// VI. 冥想引導模式邏輯
 // ===================================
 
-const MEDITATION_INTERVAL_MIN = 60; 
+const MEDITATION_INTERVAL_MIN = 60; // 每 60 分鐘彈出一次提示
 const MEDITATION_MESSAGES = [
     "閉上眼睛，深呼吸三次，感受當下的寧靜。",
     "輕輕放下你的肩膀和下巴，放鬆五秒。",
@@ -402,7 +462,7 @@ loadTheme();
 toggleBtn.addEventListener('click', toggleMeditationMode);
 closeModalBtn.addEventListener('click', closeMeditationPrompt); 
 
-// 主題按鈕事件監聽器 (已移到此處)
+// 主題按鈕事件監聽器
 document.getElementById('theme-default-btn').addEventListener('click', () => setTheme('default'));
 document.getElementById('theme-neon-btn').addEventListener('click', () => setTheme('neon-theme'));
 document.getElementById('theme-dos-btn').addEventListener('click', () => setTheme('dos-theme'));
