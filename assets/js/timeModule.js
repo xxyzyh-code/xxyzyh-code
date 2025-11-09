@@ -1,19 +1,15 @@
-import { LUNAR_LOADING_MESSAGE, APP_INITIALIZATION_MESSAGE } from './config.js'; // <-- 引入配置
-
-/**
- * @description 計算並顯示農曆日期和節氣。
- */
-function updateLunarDate() {
+// timeModule.js - 最終修正版
 
 function updateLunarDate() {
     const now = new Date();
     const lunarElement = document.getElementById('lunar-date');
+    
+    // 程式夥伴修正：改為使用實例化的物件名稱
     const converter = window.calendarConverterInstance; 
 
     if (typeof converter === 'undefined') {
         if (lunarElement) {
-            // 使用配置中的常量
-            lunarElement.textContent = LUNAR_LOADING_MESSAGE; 
+            lunarElement.textContent = '農曆函式庫載入失敗或不可用。';
         }
         console.error("Lunar Date Error: window.calendarConverterInstance is undefined.");
         return;
@@ -84,6 +80,5 @@ function updateClock() {
 export function initializeTimeModule() {
     updateClock();
     setInterval(updateClock, 1000);
-    // 使用配置中的常量
-    console.log(APP_INITIALIZATION_MESSAGE);
+    console.log("Time Module: 時鐘與日期功能已啟動。");
 }
