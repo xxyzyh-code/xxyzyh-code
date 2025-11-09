@@ -801,11 +801,22 @@ function filterPlaylist() {
             listenIntervalId = null;
         }
         
+      // ⭐️ 關鍵新增：檢查是否有歌曲在播放，如果沒有，才預設設置為 0
+    if (currentTrackIndex === -1 || currentPlaylist.length === 0) {
         currentTrackIndex = 0; 
+    }
+    
+    // 確保 audio.src 指向正確的歌曲
+    if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
         const track = currentPlaylist[currentTrackIndex]; 
         audio.src = track.url;
-        audio.pause(); 
+    } else {
+        // 如果列表是空的，則設為 -1
+        currentTrackIndex = -1;
     }
+
+    audio.pause(); 
+}
      // ⭐️ 關鍵修正：無論篩選還是清空，都調用 sortPlaylistByPlayCount
     // 這樣可以確保在搜索框清空時，如果 dataMode 是 global，列表會被正確排序。
     sortPlaylistByPlayCount(); 
