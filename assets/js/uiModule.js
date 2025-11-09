@@ -140,10 +140,11 @@ async function getWeatherData(lat, lon) {
 }
 
 // VIII. 音訊選擇與儲存邏輯
-// ALARM_SOUNDS 已從這裡移除，並從 config.js 導入
+// ALARM_SOUNDS 和 MEDITATION_MUSIC 已從 config.js 導入
 const alarmSelector = document.getElementById('alarm-selector');
-// 註：alarmAudio 在這裡被覆蓋了，我們假設您在 HTML 中有兩個不同的 <audio> 元素 ID
-// 但為了保持程式碼結構清晰，我們將其重新命名為 alarmAudioElement
+
+// 程式夥伴：修正錯誤：將 alarmAudio 命名為 alarmAudioElement，避免與 meditation-audio 混淆
+// 並且確保在 initializeUIModule 中引用正確
 const alarmAudioElement = document.getElementById('alarm-audio');
 
 
@@ -151,12 +152,31 @@ const alarmAudioElement = document.getElementById('alarm-audio');
  * @description 渲染下拉選單的選項，載入偏好並設置監聽器。
  */
 function initializeAudioSelector(selector, options, storageKey, audioElement) {
-    // 使用配置中的 options
+    // 1. 渲染選項
     selector.innerHTML = options.map((item, index) => 
         `<option value="${item.path}">${item.name}</option>`
     ).join('');
 
-    // ... (後續邏輯保持不變) ...
+    // 2. 載入儲存的偏好 (如果有)
+    const savedPath = localStorage.getItem(storageKey);
+    let selectedPath = savedPath || options[0].path; 
+
+    // 3. 設置當前選擇並更新 <audio> 的 src
+    selector.value = selectedPath;
+    audioElement.src = selectedPath;
+
+    // 4. 添加事件監聽器
+    selector.addEventListener('change', (e) => {
+        const newPath = e.target.value;
+        audioElement.src = newPath;
+        localStorage.setItem(storageKey, newPath);
+        
+        // 如果是冥想音樂且正在播放，需要重新載入並播放新音源
+        if (audioElement.id === 'meditation-audio' && !audioElement.paused) {
+            audioElement.load();
+            audioElement.play();
+        }
+    });
 }
 
 /**
@@ -165,14 +185,16 @@ function initializeAudioSelector(selector, options, storageKey, audioElement) {
 export function initializeUIModule() {
     // 啟動主題功能
     loadTheme(); 
-    // ... (事件監聽器保持不變) ...
+    document.getElementById('theme-default-btn').addEventListener('click', () => setTheme('default'));
+    document.getElementById('theme-neon-btn').addEventListener('click', () => setTheme('neon-theme'));
+    document.getElementById('theme-dos-btn').addEventListener('click', () => setTheme('dos-theme'));
 
     // 啟動冥想功能事件監聽器
     toggleBtn.addEventListener('click', toggleMeditationMode);
     closeModalBtn.addEventListener('click', closeMeditationPrompt); 
 
     // 啟動音訊選擇器 (在 DOM 準備好後)
-    // 使用配置中的 ALARM_SOUNDS 和 MEDITATION_MUSIC
+    // 程式夥伴：修正傳遞的變量名稱：將 alarmAudioElement 傳給 initializeAudioSelector
     initializeAudioSelector(alarmSelector, ALARM_SOUNDS, 'alarmSoundPath', alarmAudioElement);
     initializeAudioSelector(meditationSelector, MEDITATION_MUSIC, 'meditationMusicPath', audio);
 
