@@ -3,16 +3,46 @@
  */
 
 /* =================================== */
+/* 標題居中修正 (針對 Minimal Mistakes 主題) */
+/* =================================== */
+
+.page__header {
+    text-align: center; /* 居中 header 區域的文本 */
+}
+.page__header h1 {
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+
+
+/* =================================== */
 /* 基礎與日夜模式樣式 */
 /* =================================== */
 
-/* 程式夥伴：定義夜間模式的樣式 */
+body {
+    transition: background-image 2s ease-in-out, background-color 1s; /* 平滑過渡 */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 100vh; /* 確保至少佔滿整個視口高度 */
+}
+
+/* 白天：預設/晴朗背景 */
+body:not(.night-mode) {
+    background-image: url('https://picsum.photos/seed/day/1920/1080'); 
+    background-color: #f0f0f0; /* 預設白天淺背景 */
+    color: #333333;
+}
+
+/* 夜間：星空背景與基礎色 */
 body.night-mode {
+    background-image: url('https://picsum.photos/seed/night/1920/1080'); 
     background-color: #1a1a1a; /* 深黑背景 */
     color: #cccccc;           /* 柔和的灰色文字 */
 }
 
-/* 確保所有容器適應夜間模式 */
+/* 確保夜間模式下重要文字和邊框顏色保持高亮 */
 body.night-mode #main-container,
 body.night-mode #pomodoro-timer,
 body.night-mode #weather-info, 
@@ -21,31 +51,11 @@ body.night-mode #digital-clock {
     border-color: #00ff66;
 }
 
-/* 程式夥伴：設定整體背景過渡與圖片 */
-body {
-    transition: background-image 2s ease-in-out, background-color 1s; /* 平滑過渡 */
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
-/* 白天：預設/晴朗背景 (使用佔位符圖片) */
-body:not(.night-mode) {
-    background-image: url('https://picsum.photos/seed/day/1920/1080'); 
-}
-
-/* 夜間：星空背景 (使用佔位符圖片) */
-body.night-mode {
-    background-image: url('https://picsum.photos/seed/night/1920/1080'); 
-    background-color: #1a1a1a;
-    color: #cccccc;
-}
-
 /* =================================== */
 /* 佈局與元件基礎樣式 */
 /* =================================== */
 
-/* 程式夥伴：主要容器樣式，使用 Flexbox 讓元件並排 */
+/* 主要容器樣式，使用 Flexbox 讓元件並排 */
 #main-container {
     display: flex;
     flex-direction: column; /* 預設：元件上下堆疊 */
@@ -84,6 +94,7 @@ body.night-mode {
     text-align: center;
     min-width: 280px; 
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.5s; /* 添加過渡效果，配合主題切換 */
 }
 
 #timer-display {
@@ -101,7 +112,7 @@ body.night-mode {
     border-radius: 5px;
     background-color: #007bff; /* 藍色按鈕 */
     color: white;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, box-shadow 0.3s;
 }
 
 #control-buttons button:hover {
@@ -123,6 +134,7 @@ body.night-mode {
     text-align: center;
     min-width: 280px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.5s;
 }
 
 #weather-details {
