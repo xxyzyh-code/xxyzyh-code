@@ -1,5 +1,5 @@
 # .github/workflows/deploy_to_ipfs.yml
-name: Jekyll Build & Deploy to IPFS
+name: Jekyll Build & Deploy to Public IPFS Gateways
 
 on:
   push:
@@ -19,20 +19,17 @@ jobs:
 
       # --- 🚀 複製您現有的 Jekyll 構建流程 ---
 
-      # 2. 設定 Ruby 環境
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2' # 保持與您 Netlify 流程一致的 Ruby 版本
+          ruby-version: '3.2' 
           bundler-cache: true 
 
-      # 3. 安裝 Jekyll 依賴
       - name: Install dependencies
         run: |
           gem install bundler
           bundle install
 
-      # 4. 執行 Jekyll 建構 (輸出到 _site 目錄)
       - name: Build Jekyll site
         run: |
           echo "💡 Starting Jekyll build..."
@@ -42,141 +39,90 @@ jobs:
       # --- Jekyll 構建流程結束 ---
 
 
-      # 5. 設定 Node.js 和 IPFS 依賴
-      - name: Setup Node.js (for IPFS client)
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-
-      - name: Install IPFS dependencies
-        run: npm install ipfs-http-client node-fetch
-
-      # 6. 上傳到 IPFS 和 Pinning
-      - name: Upload to IPFS and Pin
-        id: ipfs_deploy
-        env:
-          INFURA_PROJECT_ID: ${{ secrets.INFURA_PROJECT_ID }}
-          INFURA_PROJECT_SECRET: ${{ secrets.INFURA_PROJECT_SECRET }}
-          CID_FILE_NAME: cid_output.txt 
-          BUILD_DIR: _site 
+      # 2. 壓縮 Jekyll 輸出文件 (準備上傳)
+      - name: Compress website files
+        id: compress
         run: |
-          node <<'EOF'
-          import { create } from 'ipfs-http-client';
-          import fs from 'fs';
-          import path from 'path';
-          import fetch from 'node-fetch';
+          BUILD_DIR="_site"
+          # 檢查 Jekyll 輸出目錄是否存在
+          if [ ! -d "$BUILD_DIR" ]; then
+            echo "❌ Jekyll build directory ($BUILD_DIR) not found. Exiting."
+            exit 1
+          fi
+          
+          # 將 _site 目錄的內容壓縮為 site.tar.gz
+          # -C _site 確保壓縮包內的路徑是相對根目錄的 (即不包含 _site/ 前綴)
+          tar -czf site.tar.gz -C "$BUILD_DIR" .
+          echo "✅ Files compressed to site.tar.gz"
 
-          const projectId = process.env.INFURA_PROJECT_ID;
-          const projectSecret = process.env.INFURA_PROJECT_SECRET;
-          const cidFileName = process.env.CID_FILE_NAME;
-          const buildDir = process.env.BUILD_DIR; 
+      # 3. 嘗試輪詢多個 IPFS 網關上傳
+      - name: Try uploading to multiple IPFS gateways
+        id: ipfs_deploy # 保持 ID 不變
+        # 這裡我們不需要 INFURA 相關 ENV
+        run: |
+          # 允許單個命令失敗，防止整個腳本因單個 curl 失敗而中斷
+          set +e 
           
-          if (!projectId || !projectSecret) {
-            console.error("❌ INFURA_PROJECT_ID or SECRET is missing. Cannot deploy.");
-            process.exit(1);
-          }
+          # 設置多個公共網關的 /api/v0/add 端點
+          GATEWAYS=(
+            "https://ipfs.io/api/v0/add?wrap-with-directory=true"
+            "https://dweb.link/api/v0/add?wrap-with-directory=true"
+            "https://gateway.pinata.cloud/api/v0/add?wrap-with-directory=true"
+            "https://ipfs.eternum.io/api/v0/add?wrap-with-directory=true"
+          )
           
-          const auth =
-            'Basic ' + Buffer.from(projectId + ':' + projectSecret).toString('base64');
+          SUCCESS=false
+          NEW_CID=""
+          GATEWAY_USED=""
 
-          const client = create({
-            host: 'ipfs.infura.io',
-            port: 5001,
-            protocol: 'https',
-            headers: { authorization: auth },
-          });
-          
-          async function addDirectory(dir) {
-            const files = [];
-            function walk(currentPath, baseDir) {
-              const entries = fs.readdirSync(currentPath);
-              for (const entry of entries) {
-                const fullPath = path.join(currentPath, entry);
-                
-                if (fs.statSync(fullPath).isDirectory()) {
-                  walk(fullPath, baseDir);
-                } else {
-                  const content = fs.readFileSync(fullPath);
-                  const relativePath = path.relative(baseDir, fullPath);
-                  files.push({
-                    path: relativePath,
-                    content
-                  });
-                }
-              }
-            }
+          for GW_URL in "${GATEWAYS[@]}"; do
+            echo "🌐 Trying gateway: $GW_URL"
+            # 使用 curl 上傳 tar.gz 文件，並請求網關解壓 (wrap-with-directory)
+            RESPONSE=$(curl -s -X POST -F "file=@site.tar.gz" "$GW_URL")
             
-            console.log(`🔍 Preparing to upload directory: ${dir}`);
-            walk(dir, dir); 
+            # 從 JSON 響應中解析 CID (Hash)，這是 IPFS API 的標準響應
+            CID=$(echo "$RESPONSE" | grep -o '"Hash":"[^"]*"' | head -1 | cut -d':' -f2 | tr -d '"')
 
-            if (files.length === 0) {
-              console.error("❌ No files found in build directory. Check Jekyll build step.");
-              process.exit(1);
-            }
-            
-            const root = await client.addAll(files, { wrapWithDirectory: true });
-            let last;
-            for await (const f of root) last = f;
-            return last.cid.toString();
-          }
+            if [ ! -z "$CID" ]; then
+              echo "✅ Uploaded successfully via ${GW_URL}"
+              NEW_CID="$CID"
+              # 提取基礎網關 URL，用於最終連結
+              GATEWAY_USED=$(echo "$GW_URL" | sed 's#/api/v0/add.*##') 
+              SUCCESS=true
+              break
+            else
+              echo "❌ Failed on ${GW_URL}, trying next..."
+              # 打印出響應以幫助調試
+              echo "Response was: $RESPONSE" 
+            fi
+            # 建議在這裡加入 'sleep 5' 以避免瞬間觸發限流
+            sleep 5 
+          done
 
-          (async () => {
-            try {
-              const rootCid = await addDirectory(path.join(process.cwd(), buildDir)); 
-              console.log(`✅ Upload complete!`);
-              console.log(`🌐 Your website CID: ${rootCid}`);
-              
-              fs.writeFileSync(cidFileName, rootCid);
-              
-              console.log(`📌 Pinning to Infura...`);
-
-              const response = await fetch('https://ipfs.infura.io:5001/api/v0/pin/add?arg=' + rootCid, {
-                method: 'POST',
-                headers: { authorization: auth }
-              });
-              
-              if (!response.ok) {
-                console.error(`❌ Pinning failed: ${response.status} ${response.statusText}`);
-                try {
-                    const errorResult = await response.text();
-                    console.error('Pinning Error Response:', errorResult);
-                } catch (e) {
-                    console.error('Could not read error response text.');
-                }
-              } else {
-                  try {
-                      const result = await response.json();
-                      console.log('📌 Pin result:', result);
-                  } catch (e) {
-                      console.warn('⚠️ Pinning response was not JSON, but status was OK.');
-                  }
-              }
-              console.log(`🌐 Your website is now accessible at: https://ipfs.io/ipfs/${rootCid}`);
-
-            } catch (error) {
-                console.error("❌ Critical IPFS Deployment Error:", error);
-                process.exit(1);
-            }
-          })();
-          EOF
+          if [ "$SUCCESS" = false ]; then
+            echo "💀 All gateways failed. Exiting."
+            exit 1
+          fi
           
-          NEW_CID=$(cat $CID_FILE_NAME)
+          # 將 CID 和使用的網關輸出到 GITHUB_OUTPUT
           echo "NEW_CID=$NEW_CID" >> $GITHUB_OUTPUT
+          echo "GATEWAY_USED=$GATEWAY_USED" >> $GITHUB_OUTPUT
 
-
-      # 7. 更新 CID 歷史和最新連結文件
+      # 4. 更新 CID 歷史和最新連結文件
       - name: Update CID History and Latest Link 📝
         if: success() 
         env:
+          # 從上一個步驟獲取 CID 和使用的網關
           NEW_CID: ${{ steps.ipfs_deploy.outputs.NEW_CID }} 
+          GATEWAY_USED: ${{ steps.ipfs_deploy.outputs.GATEWAY_USED }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
           LATEST_CID_FILE="CID_LATEST.md"
           HISTORY_CID_FILE="CID_HISTORY.md"
-          IPFS_GATEWAY="https://ipfs.io/ipfs"
-          CID_LINK="$IPFS_GATEWAY/$NEW_CID"
+          # 使用成功上傳的網關作為連結前綴
+          CID_LINK="$GATEWAY_USED/ipfs/$NEW_CID" 
           TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
 
           # 檢查 CID 是否有變更
@@ -200,28 +146,25 @@ jobs:
 ### 🚀 最新部署
 📅 **時間 (UTC):** \`${TIMESTAMP}\`
 🆔 **CID:** \`${NEW_CID}\`
-🔗 **訪問連結:** [點擊此處訪問]($CID_LINK)
+🔗 **訪問連結 (via $GATEWAY_USED):** [點擊此處訪問]($CID_LINK)
 EOL
 
           # 更新 CID 歷史文件 (Append 並排序到最前)
           NEW_ENTRY="---
 ### 📦 部署於 $TIMESTAMP
 * **CID:** \`${NEW_CID}\`
-* **連結:** [訪問]($CID_LINK)"
+* **連結 (via $GATEWAY_USED):** [訪問]($CID_LINK)"
 
           if [ ! -f $HISTORY_CID_FILE ]; then
               echo "# 📜 IPFS 部署歷史記錄" > $HISTORY_CID_FILE
               echo "$NEW_ENTRY" >> $HISTORY_CID_FILE
           else
               TEMP_FILE=$(mktemp)
-              # 讀取除了標題行之外的內容
               tail -n +2 $HISTORY_CID_FILE > $TEMP_FILE 
               
-              # 重新寫入標題和新條目
               echo "# 📜 IPFS 部署歷史記錄" > $HISTORY_CID_FILE
               echo "$NEW_ENTRY" >> $HISTORY_CID_FILE
               
-              # 附加舊的歷史記錄
               cat $TEMP_FILE >> $HISTORY_CID_FILE
               rm $TEMP_FILE
           fi
@@ -231,3 +174,8 @@ EOL
           git add $LATEST_CID_FILE $HISTORY_CID_FILE
           git commit -m "🤖 [CI] Auto-update IPFS CID to $NEW_CID"
           git push
+
+      # 5. 顯示最終連結
+      - name: Show final deployed link
+        if: success()
+        run: echo "🌐 Your site deployed via ${{ steps.ipfs_deploy.outputs.GATEWAY_USED }}/ipfs/${{ steps.ipfs_deploy.outputs.NEW_CID }}"
