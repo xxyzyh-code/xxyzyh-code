@@ -5,38 +5,35 @@ on:
     branches: [main]
 
 jobs:
-  build-and-deploy:
+  sync-to-gitlab: # 更改任務名稱，反應我們只做同步
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout GitHub repo
-        uses: actions/checkout@v3
+      - name: ⬇️ Checkout GitHub repo
+        uses: actions/checkout@v4 # 推薦更新到最新版本
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: 3.2
+      # ----------------------------------------------------
+      # 刪除 Jekyll 建置和 Ruby 安裝步驟
+      # 因為 Jekyll 建置將在 GitLab CI/CD 中完成
+      # ----------------------------------------------------
 
-      - name: Install dependencies
+      - name: 🔄 Deploy to GitLab
+        env:
+          # 確保 GITLAB_TOKEN 是在你的 GitHub 倉庫 Settings > Secrets 中配置的 GitLab Personal Access Token
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          # 使用 https 格式，並在 URL 中嵌入 Personal Access Token 進行身份驗證
+          GITLAB_REPO: https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.com/xxyzyh/my-blog.git 
         run: |
-          gem install bundler
-          bundle install
-
-      - name: Build Jekyll site
-        run: |
-          bundle exec jekyll build -d _site
-          echo "✅ Jekyll build complete"
-
- -name: Deploy to GitLab Pages
-  env:
-    GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
-    GITLAB_REPO: https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.com/xxyzyh/my-blog.git
-  run: |
-    cd _site
-    git init
-    git config user.name "github-actions[bot]"
-    git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-    git remote add origin $GITLAB_REPO
-    git add .
-    git commit -m "Sync Jekyll site to GitLab Pages"
-    git push -f origin main
+          # 1. 配置 Git 身份
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # 2. 添加 GitLab 遠程倉庫
+          # 'gitlab' 是遠端名稱，你可以使用任何名稱
+          git remote add gitlab $GITLAB_REPO
+          
+          # 3. 強制推送當前分支（main）到 GitLab 倉庫的 main 分支
+          # -f (force) 可以覆蓋 GitLab 上已有的內容，確保同步
+          # -u (upstream) 設定追蹤，讓後續操作更方便 (雖然這裡不會有後續操作)
+          echo "🚀 Pushing code to GitLab repository..."
+          git push --force --quiet gitlab main:main
+          echo "✅ Synchronization complete!"
