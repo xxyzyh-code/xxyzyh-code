@@ -9,39 +9,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: ⬇️ Checkout GitHub repo
-        # 拉取整個倉庫，fetch-depth: 0 對於同步很重要
+        # 拉取整個倉庫內容
         uses: actions/checkout@v4
         with:
           fetch-depth: 0 
 
-      - name: 🔄 Deploy to GitLab
+      - name: 🔑 Set up SSH Key for GitLab
+        # 使用專門的 Action 導入私密金鑰
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          # 🚨 引用我們剛剛設置的私密金鑰
+          ssh-private-key: ${{ secrets.GITLAB_SSH_PRIVATE_KEY }}
+          # 允許 Git 信任 GitLab 的 SSH 指紋，避免首次連線確認
+          known-hosts-path: '/dev/null' 
+          
+      - name: 🔄 Deploy to GitLab via SSH
         run: |
           # 設置 Git 身份
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # 🚨 最終清理：精確清理換行符和空格，確保 Token 是一個純淨字串
-          # 這是為了解決你多次遇到的 "newline in its password component" 警告。
-          CLEAN_TOKEN=$(echo -n "${{ secrets.GITLAB_TOKEN }}" | tr -d '\n\r ')
+          # 🚨 關鍵：使用 SSH URL 進行推送
+          # 格式：git@gitlab.com:user/repo.git
+          GITLAB_REPO_SSH="git@gitlab.com:xxyzyh/my-blog.git"
           
-          # 1. 對清洗後的 Token 進行 URL 編碼
-          # 確保 Token 中的特殊字元能被 Git 正確解析
-          GITLAB_TOKEN_ENCODED=$(echo -n "$CLEAN_TOKEN" | xxd -p | sed 's/\(..\)/%\1/g')
+          # 添加遠程倉庫並推送
+          git remote add gitlab "$GITLAB_REPO_SSH"
+          echo "🚀 Pushing entire GitHub repository to GitLab via SSH..."
           
-          # 2. 構建最終 URL (務必替換 YOUR_GITLAB_USERNAME)
-          GITLAB_REPO="https://xxyzyh:$GITLAB_TOKEN_ENCODED@gitlab.com/xxyzyh/my-blog.git"
-          
-          # 3. 添加遠程倉庫並推送
-          # Git 會將當前工作目錄 (你的整個 GitHub 倉庫) 推送上去
-          git remote add gitlab "$GITLAB_REPO"
-          echo "🚀 Pushing entire GitHub repository to GitLab..."
-          
-          # 嘗試推送，--force 確保覆蓋 GitLab 上只有 .gitlab-ci.yml 的狀態
-          git push --force --quiet gitlab main:main
+          # 嘗試推送
+          # 如果 GitLab 上的 Deploy Key 權限設定正確，這次就會成功
+          git push --force gitlab main:main
           
           if [ $? -eq 0 ]; then
-            echo "✅ Synchronization complete! Check GitLab CI/CD for Jekyll build pipeline."
+            echo "✅ Synchronization complete! GitLab CI/CD should now start building your Jekyll site."
           else
-            echo "❌ Synchronization FAILED. Check Secret value in GitHub."
+            echo "❌ Synchronization FAILED. Check SSH Key setup on both sides and GitLab Write Access."
             exit 1
           fi
