@@ -1,5 +1,8 @@
 // pomodoroModule.js
 
+// 程式夥伴: 導入遊戲化計分函數
+import { addPomodoroScore } from './gamificationModule.js';
+
 const WORK_TIME = 25 * 60;
 const BREAK_TIME = 5 * 60;
 let totalSeconds = WORK_TIME;
@@ -67,9 +70,19 @@ function startTimer() {
     startBtn.disabled = true;
     pauseBtn.disabled = false;
     
+    // 程式夥伴: 定義一個計數器來追蹤經過的秒數
+    let secondsElapsed = 0;
+
     timerInterval = setInterval(() => {
         totalSeconds--;
+        secondsElapsed++; // 追蹤經過的秒數
         timerDisplay.textContent = formatTime(totalSeconds);
+
+        // 程式夥伴: 每 60 秒 (1 分鐘) 呼叫一次計分
+        if (secondsElapsed % 60 === 0) {
+            // 只有在工作模式 (isWorkMode=true) 下才計分
+            addPomodoroScore(!isWorkMode); 
+        }
 
         if (totalSeconds <= 0) {
             clearInterval(timerInterval); 
