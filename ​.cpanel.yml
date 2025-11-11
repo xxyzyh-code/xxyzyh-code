@@ -1,0 +1,24 @@
+---
+# .cpanel.yml: Jekyll 網站的 cPanel 自動部署配置
+
+# 設定在哪個分支上執行部署
+deployment:
+  tasks:
+    # ----------------------------------------------------
+    # Step 1: 進入 Jekyll 專案目錄 (根目錄)
+    - export DEPLOYPATH=/home/xxyzyh/public_html
+    - cd $DEPLOYPATH
+    
+    # ----------------------------------------------------
+    # Step 2: 執行 Jekyll 構建
+    # 嘗試使用 cPanel 可能提供的 Ruby 和 Jekyll 環境
+    - echo "啟動 Jekyll 構建..."
+    - /opt/cpanel/ea-ruby27/root/bin/bundle install
+    - /opt/cpanel/ea-ruby27/root/bin/bundle exec jekyll build
+    
+    # ----------------------------------------------------
+    # Step 3: 將構建結果 (位於 _site) 移動到網站根目錄
+    - echo "移動靜態檔案到公開目錄..."
+    # 警告: 這會刪除 public_html 中除了 .cpanel.yml 以外的所有檔案
+    - cp -r _site/. $DEPLOYPATH
+    - rm -rf _site
