@@ -37,5 +37,3 @@ load_player_css: true
     // 供音樂播放器腳本 (非模組腳本) 使用。
     window.addMusicScore = addMusicScore;
 </script>
-
-</div>
