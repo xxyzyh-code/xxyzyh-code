@@ -20,21 +20,25 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # 🚨 關鍵解決方案：精確清理換行符，並去除所有空格
-          # -n 確保沒有尾隨換行，tr -d '\n\r ' 確保去除所有換行和空格
-          CLEAN_TOKEN=$(echo -n "${{ secrets.GITLAB_TOKEN }}" | tr -d '\n\r ')
+          # 🚨 關鍵解決方案：不將 Token 拼接到 URL 中
+          # 1. 定義 GitLab 倉庫的乾淨 URL
+          # 替換 xxyzyh/my-blog.git 為你的目標倉庫路徑
+          GITLAB_REPO_CLEAN="https://gitlab.com/xxyzyh/my-blog.git"
           
-          # 1. 對清洗後的 Token 進行 URL 編碼
-          # 這是為了確保 Token 中的所有特殊字元都能被 Git 正確解析
-          GITLAB_TOKEN_ENCODED=$(echo -n "$CLEAN_TOKEN" | xxd -p | sed 's/\(..\)/%\1/g')
+          # 2. 設置 Gitlab 倉庫的認證資訊
+          # 使用 git config credential.helper 讓 Git 自動處理認證
+          # 注意：我們在這裡使用 printf "%s" 來確保 ${{ secrets.GITLAB_TOKEN }} 
+          # 變數被視為單純的字串，不會包含換行。
+          printf "%s" "${{ secrets.GITLAB_TOKEN }}" > gitlab_token.txt
           
-          # 2. 構建最終 URL (務必替換 YOUR_GITLAB_USERNAME)
-          # 注意：我們現在可以相信變數是乾淨的，但仍使用雙引號
-          GITLAB_REPO="https://xxyzyh:$GITLAB_TOKEN_ENCODED@gitlab.com/xxyzyh/my-blog.git"
+          # 3. 設置 credential helper，讓 Git 使用 Token 進行 HTTP 基本認證
+          # 我們將 Token 值傳遞給一個名為 "GITLAB_TOKEN_AUTH" 的環境變數
+          # 並且使用一個腳本來輸出認證資訊給 Git
+          git config credential.https://gitlab.com.helper "!f() { test \"\$1\" = get && echo \"password=$(cat gitlab_token.txt)\" && echo \"xxyzyh\"; }; f"
           
-          # 3. 添加遠程倉庫並推送
-          # 在這裡，我們需要確保 git remote add 看不到任何換行符
-          git remote add gitlab "$GITLAB_REPO"
+          # 4. 添加遠程倉庫並推送（使用乾淨 URL）
+          git remote add gitlab "$GITLAB_REPO_CLEAN"
+          
           echo "🚀 Pushing code to GitLab repository..."
           
           # 嘗試推送
@@ -43,6 +47,7 @@ jobs:
           if [ $? -eq 0 ]; then
             echo "✅ Synchronization complete!"
           else
-            echo "❌ Synchronization FAILED. Token Cleanup/Permission Issue."
+            echo "❌ Synchronization FAILED. Final check: GitLab PAT validity (must be one clean line)."
             exit 1
           fi
+          
