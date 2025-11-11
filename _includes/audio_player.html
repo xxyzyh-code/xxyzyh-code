@@ -7,26 +7,25 @@
     
     <div id="player-controls" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;">
         
-    <div id="nav-main-group" style="display: flex; justify-content: center; align-items: center; gap: 15px;">
-    <span id="prev-button" style="cursor: pointer; font-size: 1.2em;">
-        ⏪ 上一曲
-    </span>
-    <span id="mode-button" style="cursor: pointer;">
-        [ 模式: 順序 ]
-    </span>
-    <span id="next-button" style="cursor: pointer; font-size: 1.2em;">
-        下一曲 ⏩
-    </span>
-    </div>
+        <div id="nav-main-group" style="display: flex; justify-content: center; align-items: center; gap: 15px;">
+            <span id="prev-button" onclick="playPreviousTrack()" style="cursor: pointer; font-size: 1.2em;">
+                ⏪ 上一曲
+            </span>
+            <span id="mode-button" onclick="togglePlayMode()" style="cursor: pointer;">
+                [ 模式: 順序 ]
+            </span>
+            <span id="next-button" onclick="playNextTrack()" style="cursor: pointer; font-size: 1.2em;">
+                下一曲 ⏩
+            </span>
+        </div>
         
-    <div id="mode-switcher-group" style="display: flex; justify-content: center; margin-top: 5px;">
-      <div id="data-mode-switcher">
-        <button id="data-mode-toggle-btn" style="cursor: pointer;">
-            數據模式: <span id="current-data-mode">[本地統計]</span>
-          </button>
-         </div>
-         </div>
-
+        <div id="mode-switcher-group" style="display: flex; justify-content: center; margin-top: 5px;">
+            <div id="data-mode-switcher">
+                <button id="data-mode-toggle-btn" onclick="toggleDataMode()" style="cursor: pointer;">
+                    數據模式: <span id="current-data-mode">[本地統計]</span>
+                </button>
+            </div>
+        </div>
 
         <div id="aux-controls-group" style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
             
@@ -48,7 +47,7 @@
             </div>
             
             <div id="sleep-timer-area" style="position: relative;">
-        <button id="timer-toggle-btn" style="cursor: pointer;">
+                <button id="timer-toggle-btn" onclick="toggleTimerMenu()" style="cursor: pointer;">
                     定時 (未設定)
                 </button>
                 
@@ -106,10 +105,6 @@ const themeToggleBtn = document.getElementById('theme-toggle-btn');
 const themeMenu = document.getElementById('theme-menu');
 const currentThemeName = document.getElementById('current-theme-name');
 const themeOptions = document.querySelectorAll('#theme-menu .theme-option');
-    // ⭐️ 新增：獲取導航控制按鈕
-const prevButton = document.getElementById('prev-button'); // 上一曲
-const nextButton = document.getElementById('next-button'); // 下一曲
-const dataModeToggleBtn = document.getElementById('data-mode-toggle-btn'); // 數據模式切換
     
     
 // ------------------------------------
@@ -573,7 +568,7 @@ themeOptions.forEach(option => {
         themeMenu.classList.add('hidden-menu'); 
     });
 });
-// ⭐️ 核心修正：簡化和統一全局點擊監聽器
+// ⭐️ 修正 C：簡化和統一全局點擊監聽器
 document.addEventListener('click', (e) => {
     const target = e.target;
 
@@ -588,17 +583,7 @@ document.addEventListener('click', (e) => {
     if (!timerMenu.contains(target) && !timerToggleButton.contains(target)) {
         timerMenu.classList.add('hidden-menu');
     }
-    
-    // 3. ⭐️ 新增：阻止點擊任何菜單選項時，事件向 DOM 頂層傳播
-    // 由於菜單選項沒有阻止冒泡，點擊菜單選項後，事件會向上冒泡並可能觸發其他未預期的行為。
-    // 但是，由於我們已經有精準的判斷，這個步驟可能是多餘的，我們暫時相信你目前的邏輯是足夠的。
-
-}, true); // ⭐️ 注意：這裡的 "true" 是可選的，用於在捕獲階段處理，但通常不需要。
-         // 為了保持你的程式碼風格，我們移除它。
-
-// 修正：檢查 `document.addEventListener` 是否放在了正確的位置 (初始化之前)。
-// 你的程式碼中，這個監聽器位置是正確的。
-
+});
 setInterval(() => {
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     
@@ -682,10 +667,6 @@ function updateTimerCountdown() {
     }
 }
 
-let totalListenMinutes = 0;
-let totalListenSeconds = 0; // 程式夥伴: 新增此變數來追蹤本次播放時間 (秒)
-let listenIntervalId = null; 
-    
 audio.addEventListener('play', () => {
     if (listenIntervalId === null) {
         listenIntervalId = setInterval(updateTotalListenTime, 1000);
@@ -699,21 +680,14 @@ audio.addEventListener('pause', () => {
 });
 function updateTotalListenTime() {
     totalListenSeconds++;
-    
-    // 程式夥伴: 核心音樂計分邏輯
-    if (totalListenSeconds % 60 === 0) {
-        // 每 60 秒 (1 分鐘) 呼叫一次計分
-        if (typeof window.addMusicScore === 'function') {
-            window.addMusicScore();
-        }
+    if (totalListenSeconds >= 60) {
         totalListenMinutes++;
+        totalListenSeconds = 0;
     }
     
-    // 修正: 保持原始邏輯，只顯示分鐘數 (不影響計分)
     totalListenTimeSpan.textContent = 
-        `${totalListenMinutes} 分鐘 ${totalListenSeconds % 60} 秒`;
+        `${totalListenMinutes} 分鐘 ${totalListenSeconds} 秒`;
 }
-
 // 播放次數追蹤函數
 function incrementPlayCount() {
     if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
@@ -1207,45 +1181,6 @@ audio.addEventListener('pause', () => {
 
 audio.addEventListener('ended', saveSettings);
 playlistSearchInput.addEventListener('input', debounce(filterPlaylist, 300));
-
-    // ⭐️ 關鍵修正：導航按鈕的事件監聽器
-if (prevButton) {
-    prevButton.addEventListener('click', () => {
-        playPreviousTrack();
-        // 點擊上一曲後，確保模式切換到自由模式（可選，但更符合用戶習慣）
-        if (playMode !== 3) {
-            playMode = 3; 
-            updateModeUI();
-            saveSettings();
-        }
-    });
-}
-
-if (nextButton) {
-    nextButton.addEventListener('click', () => {
-        playNextTrack();
-        // 點擊下一曲後，確保模式切換到自由模式（可選，但更符合用戶習慣）
-        if (playMode !== 3) {
-            playMode = 3; 
-            updateModeUI();
-            saveSettings();
-        }
-    });
-}
-
-if (modeButton) {
-    modeButton.addEventListener('click', togglePlayMode);
-}
-
-if (dataModeToggleBtn) {
-    // ⭐️ 注意：由於 toggleDataMode 是異步函數，不需要 debounce
-    dataModeToggleBtn.addEventListener('click', toggleDataMode);
-}
-
-// ⭐️ 新增：綁定定時器按鈕，因為它是全局函數
-if (timerToggleButton) {
-    timerToggleButton.addEventListener('click', toggleTimerMenu);
-}
 
 // --- *** 異步初始化函數 *** ---
 
