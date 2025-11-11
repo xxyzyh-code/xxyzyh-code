@@ -34,7 +34,7 @@ jobs:
           # 3. 設置 credential helper，讓 Git 使用 Token 進行 HTTP 基本認證
           # 我們將 Token 值傳遞給一個名為 "GITLAB_TOKEN_AUTH" 的環境變數
           # 並且使用一個腳本來輸出認證資訊給 Git
-          git config credential.https://gitlab.com.helper "!f() { test \"\$1\" = get && echo \"password=$(cat gitlab_token.txt)\" && echo \"xxyzyh\"; }; f"
+          git config credential.https://gitlab.com.helper "!f() { test \"\$1\" = get && echo \"password=$(cat gitlab_token.txt)\" && echo \"username=xxyzyh\"; }; f"
           
           # 4. 添加遠程倉庫並推送（使用乾淨 URL）
           git remote add gitlab "$GITLAB_REPO_CLEAN"
