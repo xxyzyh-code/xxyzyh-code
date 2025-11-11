@@ -1,0 +1,53 @@
+# .github/workflows/cpanel_deploy.yml
+# 專門用於構建 Jekyll 並透過 FTP 部署到 cPanel 伺服器
+
+name: Deploy to cPanel via FTP
+
+on:
+  # 當 push 到 main 分支時觸發自動部署
+  push:
+    branches: ["main"]
+  # 也允許手動從 GitHub 介面觸發
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cpanel_deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # 確保使用與您 Jekyll 專案相符的 Ruby 版本 (您之前使用的是 3.2)
+      - name: Setup Ruby (Required for Jekyll Build)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true  # 安裝 Gemfile.lock 中的依賴
+
+      - name: Build Jekyll Site
+        run: bundle exec jekyll build
+        env:
+          JEKYLL_ENV: production
+      
+      - name: 🚀 Deploy built files to cPanel /public_html
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.0
+        with:
+          # 連接資訊 (使用 GitHub Secrets)
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          # 上傳 Jekyll 的輸出目錄
+          local-dir: ./_site/
+          # 您的網站根目錄
+          remote-dir: /public_html/
+          # 刪除目標目錄上不再需要的舊文件
+          log-level: verbose
+          # 清理 public_html 避免 Index of / 錯誤
+          exclude: |
+            **/.git*
+            **/.DS_Store
+            **/.cpanel.yml
