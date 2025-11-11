@@ -25,3 +25,17 @@ load_player_css: true
     {% include audio_player.html %}
 
 </div>
+
+<script type="module">
+    // 導入初始化函數
+    import { initializeGamificationModule, addMusicScore } from '/assets/js/gamificationModule.js';
+    
+    // 確保模組被初始化
+    document.addEventListener('DOMContentLoaded', initializeGamificationModule);
+
+    // ⭐️ 導出 addMusicScore 函數到全局作用域 (window)，
+    // 供音樂播放器腳本 (非模組腳本) 使用。
+    window.addMusicScore = addMusicScore;
+</script>
+
+</div>
