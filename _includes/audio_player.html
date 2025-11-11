@@ -680,14 +680,21 @@ audio.addEventListener('pause', () => {
 });
 function updateTotalListenTime() {
     totalListenSeconds++;
-    if (totalListenSeconds >= 60) {
+    
+    // 程式夥伴: 核心音樂計分邏輯
+    if (totalListenSeconds % 60 === 0) {
+        // 每 60 秒 (1 分鐘) 呼叫一次計分
+        if (typeof window.addMusicScore === 'function') {
+            window.addMusicScore();
+        }
         totalListenMinutes++;
-        totalListenSeconds = 0;
     }
     
+    // 修正: 保持原始邏輯，只顯示分鐘數 (不影響計分)
     totalListenTimeSpan.textContent = 
-        `${totalListenMinutes} 分鐘 ${totalListenSeconds} 秒`;
+        `${totalListenMinutes} 分鐘 ${totalListenSeconds % 60} 秒`;
 }
+
 // 播放次數追蹤函數
 function incrementPlayCount() {
     if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
