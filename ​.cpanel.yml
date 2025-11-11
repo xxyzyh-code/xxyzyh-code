@@ -1,39 +1,35 @@
 ---
-# .cpanel.yml: Jekyll 網站的 cPanel 自動部署配置
+# .cpanel.yml: 最終版 Jekyll 網站 cPanel 自動部署配置
 
 deployment:
   tasks:
     # ----------------------------------------------------
-    # Step 1: 環境設定與進入部署目標目錄
+    # Step 1: 環境設定 - 設定部署目標和查找 BASH 執行檔
     # 設定目標目錄為 public_html
     - export DEPLOYPATH=/home/xxyzyh/public_html
     
-    # 設置環境變數，嘗試在 cPanel 環境中找到 Ruby
-    # 嘗試標準的 cPanel 路徑
-    - export PATH="$PATH:/opt/cpanel/ea-ruby27/root/bin:/opt/cpanel/ea-ruby32/root/bin"
+    # cPanel 官方範例使用 /bin/cp，我們也使用絕對路徑來確保命令執行
+    - export BASH_CP=/bin/cp
+    - export BASH_RM=/bin/rm
+    - export BASH_MKDIR=/bin/mkdir
     
     # ----------------------------------------------------
-    # Step 2: 進入 Jekyll 專案目錄並構建
-    # 注意: 部署系統會將程式碼拉到一個臨時目錄，cd $DEPLOYPATH 是讓部署結果放到 public_html
-    - echo "啟動 Jekyll 構建..."
-    
-    # 嘗試使用 Bundler 和 Jekyll 進行構建
-    # 由於我們不能保證環境，這裡直接嘗試運行命令
-    # 這是最可能失敗的地方，但必須試試看
-    - bundle install
-    - bundle exec jekyll build
-    
-    # 檢查構建是否成功 (如果 $? 不為零，則失敗)
-    - if [ ! -d "_site" ]; then echo "❌ 錯誤：Jekyll 構建失敗。_site目錄不存在。" && exit 1; fi
+    # Step 2: 進入 Jekyll 專案目錄並構建 (這是最可能失敗的地方)
+    # Jekyll 專案的檔案在部署時會被複製到一個臨時目錄，執行部署命令時就在這個臨時目錄。
+
+    - /usr/local/bin/bundle install
+    - /usr/local/bin/bundle exec jekyll build
     
     # ----------------------------------------------------
     # Step 3: 將構建結果 (_site) 移動到網站根目錄
-    - echo "移動靜態檔案到公開目錄 $DEPLOYPATH ..."
     
-    # 警告: 在複製前清理公開目錄
-    - rm -rf $DEPLOYPATH/*
+    # 1. 檢查構建是否成功 (如果 _site 不存在，則報錯)
+    - /bin/ls _site || (echo "❌ 錯誤：Jekyll 構建失敗。_site目錄不存在。" && exit 1)
     
-    # 複製 Jekyll 產生的靜態文件到 public_html
-    - cp -r _site/. $DEPLOYPATH/
+    # 2. 清理公開目錄 (使用絕對路徑)
+    - $BASH_RM -rf $DEPLOYPATH/*
     
-    - echo "部署完成！🚀"
+    # 3. 複製 Jekyll 產生的靜態文件到 public_html
+    - $BASH_CP -R _site/. $DEPLOYPATH/
+    
+    - echo "部署完成！🚀 請檢查 xxyzyh.onelocal.host"
