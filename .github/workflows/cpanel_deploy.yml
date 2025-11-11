@@ -43,7 +43,7 @@ jobs:
           # 上傳 Jekyll 的輸出目錄
           local-dir: ./_site/
           # 您的網站根目錄
-          remote-dir: /public_html/
+          server-dir: /public_html/
           # 刪除目標目錄上不再需要的舊文件
           log-level: verbose
           # 清理 public_html 避免 Index of / 錯誤
