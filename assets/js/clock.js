@@ -9,6 +9,8 @@ if (typeof window.CalendarConverter !== 'undefined') {
 import { initializeTimeModule } from './timeModule.js';
 import { initializePomodoroModule } from './pomodoroModule.js';
 import { initializeUIModule } from './uiModule.js';
+// 程式夥伴: 新增遊戲化模組導入
+import { initializeGamificationModule } from './gamificationModule.js';
 
 // 確保 DOM 完全載入後再啟動功能
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,4 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeTimeModule();
     initializePomodoroModule();
     initializeUIModule();
+    // 程式夥伴: 啟動遊戲化模組
+    initializeGamificationModule();
 });
