@@ -24,7 +24,7 @@ jobs:
           GITLAB_REPO="https://xxyzyh:$GITLAB_TOKEN_ENCODED@gitlab.com/xxyzyh/my-blog.git"
           
           echo "Debugging URL (Token Hidden):"
-          echo $GITLAB_REPO | sed "s/$GITLAB_TOKEN_ENCODED/*****/"
+          echo $GITLAB_REPO | sed "s|${GITLAB_TOKEN_ENCODED}|*****|"
           
           git remote add gitlab $GITLAB_REPO
           echo "🚀 Pushing code to GitLab repository..."
@@ -34,7 +34,7 @@ jobs:
           if [ $? -eq 0 ]; then
             echo "✅ Synchronization complete!"
           else
-            echo "❌ Synchronization FAILED. Token or Protected Branch Issue."
+            echo "❌ Synchronization FAILED. Token or Protected Branch Issue (If 403 persists)."
+            echo "Failure URL (Encrypted Token): $GITLAB_REPO"
             exit 1
           fi
-          
