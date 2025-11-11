@@ -34,23 +34,22 @@ jobs:
           JEKYLL_ENV: production
       
       - name: 🚀 Deploy built files to cPanel /public_html (via Password SFTP)
-        # 🚨 再次更換 Action！使用支援密碼的 SFTP Action
-        uses: w9jds/action-sftp-with-password@v3 
+        # 🚨 再次更換 Action！使用另一個明確支援密碼的 SFTP Action
+        uses: cross-solution/action-sftp@v2.0.1 
         with:
-          # 連接資訊，這個 Action 的參數名稱是明確且支援密碼的
+          # 連接資訊
           host: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           port: 22 # 標準 SFTP 端口
           
           # 上傳 Jekyll 的輸出目錄
-          localPath: ./_site/
+          localDir: ./_site/
           # 您的網站根目錄
-          remotePath: /home/xxyzyh/public_html/
+          remoteDir: /home/xxyzyh/public_html/
           
-          # 參數：將本地所有文件複製到遠端
-          args: "-r" 
+          # 確保所有參數都使用小駝峰命名法 (camelCase)，這是這個 Action 的要求
           
-          # 這個 Action 不支援自動刪除，它只負責複製。
-          # 如果需要刪除舊檔案，我們必須在部署前手動執行一個SSH命令，
-          # 但我們沒有設定SSH金鑰。我們只能接受它只會覆蓋檔案。
+          # 刪除遠端不存在於本地的文件 (這是確保 public_html 乾淨的關鍵)
+          deleteRemote: true
+
