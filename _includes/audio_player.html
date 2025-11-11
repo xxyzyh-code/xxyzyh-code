@@ -691,6 +691,37 @@ function updateTotalListenTime() {
     totalListenTimeSpan.textContent = 
         `${totalListenMinutes} 分鐘 ${totalListenSeconds} 秒`;
 }
+
+    /**
+ * ⭐️ 核心新增函數：每秒檢查累積時間，達到 60 秒呼叫 addMusicScore。
+ */
+function updateMusicScore() {
+    // 僅在音訊播放時計數
+    if (audio.paused) {
+        // 額外的防護措施，如果音訊暫停，則停止計時器並清零累積
+        if (scoreTimerIntervalId !== null) {
+            clearInterval(scoreTimerIntervalId);
+            scoreTimerIntervalId = null;
+            scoreAccumulatorSeconds = 0; 
+        }
+        return;
+    }
+    
+    scoreAccumulatorSeconds++;
+    
+    if (scoreAccumulatorSeconds >= 60) {
+        // 確保 addMusicScore 函數已通過 window 導入
+        if (typeof window.addMusicScore === 'function') {
+            window.addMusicScore(); 
+            // 💡 提示：這裡可以選擇彈出一個小提示
+            console.log("遊戲化：音樂計時器觸發，增加 1 分鐘音樂時長和積分。");
+        } else {
+             console.error("錯誤：window.addMusicScore 函數未找到。請檢查 music.md 中的 <script type=module> 導入。");
+        }
+        
+        scoreAccumulatorSeconds = 0; // 重置累積計數器
+    }
+}
 // 播放次數追蹤函數
 function incrementPlayCount() {
     if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
