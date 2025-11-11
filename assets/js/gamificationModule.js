@@ -306,7 +306,7 @@ function updateUI() {
 /**
  * @description 初始化遊戲化模組。
  */
-export function initializeGamificationModule() {
+function initializeGamificationModule() { // ✅ 修正：移除 export
     loadStats();
     updateUI(); // 首次載入時更新 UI
     console.log("程式夥伴: 遊戲化模組已啟動。");
@@ -315,15 +315,15 @@ export function initializeGamificationModule() {
 /**
  * @description 供外部調用，用於閱讀文章時計分。
  */
-export function addBlogScore() {
-    // 這裡我們只傳遞分鐘數 1，然後在文章佈局中處理首次閱讀的邏輯。
+function addBlogScore() { // ✅ 修正：移除 export
+    // 這裡我們只傳遞分鐘數 1，然後在文章佈局中處理首次閱讀的邏on。
     return addScore('BLOG', 1);
 }
 
 /**
  * @description 供外部調用，用於音樂播放時計分。
  */
-export function addMusicScore() {
+function addMusicScore() { // ✅ 修正：移除 export
     return addScore('MUSIC', 1);
 }
 
@@ -331,18 +331,28 @@ export function addMusicScore() {
  * @description 供外部調用，用於番茄鐘工作時計分。
  * @param {boolean} isBreakMode - 是否為休息模式 (休息模式不計分)
  */
-export function addPomodoroScore(isBreakMode) {
+function addPomodoroScore(isBreakMode) { // ✅ 修正：移除 export
     if (isBreakMode) return false;
     return addScore('POMODORO', 1);
 }
 
 // 供其他模組獲取當前統計數據 (可選)
-export function getStats() {
+function getStats() { // ✅ 修正：移除 export
     return stats;
 }
 
-// 匯出徽章配置，以便在 UI 中渲染完整的徽章列表
-export const AchievementList = CONFIG.ACHIEVEMENTS;
+// 供其他模組獲取徽章配置 (可選)
+const AchievementList = CONFIG.ACHIEVEMENTS; // ✅ 修正：移除 export
 
-// 程式夥伴: 修正！將 addMusicScore 暴露在全局，供 audio_player.html 使用
+// ------------------------------------
+// ⭐️ 關鍵：將公共 API 暴露在全局 window 對象上
+// ------------------------------------
+window.initializeGamificationModule = initializeGamificationModule;
+window.addBlogScore = addBlogScore;
 window.addMusicScore = addMusicScore;
+window.addPomodoroScore = addPomodoroScore;
+window.getStats = getStats;
+window.AchievementList = AchievementList;
+
+// 程式夥伴: 啟動模組
+document.addEventListener('DOMContentLoaded', initializeGamificationModule); 
