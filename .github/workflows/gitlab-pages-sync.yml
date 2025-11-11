@@ -14,30 +14,27 @@ jobs:
         with:
           fetch-depth: 0 
 
-      - name: 🔄 Sync to GitLab Pages Repo
-        # 使用 cp-git-sync/git-sync-action 來處理複雜的認證和推送
-        uses: cp-git-sync/git-sync-action@v1.0.0 # 使用穩定版本
-        with:
-          # 🚨 關鍵參數 1: 設置 Gitlab 倉庫 URL
-          # 確保替換 YOUR_GITLAB_USERNAME 為你的 GitLab 使用者名稱
-          # 格式: https://USERNAME:TOKEN@DOMAIN/PATH.git
-          source_repo: 'https://xxyzyh:${{ secrets.GITLAB_TOKEN }}@gitlab.com/xxyzyh/my-blog.git'
+      - name: 🔄 Deploy to GitLab
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # 🚨 關鍵參數 2: 設置 Gitlab Token 作為推送密碼
-          source_token: ${{ secrets.GITLAB_TOKEN }}
+          GITLAB_TOKEN_ENCODED=$(echo -n "${{ secrets.GITLAB_TOKEN }}" | xxd -p | sed 's/\(..\)/%\1/g')
           
-          # 🚨 關鍵參數 3: 設置目標分支
-          source_branch: 'main'
+          GITLAB_REPO="https://xxyzyh:$GITLAB_TOKEN_ENCODED@gitlab.com/xxyzyh/my-blog.git"
           
-          # 設置推送用戶資訊
-          commit_user_name: 'github-actions[bot]'
-          commit_user_email: '41898282+github-actions[bot]@users.noreply.github.com'
+          echo "Debugging URL (Token Hidden):"
+          echo $GITLAB_REPO | sed "s/$GITLAB_TOKEN_ENCODED/*****/"
           
-          # 設置 Force Push，確保覆蓋 GitLab 上的內容
-          force_push: true
+          git remote add gitlab $GITLAB_REPO
+          echo "🚀 Pushing code to GitLab repository..."
           
-          # 設置為單向同步，只從 GitHub 推送到 GitLab
-          mode: 'mirror'
-
-      - name: ✅ Synchronization Status
-        run: echo "🎉 Code synchronization attempt complete! Check GitLab CI/CD pipeline."
+          git push --force --quiet gitlab main:main
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Synchronization complete!"
+          else
+            echo "❌ Synchronization FAILED. Token or Protected Branch Issue."
+            exit 1
+          fi
+          
