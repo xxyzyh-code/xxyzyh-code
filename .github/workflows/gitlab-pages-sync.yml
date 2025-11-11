@@ -16,25 +16,29 @@ jobs:
 
       - name: 🔄 Deploy to GitLab
         run: |
+          # 設置 Git 身份
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
+          # 🚨 核心邏輯：URL 編碼，確保 Token 安全傳輸
+          
+          # 1. 獲取 Token 並進行 URL 編碼
+          # 這是為了確保 Token 中的所有特殊字元都能被 Git 正確解析
           GITLAB_TOKEN_ENCODED=$(echo -n "${{ secrets.GITLAB_TOKEN }}" | xxd -p | sed 's/\(..\)/%\1/g')
           
+          # 2. 構建最終 URL (務必替換 YOUR_GITLAB_USERNAME)
           GITLAB_REPO="https://xxyzyh:$GITLAB_TOKEN_ENCODED@gitlab.com/xxyzyh/my-blog.git"
           
-          echo "Debugging URL (Token Hidden):"
-          echo $GITLAB_REPO | sed "s|${GITLAB_TOKEN_ENCODED}|*****|"
-          
+          # 3. 添加遠程倉庫並推送
           git remote add gitlab $GITLAB_REPO
           echo "🚀 Pushing code to GitLab repository..."
           
+          # 嘗試推送
           git push --force --quiet gitlab main:main
           
           if [ $? -eq 0 ]; then
             echo "✅ Synchronization complete!"
           else
-            echo "❌ Synchronization FAILED. Token or Protected Branch Issue (If 403 persists)."
-            echo "Failure URL (Encrypted Token): $GITLAB_REPO"
+            echo "❌ Synchronization FAILED. Check credentials and protected branch settings."
             exit 1
           fi
