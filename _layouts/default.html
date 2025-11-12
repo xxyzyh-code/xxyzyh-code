@@ -4,15 +4,19 @@
 <!doctype html>
 {% include copyright.html %}
 <html lang="{{ site.locale | replace: "_", "-" | default: "en" }}" class="no-js">
-  <head>
+<head>
     {% include head.html %}
     
     {% if page.permalink == '/music/' %}
     <link rel="stylesheet" href="/assets/css/theme.css">
     <link rel="stylesheet" href="/assets/css/custom_player.css">
     {% endif %}
+
+    <link rel="stylesheet" href="/assets/css/gamification.css"> 
+    
     {% include head/custom.html %}
-  </head>
+</head>
+
 
   <body class="layout--{{ page.layout | default: layout.layout }}{% if page.classes or layout.classes %}{{ page.classes | default: layout.classes | join: ' ' | prepend: ' ' }}{% endif %}" dir="{% if site.rtl %}rtl{% else %}ltr{% endif %}">
     {% include_cached skip-links.html %}
