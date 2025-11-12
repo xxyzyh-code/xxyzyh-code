@@ -56,6 +56,9 @@ let stats = {
         music_time: 0, // 累積音樂時間 (分鐘)
         pomodoro_time: 0, // 累積番茄鐘時間 (分鐘)
         achievements: []
+        // ⭐️ 新增：追蹤簽到所需字段
+        last_check_in: '',      // 上次簽到日期 (格式: YYYY-MM-DD)
+        consecutive_days: 0     // 連續簽到天數
     }
 };
 
