@@ -66,123 +66,100 @@
 
 <div id="game-notification" class="game-notification">
     </div>
-
     {% include scripts.html %}
 
     <script type="module">
         import { initializeGamificationModule, addBlogScore } from '/assets/js/gamificationModule.js';
         
-        // 1. 初始化模組 (會載入用戶狀態並更新 UI 儀表板)
+        // 1. 初始化模組 (必須先執行，才能更新 UI)
         document.addEventListener('DOMContentLoaded', initializeGamificationModule);
 
-        // 2. 匯出 addBlogScore 到全局 window，供後續非 module 腳本使用
+        // 2. 匯出 addBlogScore 到全局 window (如果其他地方需要，保留此行)
         window.addBlogScore = addBlogScore;
 
         console.log("程式夥伴: 遊戲化模組已在 Base Layout 中啟動。");
-    </script>
 
-
-    {% if page.layout == "post" or page.layout == "single" and page.url contains site.baseurl or page.url contains "_posts" %}
-    <script>
-    // ===========================================
-    // 程式夥伴: 遊戲化 - 閱讀計分邏輯
-    // 條件檢查: 頁面路徑包含 '_posts/' (文章頁面)
-    // ===========================================
-
-    // 現在 window.addBlogScore 已經被上面的 module 腳本確保存在！
-    if (typeof window.addBlogScore === 'function') {
+        // ===========================================
+        // 程式夥伴: 閱讀計分邏輯 (確保在模組環境中啟動)
+        // 條件檢查必須使用 Liquid 判斷是否為文章頁面
+        // ===========================================
         
-        // ⭐️ 關鍵 1: 獲取當前文章的唯一 ID (使用 Liquid 獲取 Jekyll 的 page.url)
-        // 使用 page.url 作為唯一 key 是最好的做法
-        const currentArticleId = '{{ page.url }}'; 
-        const READ_LOG_KEY = 'read_log';
+        {% if page.layout == "post" or page.layout == "single" %}
         
-        // ⭐️ 關鍵 2: 載入並檢查閱讀紀錄
-        let readLog = {};
-        try {
-            const savedLog = localStorage.getItem(READ_LOG_KEY);
-            if (savedLog) {
-                readLog = JSON.parse(savedLog);
-            }
-        } catch (e) {
-            console.error("載入閱讀紀錄失敗:", e);
-        }
-        
-        // 判斷是否為首次閱讀（此 Session 中是否需要觸發 blog_count 增加）
-        let isFirstReadSession = !readLog[currentArticleId];
-        
-        // ⭐️ 關鍵 3: 閱讀計分主邏輯 (每分鐘執行一次)
-        let readTimerInterval = null;
-        let secondsAccumulator = 0; // 累積器
-        
-        function trackReadingTime() {
-            secondsAccumulator++;
+            // Liquid 變數 (在編譯時確定)
+            const currentArticleId = '{{ page.url }}'; 
+            const READ_LOG_KEY = 'read_log';
+            let readLog = {};
             
-            // 每 60 秒計分
-            if (secondsAccumulator >= 60) {
+            try {
+                const savedLog = localStorage.getItem(READ_LOG_KEY);
+                if (savedLog) {
+                    readLog = JSON.parse(savedLog);
+                }
+            } catch (e) {
+                console.error("載入閱讀紀錄失敗:", e);
+            }
+            
+            let isFirstReadSession = !readLog[currentArticleId];
+            let readTimerInterval = null;
+            let secondsAccumulator = 0; 
+            
+            function trackReadingTime() {
+                secondsAccumulator++;
                 
-                // 呼叫 gamificationModule 裡的計分函數，並傳入是否為首次閱讀的狀態
-                const success = window.addBlogScore(isFirstReadSession); // 👈 使用 window 上的函數
+                // 診斷日誌：檢查計時器是否在運行
+                // console.log(`[文章計時器] 累積秒數: ${secondsAccumulator}. 首次閱讀: ${isFirstReadSession}`); 
                 
-                // 將累積器歸零，準備下一次計分
-                secondsAccumulator = 0;
-                
-                if (success) {
-                    console.log(`閱讀計分成功。首次閱讀狀態 (是否已計入文章數): ${isFirstReadSession ? '是' : '否'}`);
+                if (secondsAccumulator >= 60) {
+                    // ⭐️ 關鍵：這裡直接使用 import 進來的 addBlogScore 函數！
+                    const success = addBlogScore(isFirstReadSession); 
+                    secondsAccumulator = 0;
                     
-                    // 首次計分成功後，更新閱讀紀錄並儲存，確保文章篇數只計一次
-                    if (isFirstReadSession) {
-                        readLog[currentArticleId] = true;
-                        localStorage.setItem(READ_LOG_KEY, JSON.stringify(readLog));
-                        // ⭐️ 關鍵修正：本次文章的「文章篇數」已計入，將狀態設為 false
-                        isFirstReadSession = false; 
+                    if (success) {
+                        console.log(`閱讀計分成功。首次閱讀狀態 (是否已計入文章數): ${isFirstReadSession ? '是' : '否'}`);
+                        
+                        if (isFirstReadSession) {
+                            readLog[currentArticleId] = true;
+                            localStorage.setItem(READ_LOG_KEY, JSON.stringify(readLog));
+                            isFirstReadSession = false; 
+                        }
+                    } else {
+                        console.log("閱讀積分已達到每日上限，停止計時。");
+                        stopTracking();
                     }
-                } else {
-                    console.log("閱讀積分已達到每日上限，停止計時。");
-                    // 如果達到上限，停止計時器以節省資源
-                    stopTracking();
                 }
             }
-        }
-        
-        function startTracking() {
-            if (readTimerInterval === null) {
-                readTimerInterval = setInterval(trackReadingTime, 1000);
-                console.log("程式夥伴: 文章閱讀計時器已啟動。");
+            
+            function startTracking() {
+                if (readTimerInterval === null) {
+                    readTimerInterval = setInterval(trackReadingTime, 1000);
+                    console.log("程式夥伴: 文章閱讀計時器已啟動。");
+                }
             }
-        }
 
-        function stopTracking() {
-            if (readTimerInterval !== null) {
-                clearInterval(readTimerInterval);
-                readTimerInterval = null;
-                // 暫停時，將累積的秒數清零
-                secondsAccumulator = 0;
-                console.log("程式夥伴: 文章閱讀計時器已停止，累積秒數已清零。");
+            function stopTracking() {
+                if (readTimerInterval !== null) {
+                    clearInterval(readTimerInterval);
+                    readTimerInterval = null;
+                    secondsAccumulator = 0;
+                    console.log("程式夥伴: 文章閱讀計時器已停止，累積秒數已清零。");
+                }
             }
-        }
-        
-        // 監聽網頁可見性
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                startTracking();
-            } else {
-                stopTracking();
-            }
-        });
+            
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    startTracking();
+                } else {
+                    stopTracking();
+                }
+            });
 
-        // 頁面載入時啟動計時器
-        startTracking();
+            startTracking();
+            window.addEventListener('beforeunload', stopTracking);
+            
+        {% endif %}
         
-        // 額外處理：當用戶離開頁面時，清除計時器
-        window.addEventListener('beforeunload', stopTracking);
-        
-    } else {
-        // 現在這個警告應該不會再出現了！
-        console.warn("程式夥伴: 遊戲化模組未完全載入。文章計分未啟動。");
-    }
     </script>
-    {% endif %}
-
+    
   </body>
 </html>
