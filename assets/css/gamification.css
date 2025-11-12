@@ -54,6 +54,13 @@
     transform: rotate(-90deg);
 }
 
+/* 程式夥伴：新增此規則以強制內容區塊垂直堆疊 */
+.gamification-dashboard .content > div {
+    display: block; 
+    width: 100%; 
+    box-sizing: border-box;
+}
+
 /* 積分和進度條樣式 */
 .score-row, .progress-text-row {
     display: flex;
