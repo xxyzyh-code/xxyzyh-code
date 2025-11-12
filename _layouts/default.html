@@ -1,3 +1,6 @@
+---
+---
+
 <!doctype html>
 {% include copyright.html %}
 <html lang="{{ site.locale | replace: "_", "-" | default: "en" }}" class="no-js">
@@ -54,13 +57,9 @@
             <span id="level-progress-text">(0 / 100)</span>
         </div>
         
-        <div class="section-title">
-            🏆 我的徽章 
-            <span id="achievement-progress-text" style="font-size: 0.9em; font-weight: normal; color: #ff9800;"></span>
-        </div>
+        <div class="section-title">🏆 我的徽章</div>
         <div id="achievement-list" class="achievement-list">
-        </div>
-
+            </div>
 
     </div>
 </div>
@@ -117,12 +116,15 @@
             
                 // 處理簽到按鈕點擊
                 checkinBtn.onclick = () => {
-                    addCheckInScore(); 
-                    // 程式夥伴：點擊後即關閉彈窗，無論簽到結果如何。
-                    modal.style.display = 'none';
+                    const success = addCheckInScore();
+                    if (success) {
+                        modal.style.display = 'none';
+                        // 確保簽到成功後，dashboard 的積分立刻更新
+                        // (雖然 addCheckInScore 內部已呼叫 updateUI，但保險起見保留)
+                        // updateUI() - 無需手動呼叫，因為它不在這個 Module 的 Scope 內
+                    }
                 };
-
-              
+                
                 // 處理關閉按鈕
                 closeBtn.onclick = () => {
                     modal.style.display = 'none';
