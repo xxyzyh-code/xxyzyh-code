@@ -82,7 +82,7 @@
     </script>
 
 
-    {% if page.path contains '_posts/' %}
+    {% if page.layout == "post" or page.layout == "single" and page.url contains site.baseurl or page.url contains "_posts" %}
     <script>
     // ===========================================
     // 程式夥伴: 遊戲化 - 閱讀計分邏輯
