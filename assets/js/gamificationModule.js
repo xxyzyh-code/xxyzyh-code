@@ -67,6 +67,9 @@ function loadStats() {
         const savedStats = localStorage.getItem(CONFIG.STORAGE_KEY);
         if (savedStats) {
             stats = JSON.parse(savedStats);
+        } else {
+            // ⭐️ 修正 B: 如果沒有儲存的 stats (首次載入)，則確保等級為 1
+            stats.lifetime.level = 1; 
         }
         
         // 每日重置檢查 (0:00 自動重置)
@@ -83,13 +86,9 @@ function loadStats() {
             console.log("程式夥伴: 每日積分已重置！");
         }
         
-        // 確保初始等級為 1 (如果總分為 0)
-        if (stats.lifetime.total_score < CONFIG.LEVEL_REQUIREMENTS[0].required) {
-            stats.lifetime.level = 0;
-        } else if (stats.lifetime.level === 0) {
-            // 如果分數夠了但等級還是 0，則從 Level 1 開始檢查
-            checkLevelUp();
-        }
+        // ⭐️ 修正 C: 移除多餘的 Level 0 檢查邏輯。
+        // checkLevelUp() 會處理 Level 1 升級到 Level 2 的情況。
+        // 如果舊的 stats 檔案被載入，但 total_score 達到要求，checkLevelUp() 仍會被積分函數呼叫並正確升級。
 
     } catch (e) {
         console.error("載入遊戲化數據失敗:", e);
