@@ -12,14 +12,27 @@ const CONFIG = {
     },
     // 每日上限：以分鐘為單位 (30分鐘, 25分鐘, 40分鐘)
     DAILY_LIMIT_MINUTES: {
-        BLOG: 30, // 3分/分鐘 * 30分鐘 = 90分
-        MUSIC: 25, // 4分/分鐘 * 25分鐘 = 100分
-        POMODORO: 40 // 2分/分鐘 * 40分鐘 = 80分
+        BLOG: 30, 
+        MUSIC: 25, 
+        POMODORO: 40 
     },
-    // ⭐️ 週末加速活動配置 (僅限週六/週日)
+    // ⭐️ 活動配置 A：週末加速活動 (僅限週六/週日)
     WEEKEND_BOOST: {
         LIMIT_MULTIPLIER: 1.5, // 得分時長上限 × 1.5
         SCORE_MULTIPLIER: 1.2  // 單位 XP × 1.2
+    },
+    // ⭐️ 活動配置 B：年度固定活動 (格式: 月-日，用來提供額外 XP 乘數)
+    ANNUAL_EVENTS: {
+        'YEAR_END_BOOST': { 
+            name: '年終衝刺日',
+            dates: ['12-24', '12-25', '12-31', '01-01'],
+            score_multiplier: 1.3 // 單位 XP × 1.3 (與週末活動取高者)
+        },
+        'SPRING_READ': { 
+            name: '春季閱讀日',
+            dates: ['04-23'],
+            score_multiplier: 1.5 
+        }
     },
     // 等級所需總積分
     LEVEL_REQUIREMENTS: [
@@ -29,14 +42,14 @@ const CONFIG = {
         { level: 4, required: 400 },
         { level: 5, required: 700 },
         { level: 6, required: 1100 },
-        // ... 如果需要更多等級，可以在這裡擴展
+        // ...
     ],
     // 徽章條件 (以分鐘計)
     ACHIEVEMENTS: {
-        'FIRST_READ': { name: '首次閱讀', condition: 1, type: 'blog_count' }, // 閱讀篇數
-        'MUSIC_MASTER': { name: '音樂達人', condition: 500, type: 'music_time' }, // 累積時長 (分鐘)
-        'POMODORO_PRO': { name: '番茄高手', condition: 1000, type: 'pomodoro_time' }, // 累積時長 (分鐘)
-        'SCORE_MASTER': { name: '積分大師', condition: 5000, type: 'total_score' } // 累積總分
+        'FIRST_READ': { name: '首次閱讀', condition: 1, type: 'blog_count' }, 
+        'MUSIC_MASTER': { name: '音樂達人', condition: 500, type: 'music_time' }, 
+        'POMODORO_PRO': { name: '番茄高手', condition: 1000, type: 'pomodoro_time' }, 
+        'SCORE_MASTER': { name: '積分大師', condition: 5000, type: 'total_score' } 
     },
     STORAGE_KEY: 'game_stats'
 };
@@ -52,18 +65,18 @@ let stats = {
         blog_time: 0,
         music_time: 0,
         pomodoro_time: 0,
-        // 🚩 新增：累積尚未計入總分的浮點數積分餘額
+        // 🚩 精確累積：儲存尚未計入總分的浮點數積分餘額 (確保小數點不丟失)
         score_remainder: 0.0, 
     },
     // 永久統計
     lifetime: {
         total_score: 0,
-        level: 1, // 預設初始等級為Level 1
-        blog_count: 0, // 閱讀文章篇數
-        music_time: 0, // 累積音樂時間 (分鐘)
-        pomodoro_time: 0, // 累積番茄鐘時間 (分鐘)
+        level: 1, 
+        blog_count: 0, 
+        music_time: 0, 
+        pomodoro_time: 0, 
         achievements: [], 
-        // 追蹤簽到所需字段
+        // 簽到追蹤字段
         last_check_in: '',      
         consecutive_days: 0     
     }
@@ -77,24 +90,25 @@ function loadStats() {
         const savedStats = localStorage.getItem(CONFIG.STORAGE_KEY);
         if (savedStats) {
             stats = JSON.parse(savedStats);
-            // 處理舊數據結構：如果沒有 score_remainder 則初始化為 0.0
+            // 處理舊數據結構的相容性：如果沒有 score_remainder 則初始化
             if (stats.daily.score_remainder === undefined) {
                  stats.daily.score_remainder = 0.0;
             }
         } else {
+            // 首次載入時確保等級正確
             stats.lifetime.level = 1; 
         }
         
         // 每日重置檢查 (0:00 自動重置)
         const today = new Date().toLocaleDateString('en-CA');
         if (stats.daily.last_reset !== today) {
+            // 創建新的 daily 統計數據
             stats.daily = {
                 last_reset: today,
                 score: 0,
                 blog_time: 0,
                 music_time: 0,
                 pomodoro_time: 0,
-                // 🚩 確保重置時，浮點數餘額也歸零
                 score_remainder: 0.0, 
             };
             console.log("程式夥伴: 每日積分已重置！");
@@ -117,7 +131,7 @@ function saveStats() {
 }
 
 // ===================================
-// 週末判斷邏輯
+// 活動判斷邏輯
 // ===================================
 /**
  * @description 判斷當前日期是否為週六 (6) 或週日 (0)。
@@ -129,8 +143,30 @@ function isWeekend() {
     return dayOfWeek === 0 || dayOfWeek === 6;
 }
 
+/**
+ * @description 檢查當前日期是否為年度固定活動日。
+ * @returns {number} 活動的最高積分乘數 (如果沒有活動則返回 1.0)
+ */
+function getAnnualEventMultiplier() {
+    // 取得當前月份-日期，格式：MM-DD
+    const todayMD = new Date().toLocaleDateString('en-CA').substring(5); 
+    let maxMultiplier = 1.0;
+
+    for (const key in CONFIG.ANNUAL_EVENTS) {
+        const event = CONFIG.ANNUAL_EVENTS[key];
+        
+        if (event.dates.includes(todayMD)) {
+            // 找出所有生效活動中最高的積分乘數
+            if (event.score_multiplier > maxMultiplier) {
+                maxMultiplier = event.score_multiplier;
+            }
+        }
+    }
+    return maxMultiplier;
+}
+
 // ===================================
-// 等級與徽章邏輯 
+// 等級與徽章邏輯
 // ===================================
 
 /**
@@ -138,12 +174,15 @@ function isWeekend() {
  */
 function checkLevelUp() {
     let currentLevel = stats.lifetime.level;
+    // 找到下一個等級所需積分
     let nextLevelReq = CONFIG.LEVEL_REQUIREMENTS.find(req => req.level === currentLevel + 1);
 
     if (nextLevelReq && stats.lifetime.total_score >= nextLevelReq.required) {
         stats.lifetime.level = nextLevelReq.level;
         saveStats();
+        // 觸發升級通知
         displayNotification(`🎉 恭喜！你的等級升級到 Level ${stats.lifetime.level}！`, 'level-up');
+        // 遞迴檢查是否能連續升級
         checkLevelUp(); 
     }
 }
@@ -157,9 +196,11 @@ function checkAchievements() {
     for (const key in CONFIG.ACHIEVEMENTS) {
         const achievement = CONFIG.ACHIEVEMENTS[key];
         
+        // 如果使用者尚未獲得此徽章
         if (!stats.lifetime.achievements.includes(key)) {
             let valueToCheck = 0;
             
+            // 根據徽章類型檢查對應的永久統計數據
             if (achievement.type === 'total_score') {
                 valueToCheck = stats.lifetime.total_score;
             } else if (achievement.type === 'music_time') {
@@ -170,6 +211,7 @@ function checkAchievements() {
                 valueToCheck = stats.lifetime.blog_count;
             }
             
+            // 檢查是否達到條件
             if (valueToCheck >= achievement.condition) {
                 stats.lifetime.achievements.push(key);
                 newAchievement = true;
@@ -184,7 +226,7 @@ function checkAchievements() {
 }
 
 // ===================================
-// 核心積分計算與公共 API (已修正為浮點數累積)
+// 核心積分計算與公共 API
 // ===================================
 
 /**
@@ -192,32 +234,66 @@ function checkAchievements() {
  * @description 增加指定活動的積分和時長。
  * @param {ScoreType} type - 活動類型 ('BLOG', 'MUSIC', 'POMODORO')
  * @param {number} minutes - 累積的時間 (分鐘)
- * @param {boolean} isNewArticle - 僅用於 BLOG 類型，標記是否為新文章 (只記一次)
+ * @param {boolean} isNewArticle - 僅用於 BLOG 類型，標記是否為新文章
  */
 function addScore(type, minutes = 1, isNewArticle = false) {
-    const dailyTimeKey = `${type.toLowerCase()}_time`; // e.g., 'blog_time'
+    const dailyTimeKey = `${type.toLowerCase()}_time`; 
     
-    // 週末加速邏輯 
+    // 獲取所有加速係數
     const weekendActive = isWeekend();
+    const annualMultiplier = getAnnualEventMultiplier();
+
+    // 1. 計算最終得分乘數 (取週末和年度活動中最高的乘數來獎勵用戶)
+    let finalScoreMultiplier = 1.0;
+    let eventTag = '';
+    
+    if (weekendActive) {
+        finalScoreMultiplier = Math.max(finalScoreMultiplier, CONFIG.WEEKEND_BOOST.SCORE_MULTIPLIER);
+        eventTag = '週末加速';
+    }
+
+    if (annualMultiplier > 1.0) {
+        // 如果年度乘數更高，則更新乘數和 Tag
+        if (annualMultiplier > finalScoreMultiplier) {
+            finalScoreMultiplier = annualMultiplier;
+            eventTag = '年度活動';
+        } else if (annualMultiplier === finalScoreMultiplier && eventTag === '週末加速') {
+            eventTag = '週末/年度活動'; // 乘數相同時的疊加提示
+        } else if (annualMultiplier < finalScoreMultiplier && finalScoreMultiplier > 1.0) {
+            // 最高乘數仍是週末活動提供的，保持週末 Tag
+            eventTag = '週末加速';
+        } else {
+             // 只有年度活動在進行 (finalScoreMultiplier 仍為 1.0)
+             eventTag = '年度活動'; 
+        }
+    }
+    
+    // 2. 計算最終時長乘數 (只有週末活動影響時長上限)
+    const limitMultiplier = weekendActive ? CONFIG.WEEKEND_BOOST.LIMIT_MULTIPLIER : 1;
+    
+    // 獲取基礎配置
     let limitMinutes = CONFIG.DAILY_LIMIT_MINUTES[type];
     let scorePerMinute = CONFIG.SCORE_PER_MINUTE[type];
 
-    if (weekendActive) {
-        limitMinutes = Math.floor(limitMinutes * CONFIG.WEEKEND_BOOST.LIMIT_MULTIPLIER); 
-        scorePerMinute = scorePerMinute * CONFIG.WEEKEND_BOOST.SCORE_MULTIPLIER;
-        console.log(`[週末加速] ${type}：新上限 ${limitMinutes} 分鐘，新單位 XP ${scorePerMinute.toFixed(2)} 分/分鐘`);
+    // 應用時長上限乘數 (用於檢查是否達上限)
+    limitMinutes = Math.floor(limitMinutes * limitMultiplier); 
+    
+    // 應用最高得分乘數 (用於計算實際得分)
+    scorePerMinute = scorePerMinute * finalScoreMultiplier;
+    
+    if (finalScoreMultiplier > 1.0) {
+        console.log(`[${eventTag}生效] ${type}：新上限 ${limitMinutes} 分鐘，新單位 XP ${scorePerMinute.toFixed(2)} 分/分鐘`);
     }
 
-    
-    // 1. 檢查是否達到每日時長上限 (使用動態上限)
+    // 3. 檢查是否達到每日時長上限
     if (stats.daily[dailyTimeKey] >= limitMinutes) {
         return false;
     }
     
-    // 2. 累計每日時長
+    // 4. 累計每日時長
     stats.daily[dailyTimeKey] += minutes;
     
-    // 3. 計算並累計每日積分 (🚩 核心修正: 處理浮點數累積)
+    // 5. 計算並累計每日積分 (處理浮點數累積)
     let rawScoreToAdd = scorePerMinute * minutes;
     
     // 如果累計時長超過上限，則只計算剩餘的積分
@@ -227,29 +303,28 @@ function addScore(type, minutes = 1, isNewArticle = false) {
     }
     
     if (rawScoreToAdd <= 0) {
-        // 確保時長累計後，如果分數 <= 0 也能儲存
-        saveStats();
+        saveStats(); // 儲存累計時長，但無分數增加
         return false; 
     }
 
-    // 🚩 核心邏輯：將浮點數分數加到餘額中
+    // 🚩 將浮點數分數加到餘額中 (精確累積的關鍵)
     stats.daily.score_remainder += rawScoreToAdd;
 
-    // 提取整數分數部分
+    // 提取整數分數部分 (只有整數部分才計入總分)
     let scoreToAdd = Math.floor(stats.daily.score_remainder);
 
     if (scoreToAdd > 0) {
         // 更新餘額：減去已經提取的整數分數
         stats.daily.score_remainder -= scoreToAdd; 
         
-        // 累計分數
+        // 累計分數到 daily 和 lifetime 總分
         stats.daily.score += scoreToAdd;
         stats.lifetime.total_score += scoreToAdd;
         
-        // 4. 累計永久時長 (用於徽章)
+        // 6. 累計永久時長 (用於徽章)
         stats.lifetime[dailyTimeKey] += minutes;
 
-        // 5. 特殊處理：文章篇數
+        // 7. 特殊處理：文章篇數
         if (type === 'BLOG' && isNewArticle) {
             stats.lifetime.blog_count += 1;
         }
@@ -263,7 +338,7 @@ function addScore(type, minutes = 1, isNewArticle = false) {
         return true;
     }
     
-    // 如果沒有累積到足夠的整數分，但餘額已增加，也需要儲存
+    // 如果餘額增加但不足 1 分，仍需儲存狀態
     if (rawScoreToAdd > 0) {
          saveStats();
          return true;
@@ -273,7 +348,7 @@ function addScore(type, minutes = 1, isNewArticle = false) {
 }
 
 // ===================================
-// UI 更新與提示 (已修正為動態顯示上限)
+// UI 更新與提示
 // ===================================
 
 /**
@@ -286,7 +361,7 @@ function displayNotification(message, type) {
     if (!notifElement) return;
 
     notifElement.textContent = message;
-    notifElement.className = `game-notification ${type}`; // 添加樣式類
+    notifElement.className = `game-notification ${type}`; 
     notifElement.style.display = 'block';
 
     setTimeout(() => {
@@ -312,17 +387,17 @@ export function getCheckInStatus() {
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toLocaleDateString('en-CA');
         
-        // 檢查簽到是否連續
+        // 檢查簽到是否連續 (與昨天日期是否相同)
         if (stats.lifetime.last_check_in === yesterdayStr) {
-            currentConsecutiveDays += 1; // 連續簽到 +1
+            currentConsecutiveDays += 1; 
         } else if (stats.lifetime.last_check_in !== '') {
-            currentConsecutiveDays = 1; // 簽到中斷，重新計為第 1 天
+            currentConsecutiveDays = 1; // 簽到中斷，重新計數
         } else {
             currentConsecutiveDays = 1; // 首次簽到
         }
     }
     
-    // 3. 計算獎勵積分 (每連續簽到一天獎勵 5 積分，上限 25 積分，即連續 5 天後穩定)
+    // 3. 計算獎勵積分 (連續簽到越多，積分越高，有上限)
     const baseScore = 5;
     const maxConsecutiveBonus = 5; 
     const bonusDays = Math.min(currentConsecutiveDays, maxConsecutiveBonus);
@@ -351,7 +426,7 @@ export function addCheckInScore() {
     stats.lifetime.last_check_in = new Date().toLocaleDateString('en-CA');
     stats.lifetime.consecutive_days = status.consecutiveDays;
     
-    // 2. 發放積分 
+    // 2. 發放積分 (直接增加，簽到不受時長限制)
     stats.daily.score += status.score;
     stats.lifetime.total_score += status.score;
 
@@ -365,10 +440,10 @@ export function addCheckInScore() {
 }
 
 /**
- * @description 更新所有遊戲化相關的前端顯示。(已修正為動態顯示上限)
+ * @description 更新所有遊戲化相關的前端顯示。
  */
 function updateUI() {
-    // 1. 等級和總積分 
+    // 1. 等級和總積分顯示
     const currentLevel = stats.lifetime.level;
     const currentScore = stats.lifetime.total_score;
     let nextLevelReq = CONFIG.LEVEL_REQUIREMENTS.find(req => req.level === currentLevel + 1);
@@ -376,7 +451,7 @@ function updateUI() {
     document.getElementById('level-display').textContent = `Level ${currentLevel}`;
     document.getElementById('total-score-display').textContent = `總積分: ${currentScore} 分`;
 
-    // 2. 進度條 
+    // 2. 進度條計算
     const progressBar = document.getElementById('level-progress-bar');
     const progressText = document.getElementById('level-progress-text');
 
@@ -394,39 +469,49 @@ function updateUI() {
         progressText.textContent = ' (已達當前最高等級)';
     }
 
-    // 3. 每日積分提示 (動態顯示上限)
+    // 3. 每日積分提示 (顯示動態上限和活動狀態)
     const dailyScoreDisplay = document.getElementById('daily-score-display');
     
     const weekendActive = isWeekend();
-    const multiplier = weekendActive ? CONFIG.WEEKEND_BOOST.LIMIT_MULTIPLIER : 1;
+    const annualMultiplier = getAnnualEventMultiplier();
+    
+    // 只有週末活動影響時長上限
+    const limitMultiplier = weekendActive ? CONFIG.WEEKEND_BOOST.LIMIT_MULTIPLIER : 1;
+    
+    // 決定 UI 提示標籤，優先顯示年度活動
+    let uiTag = '';
+    if (annualMultiplier > 1.0) {
+        uiTag = ' ✨年度活動!';
+    } else if (weekendActive) {
+        uiTag = ' ✨週末加速中!';
+    }
 
-    // 計算週末加速後的實際每日上限 
-    const actualLimitBlog = Math.floor(CONFIG.DAILY_LIMIT_MINUTES.BLOG * multiplier);
-    const actualLimitMusic = Math.floor(CONFIG.DAILY_LIMIT_MINUTES.MUSIC * multiplier);
-    const actualLimitPomodoro = Math.floor(CONFIG.DAILY_LIMIT_MINUTES.POMODORO * multiplier);
+
+    // 計算實際每日上限 
+    const actualLimitBlog = Math.floor(CONFIG.DAILY_LIMIT_MINUTES.BLOG * limitMultiplier);
+    const actualLimitMusic = Math.floor(CONFIG.DAILY_LIMIT_MINUTES.MUSIC * limitMultiplier);
+    const actualLimitPomodoro = Math.floor(CONFIG.DAILY_LIMIT_MINUTES.POMODORO * limitMultiplier);
 
     // 計算剩餘時間 
     const remainingBlog = actualLimitBlog - stats.daily.blog_time;
     const remainingMusic = actualLimitMusic - stats.daily.music_time;
     const remainingPomodoro = actualLimitPomodoro - stats.daily.pomodoro_time;
     
-    // 週末提示標籤
-    const weekendTag = weekendActive ? ' ✨週末加速中!' : ''; 
 
-    // 🚩 顯示 actualLimit 和 weekendTag
     dailyScoreDisplay.innerHTML = `
-        <strong>今日積分: ${stats.daily.score} 分${weekendTag}</strong>
+        <strong>今日積分: ${stats.daily.score} 分${uiTag}</strong>
         <br>閱讀：剩餘 ${Math.max(0, remainingBlog)} 分鐘 (上限 ${actualLimitBlog} 分鐘)
         <br>音樂：剩餘 ${Math.max(0, remainingMusic)} 分鐘 (上限 ${actualLimitMusic} 分鐘)
         <br>番茄鐘：剩餘 ${Math.max(0, remainingPomodoro)} 分鐘 (上限 ${actualLimitPomodoro} 分鐘)
         <br><small style="opacity: 0.7;">待計入餘額: ${stats.daily.score_remainder.toFixed(2)} 分</small>
     `;
 
-    // 4. 徽章顯示 
+    // 4. 徽章顯示
     const achievementList = document.getElementById('achievement-list');
     if(achievementList) {
         achievementList.innerHTML = stats.lifetime.achievements.map(key => {
             const name = CONFIG.ACHIEVEMENTS[key].name;
+            // 替換為你的徽章圖示或樣式
             return `<span title="${name}" class="badge-icon">🌟</span>`; 
         }).join('');
     }
@@ -434,7 +519,7 @@ function updateUI() {
 
 
 // ===================================
-// 啟動與匯出 
+// 啟動與匯出
 // ===================================
 
 /**
@@ -442,13 +527,12 @@ function updateUI() {
  */
 export function initializeGamificationModule() {
     loadStats();
-    updateUI(); // 首次載入時更新 UI
+    updateUI(); 
     console.log("程式夥伴: 遊戲化模組已啟動。");
 }
 
 /**
  * @description 供外部調用，用於閱讀文章時計分。
- * @param {boolean} isNewArticle - 是否為首次閱讀此文章 (用於計算 lifetime.blog_count)
  */
 export function addBlogScore(isNewArticle = false) {
     return addScore('BLOG', 1, isNewArticle);
@@ -470,10 +554,10 @@ export function addPomodoroScore(isBreakMode) {
     return addScore('POMODORO', 1);
 }
 
-// 供其他模組獲取當前統計數據 （可選）
+// 供其他模組獲取當前統計數據 (可選)
 export function getStats() {
     return stats;
 }
 
-// 匯出徽章配置，以便在 UI 中渲染完整的徽章列表
+// 匯出徽章配置
 export const AchievementList = CONFIG.ACHIEVEMENTS;
