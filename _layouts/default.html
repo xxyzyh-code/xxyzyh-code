@@ -86,6 +86,11 @@
         
         {% if page.layout == "post" or page.layout == "single" %}
         
+            // ⭐️ 修正: 所有變數都必須在頂層定義，才能被後續的函數存取 (Scope)
+            const progressBar = document.getElementById('read-progress-bar');
+            const progressText = document.getElementById('read-progress-text');
+            const progressContainer = document.getElementById('read-progress-bar-container');
+      
             // Liquid 變數 (在編譯時確定)
             const currentArticleId = '{{ page.url }}'; 
             const READ_LOG_KEY = 'read_log';
@@ -100,23 +105,42 @@
                 console.error("載入閱讀紀錄失敗:", e);
             }
             
+            // 狀態變數
             let isFirstReadSession = !readLog[currentArticleId];
             let readTimerInterval = null;
             let secondsAccumulator = 0; 
+            const SECONDS_PER_SCORE = 60; // 每 60 秒計分
+            
+            // ===========================================
+            // 函數定義
+            // ===========================================
+            
+            // ⭐️ 更新進度條的函數
+            function updateProgressBar() {
+                if (!progressBar) return;
+
+                const progressPercent = (secondsAccumulator / SECONDS_PER_SCORE) * 100;
+                progressBar.style.width = `${progressPercent}%`;
+                
+                const remainingSeconds = SECONDS_PER_SCORE - secondsAccumulator;
+                progressText.textContent = `距離下次積分：${remainingSeconds} 秒`;
+            }
             
             function trackReadingTime() {
                 secondsAccumulator++;
                 
-                // 診斷日誌：檢查計時器是否在運行
-                // console.log(`[文章計時器] 累積秒數: ${secondsAccumulator}. 首次閱讀: ${isFirstReadSession}`); 
-                
-                if (secondsAccumulator >= 60) {
-                    // ⭐️ 關鍵：這裡直接使用 import 進來的 addBlogScore 函數！
+                // ⭐️ 關鍵：每秒更新進度條
+                updateProgressBar();
+
+                if (secondsAccumulator >= SECONDS_PER_SCORE) {
+                    
                     const success = addBlogScore(isFirstReadSession); 
-                    secondsAccumulator = 0;
+                    secondsAccumulator = 0; // 重置計數器
                     
                     if (success) {
                         console.log(`閱讀計分成功。首次閱讀狀態 (是否已計入文章數): ${isFirstReadSession ? '是' : '否'}`);
+                        // ⭐️ 重置進度條
+                        updateProgressBar(); 
                         
                         if (isFirstReadSession) {
                             readLog[currentArticleId] = true;
@@ -126,12 +150,19 @@
                     } else {
                         console.log("閱讀積分已達到每日上限，停止計時。");
                         stopTracking();
+                        
+                        // ⭐️ 達到上限時更新 UI 狀態
+                        progressBar.style.width = '100%';
+                        progressText.textContent = '今日閱讀積分已達上限！';
+                        progressContainer.classList.add('limit-reached');
                     }
                 }
             }
             
             function startTracking() {
                 if (readTimerInterval === null) {
+                    // ⭐️ 確保啟動時先呼叫一次，以顯示初始狀態
+                    updateProgressBar(); 
                     readTimerInterval = setInterval(trackReadingTime, 1000);
                     console.log("程式夥伴: 文章閱讀計時器已啟動。");
                 }
@@ -142,9 +173,15 @@
                     clearInterval(readTimerInterval);
                     readTimerInterval = null;
                     secondsAccumulator = 0;
+                    // ⭐️ 暫停時重置進度條，避免切換標籤頁回來時寬度突變
+                    updateProgressBar(); 
                     console.log("程式夥伴: 文章閱讀計時器已停止，累積秒數已清零。");
                 }
             }
+            
+            // ===========================================
+            // 啟動邏輯
+            // ===========================================
             
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') {
@@ -158,8 +195,54 @@
             window.addEventListener('beforeunload', stopTracking);
             
         {% endif %}
+
         
     </script>
-    
+        
+    {% if page.layout == "post" or page.layout == "single" %}
+    <div id="read-progress-bar-container">
+        <div id="read-progress-bar"></div>
+        <div id="read-progress-text"></div>
+    </div>
+
+    <style>
+        /* CSS: 進度條樣式 */
+        #read-progress-bar-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 8px; /* 容器高度 */
+            background-color: #333; /* 背景色 */
+            z-index: 1000; /* 確保它在最上層 */
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+        }
+
+        #read-progress-bar {
+            height: 100%;
+            width: 0%; /* 初始寬度為 0 */
+            background-color: #4CAF50; /* 進度條顏色 (綠色) */
+            transition: width 1s linear; /* 平滑過渡動畫 */
+        }
+        
+        #read-progress-text {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            font-size: 10px;
+            font-weight: bold;
+            text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* 當達到每日上限時的樣式 */
+        .limit-reached #read-progress-bar {
+            background-color: #e57373 !important; /* 變為紅色 */
+        }
+    </style>
+    {% endif %}
+
   </body>
 </html>
