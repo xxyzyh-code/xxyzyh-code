@@ -34,7 +34,7 @@ const CONFIG = {
             score_multiplier: 1.5 
         }
     },
-    // 等級所需總積分
+    // 等級所需總積分 (保持不變)
     LEVEL_REQUIREMENTS: [
         { level: 1, required: 0 },
         { level: 2, required: 110 },
@@ -70,39 +70,44 @@ const CONFIG = {
     ],
     // 徽章條件 (以分鐘/篇數/天數計)
     ACHIEVEMENTS: {
-        // --- 1. total_score (累積總分) ---
+        // --- 1. total_score 累積總分 (XP) ---
         'SCORE_NOVICE': { name: '積分新手', condition: 500, type: 'total_score' }, 
-        'SCORE_VETERAN': { name: '經驗老手', condition: 2000, type: 'total_score' }, 
-        'SCORE_MASTER': { name: '積分大師', condition: 5000, type: 'total_score' }, // 沿用舊名
-        'SCORE_LEGEND': { name: '傳說玩家', condition: 10000, type: 'total_score' },
+        'SCORE_TRAVELER': { name: '成長旅人', condition: 1500, type: 'total_score' }, 
+        'SCORE_MASTER': { name: '積分大師', condition: 5000, type: 'total_score' }, 
+        'SCORE_LEGEND': { name: '榮耀傳說', condition: 12000, type: 'total_score' },
+        'SCORE_ETERNAL': { name: '永恆之光', condition: 25000, type: 'total_score' },
         
-        // --- 2. blog_count (閱讀文章篇數) ---
-        'FIRST_READ': { name: '首次閱讀', condition: 1, type: 'blog_count' }, // 沿用舊名
-        'ARTICLE_EXPLORER': { name: '文章探險家', condition: 10, type: 'blog_count' },
-        'KNOWLEDGE_SEEKER': { name: '知識追尋者', condition: 50, type: 'blog_count' },
-        'READING_GRANDMASTER': { name: '閱讀宗師', condition: 100, type: 'blog_count' },
+        // --- 2. blog_count 閱讀文章篇數 (篇) ---
+        'READ_FIRST': { name: '首次閱讀', condition: 1, type: 'blog_count' }, 
+        'READ_EXPLORER': { name: '文章探險家', condition: 10, type: 'blog_count' },
+        'READ_SEEKER': { name: '知識追尋者', condition: 50, type: 'blog_count' },
+        'READ_GRANDMASTER': { name: '閱讀宗師', condition: 100, type: 'blog_count' },
+        'READ_TOWER_GUARD': { name: '智者之塔守衛者', condition: 300, type: 'blog_count' },
         
-        // --- 3. music_time (累積音樂時間 - 分鐘) ---
+        // --- 3. music_time 累積音樂時間 (分鐘) ---
         'MUSIC_NOVICE': { name: '音樂新手', condition: 50, type: 'music_time' },
-        'MELODY_TRAVELER': { name: '旋律旅人', condition: 200, type: 'music_time' },
-        'MUSIC_MASTER': { name: '音樂達人', condition: 500, type: 'music_time' }, // 沿用舊名
-        'MELODY_GRANDMASTER': { name: '旋律大師', condition: 1000, type: 'music_time' },
+        'MUSIC_RHYTHM_TRAVELER': { name: '節奏旅人', condition: 200, type: 'music_time' },
+        'MUSIC_MASTER': { name: '音樂達人', condition: 500, type: 'music_time' },
+        'MUSIC_SOUL_LISTENER': { name: '靈魂聽者', condition: 1000, type: 'music_time' },
+        'MUSIC_ETERNAL': { name: '永恆樂者', condition: 3000, type: 'music_time' },
         
-        // --- 4. pomodoro_time (累積番茄鐘時間 - 分鐘) ---
-        'POMODORO_NOVICE': { name: '番茄新手', condition: 100, type: 'pomodoro_time' },
-        'TIME_TRAVELER': { name: '時間旅人', condition: 500, type: 'pomodoro_time' },
-        'POMODORO_PRO': { name: '番茄高手', condition: 1000, type: 'pomodoro_time' }, // 沿用舊名
-        'TIME_GRANDMASTER': { name: '時間宗師', condition: 2000, type: 'pomodoro_time' },
+        // --- 4. pomodoro_time 累積番茄鐘時間 (分鐘) ---
+        'POMO_NOVICE': { name: '番茄新手', condition: 100, type: 'pomodoro_time' },
+        'POMO_TIME_TRAVELER': { name: '時間旅人', condition: 500, type: 'pomodoro_time' },
+        'POMO_PRO': { name: '番茄高手', condition: 1000, type: 'pomodoro_time' }, 
+        'POMO_EFFICIENCY_MENTOR': { name: '效率導師', condition: 2000, type: 'pomodoro_time' },
+        'POMO_GRANDMASTER': { name: '時間宗師', condition: 5000, type: 'pomodoro_time' },
         
-        // --- 5. consecutive_days (連續簽到天數 - 天) ---
+        // --- 5. consecutive_days 連續簽到天數 (天) ---
         'CHECKIN_NOVICE': { name: '每日新手', condition: 2, type: 'consecutive_days' },
         'CHECKIN_PERSISTER': { name: '堅持者', condition: 7, type: 'consecutive_days' },
         'CHECKIN_MASTER': { name: '連簽達人', condition: 30, type: 'consecutive_days' },
-        'CHECKIN_GRANDMASTER': { name: '習慣宗師', condition: 100, type: 'consecutive_days' },
+        'CHECKIN_DISCIPLINE': { name: '紀律修行者', condition: 100, type: 'consecutive_days' },
+        'CHECKIN_ETERNAL_FLAME': { name: '不滅之焰', condition: 365, type: 'consecutive_days' },
     },
     STORAGE_KEY: 'game_stats'
 };
- 
+
 // ===================================
 // 數據模型與儲存
 // ===================================
@@ -161,6 +166,11 @@ function loadStats() {
                 score_remainder: 0.0, 
             };
             console.log("程式夥伴: 每日積分已重置！");
+        }
+        
+        // 處理徽章條件類型更新：確保 consecutive_days 在 lifetime 中有值
+        if (stats.lifetime.consecutive_days === undefined) {
+             stats.lifetime.consecutive_days = 0;
         }
 
     } catch (e) {
@@ -258,6 +268,9 @@ function checkAchievements() {
                 valueToCheck = stats.lifetime.pomodoro_time;
             } else if (achievement.type === 'blog_count') {
                 valueToCheck = stats.lifetime.blog_count;
+            } else if (achievement.type === 'consecutive_days') {
+                // 檢查連簽徽章
+                valueToCheck = stats.lifetime.consecutive_days;
             }
             
             // 檢查是否達到條件
@@ -481,7 +494,7 @@ export function addCheckInScore() {
 
     saveStats();
     checkLevelUp();
-    checkAchievements();
+    checkAchievements(); // 簽到完成後立即檢查連簽徽章
     updateUI();
 
     displayNotification(`✅ 簽到成功！連續第 ${status.consecutiveDays} 天，獲得 ${status.score} 積分！`, 'success');
