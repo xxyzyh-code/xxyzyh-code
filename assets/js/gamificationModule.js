@@ -18,11 +18,12 @@ const CONFIG = {
     },
     // 等級所需總積分
     LEVEL_REQUIREMENTS: [
-        { level: 1, required: 100 },
-        { level: 2, required: 200 },
-        { level: 3, required: 400 },
-        { level: 4, required: 700 },
-        { level: 5, required: 1100 },
+        { level: 1, required: 0 },
+        { level: 2, required: 100 },
+        { level: 3, required: 200 },
+        { level: 4, required: 400 },
+        { level: 5, required: 700 },
+        { level: 6, required: 1100 },
         // ... 如果需要更多等級，可以在這裡擴展
     ],
     // 徽章條件 (以分鐘計)
@@ -50,7 +51,7 @@ let stats = {
     // 永久統計
     lifetime: {
         total_score: 0,
-        level: 0, // 0 表示未開始 (或 Level 1)
+        level: 1, // 預設初始等級為Level 1
         blog_count: 0, // 閱讀文章篇數
         music_time: 0, // 累積音樂時間 (分鐘)
         pomodoro_time: 0, // 累積番茄鐘時間 (分鐘)
