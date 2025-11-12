@@ -16,6 +16,11 @@ const CONFIG = {
         MUSIC: 25, 
         POMODORO: 40 
     },
+    // ⭐️ 專為等級時長設計的配置
+    LEVEL_LIMIT_BONUS: [
+        { level: 10, bonusMinutes: 5 }, // 達到 Level 10，每項增加 5 分鐘
+        { level: 20, bonusMinutes: 5 }, // 達到 Level 20，每項再增加 5 分鐘 (共 10 分鐘)
+    ],
     // ⭐️ 活動配置 A：週末加速活動 (僅限週六/週日)
     WEEKEND_BOOST: {
         LIMIT_MULTIPLIER: 1.5, // 得分時長上限 × 1.5
@@ -229,6 +234,23 @@ function getAnnualEventMultiplier() {
 // ===================================
 
 /**
+ * @description 根據當前等級，計算每日時長上限增加的分鐘數 (Level 10/20 增加 5 分鐘)。
+ * @returns {number} 額外增加的時長 (分鐘)
+ */
+function getLevelLimitBonus() {
+    const currentLevel = stats.lifetime.level;
+    let totalBonus = 0;
+    
+    // 遍歷所有等級獎勵配置
+    for (const item of CONFIG.LEVEL_LIMIT_BONUS) {
+        if (currentLevel >= item.level) {
+            totalBonus += item.bonusMinutes;
+        }
+    }
+    return totalBonus;
+}
+
+/**
  * @description 檢查等級是否提升。
  */
 function checkLevelUp() {
@@ -304,6 +326,9 @@ function addScore(type, minutes = 1, isNewArticle = false) {
     // 獲取所有加速係數
     const weekendActive = isWeekend();
     const annualMultiplier = getAnnualEventMultiplier();
+    
+    // 🚩 NEW: 獲取等級時長獎勵
+    const levelBonusMinutes = getLevelLimitBonus();
 
     // 1. 計算最終得分乘數 (取週末和年度活動中最高的乘數來獎勵用戶)
     let finalScoreMultiplier = 1.0;
@@ -330,21 +355,23 @@ function addScore(type, minutes = 1, isNewArticle = false) {
         }
     }
     
-    // 2. 計算最終時長乘數 (只有週末活動影響時長上限)
-    const limitMultiplier = weekendActive ? CONFIG.WEEKEND_BOOST.LIMIT_MULTIPLIER : 1;
-    
+    // 2. 計算最終時長上限
     // 獲取基礎配置
-    let limitMinutes = CONFIG.DAILY_LIMIT_MINUTES[type];
+    let baseLimitMinutes = CONFIG.DAILY_LIMIT_MINUTES[type];
     let scorePerMinute = CONFIG.SCORE_PER_MINUTE[type];
 
-    // 應用時長上限乘數 (用於檢查是否達上限)
+    // 🚩 STEP A: 先疊加等級獎勵
+    let limitMinutes = baseLimitMinutes + levelBonusMinutes;
+    
+    // 🚩 STEP B: 再應用週末加速乘數 (只有週末活動影響時長上限)
+    const limitMultiplier = weekendActive ? CONFIG.WEEKEND_BOOST.LIMIT_MULTIPLIER : 1;
     limitMinutes = Math.floor(limitMinutes * limitMultiplier); 
     
     // 應用最高得分乘數 (用於計算實際得分)
     scorePerMinute = scorePerMinute * finalScoreMultiplier;
     
-    if (finalScoreMultiplier > 1.0) {
-        console.log(`[${eventTag}生效] ${type}：新上限 ${limitMinutes} 分鐘，新單位 XP ${scorePerMinute.toFixed(2)} 分/分鐘`);
+    if (finalScoreMultiplier > 1.0 || levelBonusMinutes > 0) {
+        console.log(`[${eventTag || '等級獎勵'}] ${type}：新上限 ${limitMinutes} 分鐘 (基礎 ${baseLimitMinutes} + 等級獎勵 ${levelBonusMinutes})，新單位 XP ${scorePerMinute.toFixed(2)} 分/分鐘`);
     }
 
     // 3. 檢查是否達到每日時長上限
@@ -547,21 +574,29 @@ function updateUI() {
     } else if (weekendActive) {
         uiTag = ' ✨週末加速中!';
     }
+    
+    // 🚩 NEW: 獲取等級時長獎勵
+    const levelBonus = getLevelLimitBonus();
 
-
-    // 計算實際每日上限 
-    const actualLimitBlog = Math.floor(CONFIG.DAILY_LIMIT_MINUTES.BLOG * limitMultiplier);
-    const actualLimitMusic = Math.floor(CONFIG.DAILY_LIMIT_MINUTES.MUSIC * limitMultiplier);
-    const actualLimitPomodoro = Math.floor(CONFIG.DAILY_LIMIT_MINUTES.POMODORO * limitMultiplier);
+    // 計算實際每日上限 (基礎 + 等級獎勵) * 乘數
+    const baseLimitBlog = CONFIG.DAILY_LIMIT_MINUTES.BLOG + levelBonus;
+    const baseLimitMusic = CONFIG.DAILY_LIMIT_MINUTES.MUSIC + levelBonus;
+    const baseLimitPomodoro = CONFIG.DAILY_LIMIT_MINUTES.POMODORO + levelBonus;
+    
+    const actualLimitBlog = Math.floor(baseLimitBlog * limitMultiplier);
+    const actualLimitMusic = Math.floor(baseLimitMusic * limitMultiplier);
+    const actualLimitPomodoro = Math.floor(baseLimitPomodoro * limitMultiplier);
 
     // 計算剩餘時間 
     const remainingBlog = actualLimitBlog - stats.daily.blog_time;
     const remainingMusic = actualLimitMusic - stats.daily.music_time;
     const remainingPomodoro = actualLimitPomodoro - stats.daily.pomodoro_time;
     
+    let bonusTag = levelBonus > 0 ? ` (等級獎勵: +${levelBonus}分鐘)` : '';
 
     dailyScoreDisplay.innerHTML = `
         <strong>今日積分: ${stats.daily.score} 分${uiTag}</strong>
+        ${bonusTag}
         <br>閱讀：剩餘 ${Math.max(0, remainingBlog)} 分鐘 (上限 ${actualLimitBlog} 分鐘)
         <br>音樂：剩餘 ${Math.max(0, remainingMusic)} 分鐘 (上限 ${actualLimitMusic} 分鐘)
         <br>番茄鐘：剩餘 ${Math.max(0, remainingPomodoro)} 分鐘 (上限 ${actualLimitPomodoro} 分鐘)
