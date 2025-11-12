@@ -528,7 +528,6 @@ export function addCheckInScore() {
     return true;
 }
 
-
 /**
  * @description 更新所有遊戲化相關的前端顯示。
  */
@@ -606,23 +605,6 @@ function updateUI() {
 
     // 4. 徽章顯示
     const achievementList = document.getElementById('achievement-list');
-    
-    // ⭐ 關鍵修改：計算徽章進度
-    const totalAchievements = Object.keys(CONFIG.ACHIEVEMENTS).length; // 總徽章數量
-    const earnedAchievements = stats.lifetime.achievements.length;    // 已獲得徽章數量
-    const progressText = `${earnedAchievements} / ${totalAchievements}`;
-    
-    // 🎯 獲取 Default.html 中新增的元素
-    const achievementProgressDisplay = document.getElementById('achievement-progress-text');
-
-    if (achievementProgressDisplay) {
-        // 更新進度文本到指定的 span 元素
-        achievementProgressDisplay.textContent = ` (${progressText})`;
-    } else {
-        // 備用方案：如果 HTML 元素不存在，將進度添加到 console (或不做處理)
-        console.warn(`程式夥伴: 找不到 ID 'achievement-progress-text'。徽章進度為: ${progressText}`);
-    }
-
     if(achievementList) {
         achievementList.innerHTML = stats.lifetime.achievements.map(key => {
             const name = CONFIG.ACHIEVEMENTS[key].name;
