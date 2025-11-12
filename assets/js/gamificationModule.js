@@ -314,10 +314,12 @@ export function initializeGamificationModule() {
 
 /**
  * @description 供外部調用，用於閱讀文章時計分。
+ * @param {boolean} isNewArticle - 是否為首次閱讀此文章 (用於計算 lifetime.blog_count)
  */
-export function addBlogScore() {
-    // 這裡我們只傳遞分鐘數 1，然後在文章佈局中處理首次閱讀的邏輯。
-    return addScore('BLOG', 1);
+export function addBlogScore(isNewArticle = false) {
+    // ⭐️ 修正：接收 isNewArticle 參數，並將其傳遞給底層 addScore 函數
+    // 確保文章時長和 blog_count 都能正確累計
+    return addScore('BLOG', 1, isNewArticle);
 }
 
 /**
