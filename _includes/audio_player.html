@@ -70,1241 +70,1102 @@
     <span>剩餘: <span id="remaining-timer">--:--</span></span>
 </div>
 <ul id="playlist">
-    {% for track in site.data.music %}
-        <li onclick="loadTrack({{ forloop.index0 }})">
-            {{ track.title }} - {{ track.artist }}
-        </li>
-    {% endfor %}
     </ul>
-    
 </div>
 <script>
     // ⭐️ 關鍵修正 1: 使用 Liquid 將數據傳遞給 JavaScript
-// 注意: `trackDataArray` 現在是一個全局可用的 JS 變量
-const trackDataArray = {{ site.data.music | jsonify }}; 
-// ------------------------------------
-// ⭐️ 關鍵：Supabase API 配置 (使用您提供的 Key)
-// ------------------------------------
-const SUPABASE_URL = 'https://dpflzangmwahuwyevegp.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwZmx6YW5nbXdhaHV3eWV2ZWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0Mjc0NDYsImV4cCI6MjA3ODAwMzQ0Nn0.bydLBJIGqHcEKDhmw4E7zEqxFxymieS7GlLjL9Zyr90';
-const GLOBAL_STATS_TABLE = 'play_logs'; // 您的表名
-
-// ------------------------------------
-// 獲取 DOM 元素
-// ------------------------------------
-const audio = document.getElementById('main-audio');
-const playerTitle = document.querySelector('#custom-audio-player h3');
-let playlistItems = document.querySelectorAll('#playlist li'); 
-const modeButton = document.getElementById('mode-button'); 
-const timerToggleButton = document.getElementById('timer-toggle-btn');
-const timerMenu = document.getElementById('timer-menu');
-const totalListenTimeSpan = document.getElementById('total-listen-time');
-const remainingTimerSpan = document.getElementById('remaining-timer');
-const playlistSearchInput = document.getElementById('playlist-search'); 
-const themeToggleBtn = document.getElementById('theme-toggle-btn');
-const themeMenu = document.getElementById('theme-menu');
-const currentThemeName = document.getElementById('current-theme-name');
-const themeOptions = document.querySelectorAll('#theme-menu .theme-option');
+    const trackDataArray = {{ site.data.music | jsonify }}; 
     
-    
-// ------------------------------------
-// 1. 準備數據和狀態追蹤
-// ------------------------------------
-// ⭐️ 修正：確保 MASTER_TRACK_LIST 使用在 HTML 頂部定義的 trackDataArray
-const MASTER_TRACK_LIST = (function() {
-    // 檢查 trackDataArray 是否存在 (它應該在上面的 <script> 塊中被 Liquid 定義)
-    if (typeof trackDataArray === 'undefined' || trackDataArray.length === 0) {
-        console.error("錯誤: trackDataArray (site.data.music) 數據未找到或為空。");
-        return [];
-    }
-    return trackDataArray.map((track, index) => ({
-        // 確保每個歌曲物件都有一個唯一的 'id' 欄位，與 Supabase 的 'song id' 對應
-        // 如果您的數據中沒有，則這裡使用 's' + index 作為 fallback ID
-        id: track.id || `s${index}`, 
-        title: track.title,
-        artist: track.artist,
-        url: track.url,
-        originalIndex: index 
-    }));
-})(); 
+    // ------------------------------------
+    // ⭐️ 關鍵：Supabase API 配置 (使用您提供的 Key)
+    // ------------------------------------
+    const SUPABASE_URL = 'https://dpflzangmwahuwyevegp.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwZmx6YW5nbXdhaHV3eWV2ZWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0Mjc0NDYsImV4cCI6MjA3ODAwMzQ0Nn0.bydLBJIGqHcEKDhmw4E7zEqxFxymieS7GlLjL9Zyr90';
+    const GLOBAL_STATS_TABLE = 'play_logs'; // 您的表名
 
-let currentPlaylist = []; 
-let currentTrackIndex = 0; 
-let playMode = 0; 
-let sleepTimerId = null; 
-let sleepTime = 0; 
-let endTime = 0; 
-let countdownIntervalId = null; 
-let totalListenMinutes = 0;
-let totalListenSeconds = 0;
-let listenIntervalId = null; 
-    // ⭐️ 新增計時變數
-let scoreTimerIntervalId = null; // 用於計分的主要計時器 ID
-let scoreAccumulatorSeconds = 0; // 累積的秒數，達到 60 秒計分一次
-
-const PLAY_COUNT_STORAGE_KEY = 'audioTrackPlayCounts'; 
-let trackPlayCounts = {}; 
-let dataMode = 'local';
-const DATA_MODE_STORAGE_KEY = 'audioPlayerDataMode';
-// ⭐️ 關鍵：儲存從 API 獲取的全球播放次數
-let globalTrackPlayCounts = {}; 
-
-// --- *** Supabase/API 相關函數 *** ---
-
-// 1. 獲取或生成唯一的匿名用戶 ID
-function getUserId() {
-  let id = localStorage.getItem('anon_user_id');
-  if (!id) {
-    id = crypto.randomUUID(); 
-    localStorage.setItem('anon_user_id', id);
-  }
-  return id;
-}
-
-// 2. 向 Serverless API 發送播放日誌
-function trackPlayToDatabase(song_id) {
-    if (typeof song_id === 'undefined' || song_id === null) {
-        console.warn("trackPlayToDatabase: Song ID 無效，跳過數據庫記錄。");
-        return;
-    }
-    
-    const user_id = getUserId(); 
-    
-    // ⭐️ 核心修改 A: 找到當前播放歌曲的 title
-    const currentTrack = currentPlaylist[currentTrackIndex];
-    const song_title = currentTrack ? currentTrack.title : '未知歌曲'; // 獲取 title
-    
-    // 這裡使用 song_id 本身（即 MASTER_TRACK_LIST 中的 track.id 或 sX）
-    fetch('/api/track', { 
-        method: 'POST',
-        body: JSON.stringify({
-            user_id: user_id,
-            song_id: song_id,
-            // ⭐️ 核心修改 B: 將 title 傳遞給 API
-            title: song_title 
-        }),
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(response => {
-        if (!response.ok) {
-            // 打印響應狀態，有助於調試
-            console.error(`播放記錄發送失敗，狀態碼: ${response.status}`);
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .catch(error => {
-        console.error('播放記錄發送失敗:', error);
-    });
-}
-
-// ------------------------------------
-// ⭐️ 核心修正：獲取全球播放數據的異步函數 (現在是調用您的 /api/stats.js)
-// ------------------------------------
-async function fetchGlobalPlayCounts() {
-    // 1. UI 顯示載入中
-    document.getElementById('current-data-mode').textContent = '[載入中...]';
-
-    const BASE_URL = window.location.origin;
-    const apiEndpoint = `${BASE_URL}/api/stats`;
-    
-    try {
-        const response = await fetch(apiEndpoint, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json' 
-            }
-        });
+    // ------------------------------------
+    // 獲取 DOM 元素
+    // ------------------------------------
+    const audio = document.getElementById('main-audio');
+    const playerTitle = document.querySelector('#custom-audio-player h3');
+    const modeButton = document.getElementById('mode-button'); 
+    const timerToggleButton = document.getElementById('timer-toggle-btn');
+    const timerMenu = document.getElementById('timer-menu');
+    const totalListenTimeSpan = document.getElementById('total-listen-time');
+    const remainingTimerSpan = document.getElementById('remaining-timer');
+    const playlistSearchInput = document.getElementById('playlist-search'); 
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    const themeMenu = document.getElementById('theme-menu');
+    const currentThemeName = document.getElementById('current-theme-name');
+    const themeOptions = document.querySelectorAll('#theme-menu .theme-option');
         
-        // --- 修正區域 START ---
-        if (!response.ok) {
-            // 嘗試解析錯誤信息
-            let errorMessage = `API 錯誤! 狀態碼: ${response.status}.`;
-            try {
-                const errorBody = await response.json();
-                if (errorBody && errorBody.message) {
-                    errorMessage += ` 詳情: ${errorBody.message}`;
-                } else if (errorBody.error) {
-                    errorMessage += ` 詳情: ${errorBody.error}`;
+        
+    // ------------------------------------
+    // 1. 準備數據和狀態追蹤
+    // ------------------------------------
+    const MASTER_TRACK_LIST = (function() {
+        if (typeof trackDataArray === 'undefined' || trackDataArray.length === 0) {
+            console.error("錯誤: trackDataArray (site.data.music) 數據未找到或為空。");
+            return [];
+        }
+        return trackDataArray.map((track, index) => ({
+            id: track.id || `s${index}`, 
+            title: track.title,
+            artist: track.artist,
+            url: track.url,
+            originalIndex: index 
+        }));
+    })(); 
+
+    let currentPlaylist = []; 
+    let currentTrackIndex = 0; 
+    let playMode = 0; 
+    let sleepTimerId = null; 
+    let sleepTime = 0; 
+    let endTime = 0; 
+    let countdownIntervalId = null; 
+    let totalListenMinutes = 0;
+    let totalListenSeconds = 0;
+    let listenIntervalId = null; 
+    let scoreTimerIntervalId = null; 
+    let scoreAccumulatorSeconds = 0; 
+
+    const PLAY_COUNT_STORAGE_KEY = 'audioTrackPlayCounts'; 
+    let trackPlayCounts = {}; 
+    let dataMode = 'local';
+    const DATA_MODE_STORAGE_KEY = 'audioPlayerDataMode';
+    let globalTrackPlayCounts = {}; 
+
+    // --- *** Supabase/API 相關函數 (保持不變) *** ---
+    function getUserId() {
+      let id = localStorage.getItem('anon_user_id');
+      if (!id) {
+        id = crypto.randomUUID(); 
+        localStorage.setItem('anon_user_id', id);
+      }
+      return id;
+    }
+
+    function trackPlayToDatabase(song_id) {
+        if (typeof song_id === 'undefined' || song_id === null) {
+            console.warn("trackPlayToDatabase: Song ID 無效，跳過數據庫記錄。");
+            return;
+        }
+        
+        const user_id = getUserId(); 
+        const currentTrack = currentPlaylist[currentTrackIndex];
+        const song_title = currentTrack ? currentTrack.title : '未知歌曲'; 
+        
+        fetch('/api/track', { 
+            method: 'POST',
+            body: JSON.stringify({
+                user_id: user_id,
+                song_id: song_id,
+                title: song_title 
+            }),
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => {
+            if (!response.ok) {
+                console.error(`播放記錄發送失敗，狀態碼: ${response.status}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .catch(error => {
+            console.error('播放記錄發送失敗:', error);
+        });
+    }
+
+    async function fetchGlobalPlayCounts() {
+        document.getElementById('current-data-mode').textContent = '[載入中...]';
+
+        const BASE_URL = window.location.origin;
+        const apiEndpoint = `${BASE_URL}/api/stats`;
+        
+        try {
+            const response = await fetch(apiEndpoint, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json' 
                 }
-            } catch (e) {
-                // 如果無法解析 JSON (例如 Vercel 返回了 HTML 404 頁面)
-                errorMessage += ` 後端響應格式錯誤或為靜態頁面。`;
+            });
+            
+            if (!response.ok) {
+                let errorMessage = `API 錯誤! 狀態碼: ${response.status}.`;
+                try {
+                    const errorBody = await response.json();
+                    if (errorBody && errorBody.message) {
+                        errorMessage += ` 詳情: ${errorBody.message}`;
+                    } else if (errorBody.error) {
+                        errorMessage += ` 詳情: ${errorBody.error}`;
+                    }
+                } catch (e) {
+                    errorMessage += ` 後端響應格式錯誤或為靜態頁面。`;
+                }
+                throw new Error(errorMessage);
             }
             
-            // 統一拋出錯誤，讓 catch 處理彈窗
-            throw new Error(errorMessage);
-        }
-        // --- 修正區域 END ---
-        
-        const globalStats = await response.json();
-        return globalStats;
-        
-    } catch (error) {
-        console.error('獲取全球播放次數失敗:', error);
-        
-        // 彈窗顯示更精確的錯誤信息
-        alert(`無法載入全球統計數據。錯誤: ${error.message}。已自動切換到本地模式。`);
-        
-        // ⭐️ 關鍵修正：切換回本地模式並更新 UI
-        dataMode = 'local';
-        updateDataModeUI(); 
-        saveSettings();
-        
-        return {}; // 失敗時返回空對象
-    }
-}
-
-// --- *** 防抖輔助函數 *** ---
-function debounce(func, delay) {
-    let timeoutId;
-    return function(...args) {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-            func.apply(this, args);
-        }, delay);
-    };
-}
-
-// --- *** 歌單重置與初始化 *** ---
-function resetCurrentPlaylist() {
-    currentPlaylist = [...MASTER_TRACK_LIST]; 
-}
-
-// --- 輔助函數 (保持不變) ---
-function playTrack(index) {
-    // ... (保持不變) ...
-    if (index >= 0 && index < currentPlaylist.length) { 
-        currentTrackIndex = index;
-        const track = currentPlaylist[index]; 
-        audio.src = track.url;
-        playerTitle.textContent = `正在播放：${track.title}`;
-        audio.play().catch(error => {
-            console.error("自動播放失敗，可能是瀏覽器限制：", error);
-        });
-        updatePlaylistHighlight();
-    } else if (index === currentPlaylist.length) { 
-        audio.pause(); 
-        playerTitle.textContent = "播放列表已結束";
-        currentTrackIndex = -1; 
-        updatePlaylistHighlight();
-    }
-}
-// ... (getNextRandomIndex, playNextTrack, playPreviousTrack 保持不變) ...
-function getNextRandomIndex() {
-    let newIndex;
-    do {
-        newIndex = Math.floor(Math.random() * currentPlaylist.length); 
-    } while (newIndex === currentTrackIndex && currentPlaylist.length > 1);
-    
-    return newIndex;
-}
-function playNextTrack() {
-    if (currentPlaylist.length === 0) return;
-    
-    let nextIndex;
-    
-    if (playMode === 1) { 
-        nextIndex = currentTrackIndex; 
-    } else if (playMode === 2) { 
-        nextIndex = getNextRandomIndex();
-    } else { 
-        if (currentTrackIndex < currentPlaylist.length - 1) {
-            nextIndex = currentTrackIndex + 1;
-        } else if (playMode === 4) { 
-            nextIndex = 0; 
-        } else { 
-            audio.pause();
-            playerTitle.textContent = "已到達列表末尾。";
-            currentTrackIndex = currentPlaylist.length; 
-            updatePlaylistHighlight();
-            return;
-        }
-    }
-    
-    playTrack(nextIndex);
-}
-function playPreviousTrack() {
-    if (currentPlaylist.length === 0) return;
-    let prevIndex;
-    
-    if (playMode === 1) { 
-        prevIndex = currentTrackIndex; 
-    } else if (playMode === 2) { 
-        prevIndex = getNextRandomIndex();
-    } else { 
-        if (currentTrackIndex > 0) {
-            prevIndex = currentTrackIndex - 1;
-        } else if (playMode === 4) { 
-            prevIndex = currentPlaylist.length - 1; 
-        } else { 
-            audio.pause();
-            playerTitle.textContent = "已到達列表開頭。";
-            currentTrackIndex = -1;
-            updatePlaylistHighlight();
-            return;
-        }
-    }
-    
-    playTrack(prevIndex);
-}
-function updatePlaylistHighlight(manualScroll = false) {
-    const listItems = document.querySelectorAll('#playlist li');
-    
-    listItems.forEach(item => {
-        item.classList.remove('playing');
-    });
-    
-    if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
-        const playingTrackOriginalIndex = currentPlaylist[currentTrackIndex].originalIndex;
-        
-        const playingItem = Array.from(listItems).find(item => {
-            const onclickAttr = item.getAttribute('onclick');
-            const match = onclickAttr.match(/loadTrack\((\d+)\)/);
-            return match && parseInt(match[1]) === playingTrackOriginalIndex;
-        });
-        if (playingItem) {
-            playingItem.classList.add('playing');
+            const globalStats = await response.json();
+            return globalStats;
             
-            if (!manualScroll) {
-                 playingItem.scrollIntoView({
-                    behavior: 'smooth', 
-                    block: 'nearest'    
-                });
-            }
+        } catch (error) {
+            console.error('獲取全球播放次數失敗:', error);
+            
+            alert(`無法載入全球統計數據。錯誤: ${error.message}。已自動切換到本地模式。`);
+            
+            dataMode = 'local';
+            updateDataModeUI(); 
+            saveSettings();
+            
+            return {}; 
         }
     }
-}
-// --- 核心邏輯：控制播放順序/循環/隨機/自由 (保持不變) ---
-audio.addEventListener('ended', () => {
-    incrementPlayCount(); 
-    updatePlaylistDisplay(); 
-    sortPlaylistByPlayCount(); 
-    saveSettings(); 
-    
-    let nextIndex; 
-    if (playMode === 1) { 
-        audio.currentTime = 0; 
-        audio.play();
-        updatePlaylistHighlight(); 
-        return; 
-    } 
-    
-    if (playMode === 3) { 
-        audio.pause();
-        playerTitle.textContent = "自由模式下，歌曲播放完畢。";
-        currentTrackIndex = -1; 
-        updatePlaylistHighlight(); 
-        window.location.hash = ''; 
-        return; 
-    } 
-    
-    if (playMode === 2) { 
-        nextIndex = getNextRandomIndex();
-    } else if (playMode === 4) { 
-        nextIndex = (currentTrackIndex + 1) % currentPlaylist.length;
-    } else { 
-        if (currentTrackIndex < currentPlaylist.length - 1) { 
-            nextIndex = currentTrackIndex + 1;
-        } else {
-            audio.pause();
+
+    // --- *** 防抖輔助函數 (保持不變) *** ---
+    function debounce(func, delay) {
+        let timeoutId;
+        return function(...args) {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                func.apply(this, args);
+            }, delay);
+        };
+    }
+
+    // --- *** 歌單重置與初始化 (保持不變) *** ---
+    function resetCurrentPlaylist() {
+        currentPlaylist = [...MASTER_TRACK_LIST]; 
+    }
+
+    // --- 輔助函數 ---
+    function playTrack(index) {
+        if (index >= 0 && index < currentPlaylist.length) { 
+            currentTrackIndex = index;
+            const track = currentPlaylist[index]; 
+            audio.src = track.url;
+            playerTitle.textContent = `正在播放：${track.title}`;
+            audio.play().catch(error => {
+                console.error("自動播放失敗，可能是瀏覽器限制：", error);
+            });
+            updatePlaylistHighlight();
+            
+            // ⭐️ 修正：使用 track.originalIndex 來設定 hash
+            window.location.hash = `song-index-${track.originalIndex}`; 
+        } else if (index === currentPlaylist.length) { 
+            audio.pause(); 
             playerTitle.textContent = "播放列表已結束";
+            currentTrackIndex = -1; 
+            updatePlaylistHighlight();
+            window.location.hash = '';
+        }
+    }
+    
+    function getNextRandomIndex() {
+        let newIndex;
+        do {
+            newIndex = Math.floor(Math.random() * currentPlaylist.length); 
+        } while (newIndex === currentTrackIndex && currentPlaylist.length > 1);
+        
+        return newIndex;
+    }
+    function playNextTrack() {
+        if (currentPlaylist.length === 0) return;
+        
+        let nextIndex;
+        
+        if (playMode === 1) { 
+            nextIndex = currentTrackIndex; 
+        } else if (playMode === 2) { 
+            nextIndex = getNextRandomIndex();
+        } else { 
+            if (currentTrackIndex < currentPlaylist.length - 1) {
+                nextIndex = currentTrackIndex + 1;
+            } else if (playMode === 4) { 
+                nextIndex = 0; 
+            } else { 
+                audio.pause();
+                playerTitle.textContent = "已到達列表末尾。";
+                currentTrackIndex = currentPlaylist.length; 
+                updatePlaylistHighlight();
+                window.location.hash = '';
+                return;
+            }
+        }
+        
+        playTrack(nextIndex);
+    }
+    function playPreviousTrack() {
+        if (currentPlaylist.length === 0) return;
+        let prevIndex;
+        
+        if (playMode === 1) { 
+            prevIndex = currentTrackIndex; 
+        } else if (playMode === 2) { 
+            prevIndex = getNextRandomIndex();
+        } else { 
+            if (currentTrackIndex > 0) {
+                prevIndex = currentTrackIndex - 1;
+            } else if (playMode === 4) { 
+                prevIndex = currentPlaylist.length - 1; 
+            } else { 
+                audio.pause();
+                playerTitle.textContent = "已到達列表開頭。";
+                currentTrackIndex = -1;
+                updatePlaylistHighlight();
+                window.location.hash = '';
+                return;
+            }
+        }
+        
+        playTrack(prevIndex);
+    }
+    
+    // ⭐️ 核心：使用 data-index 匹配 currentTrackIndex
+    function updatePlaylistHighlight(manualScroll = false) {
+        const listItems = document.querySelectorAll('#playlist li');
+        
+        listItems.forEach(item => {
+            item.classList.remove('playing');
+        });
+        
+        if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
+            const playingItem = Array.from(listItems).find(item => {
+                const dataIndex = item.getAttribute('data-index');
+                return dataIndex && parseInt(dataIndex) === currentTrackIndex;
+            });
+            
+            if (playingItem) {
+                playingItem.classList.add('playing');
+                
+                if (!manualScroll) {
+                     playingItem.scrollIntoView({
+                        behavior: 'smooth', 
+                        block: 'nearest'    
+                    });
+                }
+            }
+        }
+    }
+
+    // --- 核心邏輯：控制播放順序/循環/隨機/自由 (保持不變) ---
+    audio.addEventListener('ended', () => {
+        incrementPlayCount(); 
+        sortPlaylistByPlayCount(); // 排序並渲染
+        saveSettings(); 
+        
+        let nextIndex; 
+        if (playMode === 1) { 
+            audio.currentTime = 0; 
+            audio.play();
+            updatePlaylistHighlight(); 
+            return; 
+        } 
+        
+        if (playMode === 3) { 
+            audio.pause();
+            playerTitle.textContent = "自由模式下，歌曲播放完畢。";
             currentTrackIndex = -1; 
             updatePlaylistHighlight(); 
             window.location.hash = ''; 
             return; 
-        }
-    }
-    if (nextIndex !== undefined && nextIndex !== -1) {
-        playTrack(nextIndex);
-        window.location.hash = `song-index-${currentPlaylist[nextIndex].originalIndex}`;
-    }
-});
-// 模式切換函數 (保持不變)
-function togglePlayMode() {
-    playMode = (playMode + 1) % 5; 
-    
-    updateModeUI();
-    
-    playerTitle.textContent = `已切換到 ${modeButton.textContent.replace('[ 模式: ', '').replace(' ]', '')}`;
-    saveSettings(); 
-}
-// ⭐️ 核心修正：切換數據模式函數 (異步處理數據獲取)
-async function toggleDataMode() {
-    dataMode = (dataMode === 'local') ? 'global' : 'local';
-    
-    updateDataModeUI();
-    saveSettings(); 
-    
-    playerTitle.textContent = `數據模式已切換為：${(dataMode === 'global' ? '全球統計' : '本地統計')}`;
-    
-    // 關鍵：在手動切換時，強制異步重新初始化播放器
-    await initializePlayer(true); 
-}
-// ⭐️ 修正：統一更新數據模式 UI (包含載入狀態)
-function updateDataModeUI() {
-    const modeSpan = document.getElementById('current-data-mode');
-    if (dataMode === 'global') {
-        modeSpan.textContent = "[全球統計]";
-        modeSpan.style.color = 'red'; 
-    } else {
-        modeSpan.textContent = "[本地統計]";
-        modeSpan.style.color = '';
-    }
-}
-// 統一更新模式 UI 的函數 (保持不變)
-function updateModeUI() {
-    let modeText;
-    
-    if (playMode === 1) {
-        modeText = "[ 模式: 單曲循環 ]";
-    } else if (playMode === 2) {
-        modeText = "[ 模式: 隨機 ]";
-    } else if (playMode === 3) {
-        modeText = "[ 模式: 自由 ]";
-    } else if (playMode === 4) {
-        modeText = "[ 模式: 順序循環 ]"; 
-    } else {
-        modeText = "[ 模式: 順序停止 ]"; 
-    }
-    
-    modeButton.textContent = modeText;
-}
-
-// --- *** 主題切換邏輯 (保持不變) *** ---
-const THEME_STORAGE_KEY = 'userThemePreference';
-const LIGHT_THEME = 'light'; 
-const DARK_THEME = 'dark';   
-const GREY_THEME = 'grey';   
-const BLUE_THEME = 'blue';
-const GREEN_THEME = 'green';
-const PURPLE_THEME = 'purple';
-const PINK_THEME = 'pink';
-const YELLOW_THEME = 'yellow';
-const RED_THEME = 'red';
-    
-function applyTheme(desiredTheme, isManual = false) {
-    const body = document.body;
-    let displayName = '';
-    
-    // ... (主題顏色邏輯保持不變) ...
-    body.classList.remove(
-        DARK_THEME + '-theme', 
-        GREY_THEME + '-theme',
-        BLUE_THEME + '-theme',
-        GREEN_THEME + '-theme',
-        PURPLE_THEME + '-theme', 
-        PINK_THEME + '-theme',  
-        YELLOW_THEME + '-theme',
-        RED_THEME + '-theme'     
-    );
-    let themeToApply = desiredTheme;
-    let modeText = '【手動】';
-    if (isManual) {
-        localStorage.setItem(THEME_STORAGE_KEY, desiredTheme);
-    } 
-    else if (desiredTheme === LIGHT_THEME) {
-        themeToApply = getSystemThemeBasedOnTime();
-        modeText = '【自動】';
-    }
-    if (themeToApply === DARK_THEME) {
-        body.classList.add(DARK_THEME + '-theme');
-        displayName = '黑色';
-    } else if (themeToApply === GREY_THEME) {
-        body.classList.add(GREY_THEME + '-theme');
-        displayName = '灰色';
-    } else if (themeToApply === BLUE_THEME) {
-        body.classList.add(BLUE_THEME + '-theme');
-        displayName = '藍色';
-    } else if (themeToApply === GREEN_THEME) {
-        body.classList.add(GREEN_THEME + '-theme');
-        displayName = '綠色';
-    } else if (themeToApply === PURPLE_THEME) { 
-        body.classList.add(PURPLE_THEME + '-theme');
-        displayName = '紫色';
-    } else if (themeToApply === PINK_THEME) { 
-        body.classList.add(PINK_THEME + '-theme');
-        displayName = '粉色';
-    } else if (themeToApply === YELLOW_THEME) { 
-        body.classList.add(YELLOW_THEME + '-theme');
-        displayName = '黃色';
-    } else if (themeToApply === RED_THEME) { 
-        body.classList.add(RED_THEME + '-theme');
-        displayName = '紅色';
-    } else { 
-        displayName = '白色';
-    }
-    
-    currentThemeName.textContent = `${displayName} ${modeText}`;
-}
-function getSystemThemeBasedOnTime() {
-    const hour = new Date().getHours();
-    return (hour >= 19 || hour < 7) ? DARK_THEME : LIGHT_THEME;
-}
-function initializeTheme() {
-    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    
-    if (storedTheme) {
-        if (storedTheme === LIGHT_THEME) {
-             applyTheme(LIGHT_THEME, false); 
-        } else {
-             applyTheme(storedTheme, true); 
-        }
-    } else {
-        applyTheme(LIGHT_THEME, false);
-    }
-}
-// --- 主題/定時器/統計邏輯 ---
-// ⭐️ 修正 A：移除 stopPropagation，並在點擊主題按鈕時關閉定時器菜單
-themeToggleBtn.addEventListener('click', () => {
-    themeMenu.classList.toggle('hidden-menu');
-    
-    // 確保定時器菜單關閉
-    if (!timerMenu.classList.contains('hidden-menu')) {
-        timerMenu.classList.add('hidden-menu');
-    }
-});
-themeOptions.forEach(option => {
-    option.addEventListener('click', (e) => {
-        const selectedTheme = e.target.getAttribute('data-theme');
-        applyTheme(selectedTheme, true); 
-        themeMenu.classList.add('hidden-menu'); 
-    });
-});
-// ⭐️ 修正 C：簡化和統一全局點擊監聽器
-document.addEventListener('click', (e) => {
-    const target = e.target;
-
-    // 1. 處理主題菜單的外部點擊關閉
-    // 如果點擊目標不在主題菜單內，也不在主題按鈕上，則關閉菜單
-    if (!themeMenu.contains(target) && !themeToggleBtn.contains(target)) {
-        themeMenu.classList.add('hidden-menu');
-    }
-
-    // 2. 處理定時器菜單的外部點擊關閉
-    // 如果點擊目標不在定時器菜單內，也不在定時器按鈕上，則關閉菜單
-    if (!timerMenu.contains(target) && !timerToggleButton.contains(target)) {
-        timerMenu.classList.add('hidden-menu');
-    }
-});
-setInterval(() => {
-    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    
-    if (storedTheme === LIGHT_THEME) {
-        applyTheme(LIGHT_THEME, false); 
-    }
-}, 1000 * 60 * 60); 
-    
-// ⭐️ 修正 B：在點擊定時器按鈕時明確關閉主題菜單
-function toggleTimerMenu() {
-    timerMenu.classList.toggle('hidden-menu');
-    
-    // 確保主題菜單關閉
-    if (!themeMenu.classList.contains('hidden-menu')) {
-        themeMenu.classList.add('hidden-menu');
-    }
-}
-// ⭐️ 修正 D： setSleepTimer 函數 (移除 setTimeout 裡的 clearSleepTimer)
-function setSleepTimer(minutes) {
-    clearSleepTimer();
-    toggleTimerMenu(); 
-    
-    const delayMilliseconds = minutes * 60 * 1000;
-    
-    sleepTime = minutes * 60;
-    endTime = Date.now() + delayMilliseconds;
-    
-    // 關鍵修正：setTimeout 只需要執行 audio.pause() 和訊息更新
-    sleepTimerId = setTimeout(() => {
-        // 僅暫停，讓 updateTimerCountdown 處理清理邏輯
-        audio.pause(); 
-        playerTitle.textContent = `定時器到期，已暫停播放 (${minutes} 分鐘)`;
-    }, delayMilliseconds);
-    
-    countdownIntervalId = setInterval(updateTimerCountdown, 1000);
-    timerToggleButton.textContent = `定時 (${minutes} 分鐘)`;
-    playerTitle.textContent = `定時器已設置：${minutes} 分鐘後自動關閉`;
-    if (audio.paused) {
-        audio.play();
-    }
-}
-
-function clearSleepTimer() {
-    // ... (清除定時器邏輯保持不變) ...
-    if (sleepTimerId !== null) {
-        clearTimeout(sleepTimerId);
-        sleepTimerId = null;
-    }
-    if (countdownIntervalId !== null) {
-        clearInterval(countdownIntervalId);
-        countdownIntervalId = null;
-    }
-    
-    sleepTime = 0;
-    endTime = 0;
-    timerToggleButton.textContent = "定時 (未設定)";
-    remainingTimerSpan.textContent = "--:--";
-    playerTitle.textContent = "已取消定時器";
-}
-// ⭐️ 修正 E： updateTimerCountdown 函數 (到期時執行 clearSleepTimer)
-function updateTimerCountdown() {
-    // ... (更新定時器倒數邏輯保持不變) ...
-    if (endTime > 0) {
-        const remainingMs = endTime - Date.now();
-        const remainingS = Math.max(0, Math.floor(remainingMs / 1000));
+        } 
         
-        const minutes = Math.floor(remainingS / 60);
-        const seconds = remainingS % 60;
-        
-        remainingTimerSpan.textContent = 
-            `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            
-        if (remainingS === 0) {
-            // 統一在這裡執行清理，防止重複
-            clearSleepTimer(); 
-            if (!audio.paused) {
-                 audio.pause();
-                 playerTitle.textContent = `定時器到期，已暫停播放`;
+        if (playMode === 2) { 
+            nextIndex = getNextRandomIndex();
+        } else if (playMode === 4) { 
+            nextIndex = (currentTrackIndex + 1) % currentPlaylist.length;
+        } else { 
+            if (currentTrackIndex < currentPlaylist.length - 1) { 
+                nextIndex = currentTrackIndex + 1;
+            } else {
+                audio.pause();
+                playerTitle.textContent = "播放列表已結束";
+                currentTrackIndex = -1; 
+                updatePlaylistHighlight(); 
+                window.location.hash = ''; 
+                return; 
             }
         }
-    }
-}
+        if (nextIndex !== undefined && nextIndex !== -1) {
+            playTrack(nextIndex);
+        }
+    });
 
-audio.addEventListener('play', () => {
-    if (listenIntervalId === null) {
-        listenIntervalId = setInterval(updateTotalListenTime, 1000);
-    }
-});
-audio.addEventListener('pause', () => {
-    if (listenIntervalId !== null) {
-        clearInterval(listenIntervalId);
-        listenIntervalId = null;
-    }
-});
-function updateTotalListenTime() {
-    totalListenSeconds++;
-    if (totalListenSeconds >= 60) {
-        totalListenMinutes++;
-        totalListenSeconds = 0;
-    }
-    
-    totalListenTimeSpan.textContent = 
-        `${totalListenMinutes} 分鐘 ${totalListenSeconds} 秒`;
-}
-
-    /**
- * ⭐️ 核心新增函數：每秒檢查累積時間，達到 60 秒呼叫 addMusicScore。
- */
-function updateMusicScore() {
-    // 僅在音訊播放時計數
-    if (audio.paused) {
-        // 額外的防護措施，如果音訊暫停，則停止計時器並清零累積
-        if (scoreTimerIntervalId !== null) {
-            clearInterval(scoreTimerIntervalId);
-            scoreTimerIntervalId = null;
-            scoreAccumulatorSeconds = 0; 
-        }
-        return;
-    }
-    
-    scoreAccumulatorSeconds++;
-    
-    if (scoreAccumulatorSeconds >= 60) {
-        // 確保 addMusicScore 函數已通過 window 導入
-        if (typeof window.addMusicScore === 'function') {
-            window.addMusicScore(); 
-            // 💡 提示：這裡可以選擇彈出一個小提示
-            console.log("遊戲化：音樂計時器觸發，增加 1 分鐘音樂時長和積分。");
-        } else {
-             console.error("錯誤：window.addMusicScore 函數未找到。請檢查 music.md 中的 <script type=module> 導入。");
-        }
+    function togglePlayMode() {
+        playMode = (playMode + 1) % 5; 
         
-        scoreAccumulatorSeconds = 0; // 重置累積計數器
-    }
-}
-// 播放次數追蹤函數
-function incrementPlayCount() {
-    if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
-        const track = currentPlaylist[currentTrackIndex];
-        const key = track.originalIndex; 
-        
-        trackPlayCounts[key] = (trackPlayCounts[key] || 0) + 1; 
-        
-        try {
-            localStorage.setItem(PLAY_COUNT_STORAGE_KEY, JSON.stringify(trackPlayCounts));
-        } catch (e) {
-            console.warn('無法儲存播放次數到 LocalStorage.', e);
-        }
-        
-        if (typeof gtag === 'function') {
-            gtag('event', 'song_played', {
-                'song_index': key,           
-                'song_title': track.title    
-            });
-            console.log(`GA4 事件發送成功: song_played, 歌曲ID: ${key}, 標題: ${track.title}`);
-        } 
-    }
-}
-    
-// --- 外部呼叫函數 (來自列表點擊) ---
-// ⭐️ 修正 A：優化 loadTrack 函數 (移除可能導致狀態不一致的備用邏輯)
-/**
- * @param {number} originalIndex - 歌曲在 Master List 中的原始索引
- */
-function loadTrack(originalIndex) { 
-    
-    // 1. 確保播放列表是完整的（如果當前是篩選模式，則先退出篩選，並重置 currentPlaylist）
-    const isFiltered = playlistSearchInput.value.trim().length > 0;
-    if (isFiltered) {
-        // 點擊列表應被視為退出篩選
-        playlistSearchInput.value = ''; // 清空搜索框
-        filterPlaylist(); // 執行 filterPlaylist，它會重置 currentPlaylist 和 currentTrackIndex=0
-        
-        // 由於 filterPlaylist() 已經將 currentPlaylist 重設為完整列表，我們現在可以在完整列表裡查找
-        // 注意：filterPlaylist() 已經呼叫了 updatePlaylistHighlight() 和 sortPlaylistByPlayCount()
-    }
-    
-    // 2. 確保點擊播放列表時進入自由模式（可選）
-    if (playMode !== 3) {
-        playMode = 3; 
         updateModeUI();
+        
+        playerTitle.textContent = `已切換到 ${modeButton.textContent.replace('[ 模式: ', '').replace(' ]', '')}`;
         saveSettings(); 
     }
     
-    // 3. 在當前列表 (可能已排序或篩選/重置) 中查找歌曲
-    const newIndex = currentPlaylist.findIndex(track => track.originalIndex === originalIndex);
-    
-    if (newIndex !== -1) {
-        // 4. 如果找到，播放它 (播放邏輯完全依賴 currentPlaylist)
-        playTrack(newIndex);
+    async function toggleDataMode() {
+        dataMode = (dataMode === 'local') ? 'global' : 'local';
         
-    } else {
-        // 5. 核心修正：如果歌曲不在當前歌單中 (這不應該發生在未篩選狀態)，
-        // 則發出警告並預設播放 MASTER_TRACK_LIST 的第一首歌
-        console.error(`loadTrack 錯誤: 歌曲 (原始索引: ${originalIndex}) 在當前歌單中找不到。`);
+        updateDataModeUI();
+        saveSettings(); 
         
-        // 為避免狀態混亂，這裡不執行任何播放，因為我們不知道下一曲該怎麼辦。
-        // 可以選擇：強制重設整個播放器到 MASTER_TRACK_LIST 的第一首。
-        if (currentPlaylist.length === 0) {
-            resetCurrentPlaylist();
-            sortPlaylistByPlayCount(); // 確保排序
-        }
+        playerTitle.textContent = `數據模式已切換為：${(dataMode === 'global' ? '全球統計' : '本地統計')}`;
         
-        playerTitle.textContent = `錯誤：歌曲找不到。請手動點擊歌單中的其他歌曲。`;
+        // ⭐️ 修正：切換數據模式後，需要重新初始化，以便正確載入數據和狀態
+        await initializePlayer(true); 
     }
     
-    window.location.hash = `song-index-${originalIndex}`;
-    updatePlaylistHighlight(); // 確保高亮顯示正確
-}
-
-
-// --- *** 搜尋/篩選邏輯 (保持不變) *** ---
-function filterPlaylist() {
-    const searchText = playlistSearchInput.value.toLowerCase().trim(); 
-    
-    if (searchText.length > 0) {
-        // ... (篩選邏輯保持不變) ...
-        currentPlaylist = MASTER_TRACK_LIST.filter(track => { 
-            const itemText = (track.title + ' ' + track.artist).toLowerCase(); 
-            return itemText.includes(searchText);
-        });
-        
-        if (listenIntervalId !== null) {
-            clearInterval(listenIntervalId); 
-            listenIntervalId = null;
-        }
-        if (currentPlaylist.length === 0) {
-            playerTitle.textContent = `未找到與 "${searchText}" 相關的歌曲。`;
-            audio.pause(); 
-            currentTrackIndex = -1;
-            
-        } else {
-             playerTitle.textContent = `已根據篩選建立新歌單 (${currentPlaylist.length} 首)。請點擊播放。`;
-             currentTrackIndex = 0; 
-             
-             const track = currentPlaylist[0]; 
-             audio.src = track.url; 
-             audio.pause(); 
-        }
-    } else {
-        resetCurrentPlaylist(); 
-        playerTitle.textContent = "我的音樂播放器";
-        
-        if (listenIntervalId !== null) {
-            clearInterval(listenIntervalId); 
-            listenIntervalId = null;
-        }
-        
-      // ⭐️ 關鍵新增：檢查是否有歌曲在播放，如果沒有，才預設設置為 0
-    if (currentTrackIndex === -1 || currentPlaylist.length === 0) {
-        currentTrackIndex = 0; 
-    }
-    
-    // 確保 audio.src 指向正確的歌曲
-    if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
-        const track = currentPlaylist[currentTrackIndex]; 
-        audio.src = track.url;
-    } else {
-        // 如果列表是空的，則設為 -1
-        currentTrackIndex = -1;
-    }
-
-    audio.pause(); 
-}
-     // ⭐️ 關鍵修正：無論篩選還是清空，都調用 sortPlaylistByPlayCount
-    // 這樣可以確保在搜索框清空時，如果 dataMode 是 global，列表會被正確排序。
-    sortPlaylistByPlayCount(); 
-     // DOM 元素的隱藏/顯示
-    playlistItems.forEach(item => {
-        const itemText = item.textContent.toLowerCase(); 
-        if (itemText.includes(searchText) || searchText.length === 0) {
-            item.style.display = ''; 
-        } else {
-            item.style.display = 'none';
-        }
-    });
-    updatePlaylistHighlight(); 
-}
-// --- 播放列表顯示與排序邏輯 ---
-
-/**
- * ⭐️ 核心修正：使用 track.originalIndex 和 dataMode 進行數據查找
- */
-function updatePlaylistDisplay() {
-    const currentListItems = document.querySelectorAll('#playlist li'); 
-    
-    currentListItems.forEach(item => {
-        const onclickAttr = item.getAttribute('onclick');
-        const match = onclickAttr.match(/loadTrack\((\d+)\)/);
-        const index = match ? parseInt(match[1]) : -1;
-        
-        if (index === -1) return;
-        
-        const track = MASTER_TRACK_LIST[index];
-        const originalText = track.title + ' - ' + track.artist;
-        
-        // ⭐️ 關鍵：根據當前模式選擇數據源
-        let playCount = 0;
+    function updateDataModeUI() {
+        const modeSpan = document.getElementById('current-data-mode');
         if (dataMode === 'global') {
-            // 在全球模式下，使用 track.id 查找全球統計數據
-            playCount = globalTrackPlayCounts[track.id] || 0; 
+            modeSpan.textContent = "[全球統計]";
+            modeSpan.style.color = 'red'; 
         } else {
-            // 在本地模式下，使用 track.originalIndex 查找本地統計數據
-            playCount = trackPlayCounts[index] || 0; 
-        }
-        
-        item.innerHTML = '';
-        
-        const mainSpan = document.createElement('span');
-        mainSpan.textContent = originalText;
-        item.appendChild(mainSpan);
-        
-        if (playCount > 0) {
-            const countSpan = document.createElement('small');
-            countSpan.className = 'play-stats'; // 添加類名方便移除
-            countSpan.textContent = ` (${playCount} 次播放)`;
-            
-            countSpan.style.fontSize = '0.8em'; 
-            countSpan.style.color = '#888'; 
-            countSpan.style.marginLeft = '10px';
-            
-            item.appendChild(countSpan);
-        }
-    });
-}
-
-// ⭐️ 最終修正：sortPlaylistByPlayCount 函數
-function sortPlaylistByPlayCount() {
-    
-    // 如果播放列表不是完整的，或者我們在搜索模式，則不進行排序，只更新顯示
-    if (currentPlaylist.length !== MASTER_TRACK_LIST.length) {
-         updatePlaylistDisplay(); 
-         updatePlaylistHighlight();
-         return;
-    }
-    
-    // 1. 準備用於排序的增強列表 (基於 MASTER_TRACK_LIST)
-    const sortableList = [...MASTER_TRACK_LIST].map(track => {
-        const index = track.originalIndex;
-        let count = 0;
-        
-        if (dataMode === 'global') {
-            count = globalTrackPlayCounts[track.id] || 0; 
-        } else {
-            count = trackPlayCounts[index] || 0; 
-        }
-        return { ...track, playCount: count };
-    });
-    
-    // 2. 執行排序 (按播放次數降序，然後按原始索引升序)
-    sortableList.sort((a, b) => {
-        if (b.playCount !== a.playCount) {
-            return b.playCount - a.playCount;
-        }
-        return a.originalIndex - b.originalIndex; 
-    });
-    
-    // 3. 儲存當前播放狀態
-    const currentlyPlayingOriginalIndex = currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length
-        ? currentPlaylist[currentTrackIndex].originalIndex 
-        : -1; 
-        
-    // 4. 關鍵：更新內部播放列表 currentPlaylist 數組
-    currentPlaylist = sortableList; 
-    
-    // 5. 重新定位當前歌曲在新列表中的索引
-    if (currentlyPlayingOriginalIndex !== -1) {
-        const newIndex = currentPlaylist.findIndex(track => track.originalIndex === currentlyPlayingOriginalIndex);
-        currentTrackIndex = newIndex !== -1 ? newIndex : 0; // 如果找不到則設為第一首
-    } else {
-        currentTrackIndex = 0;
-    }
-
-    // ⭐️ 核心修正區塊：確保 DOM 元素存在並正確進行重排
-    const playlistUl = document.getElementById('playlist');
-    let originalLiElements = Array.from(playlistUl.querySelectorAll('li'));
-    
-    // 🔴 檢查：如果列表為空，強制重建 DOM 元素
-    if (originalLiElements.length === 0) {
-        console.warn("DOM 列表為空！正在強制重建所有 LI 元素以避免空白列表。");
-        const fragment = document.createDocumentFragment();
-        MASTER_TRACK_LIST.forEach((track, index) => {
-            const li = document.createElement('li');
-            li.setAttribute('onclick', `loadTrack(${index})`);
-            li.textContent = `${track.title} - ${track.artist}`;
-            fragment.appendChild(li);
-        });
-        playlistUl.innerHTML = '';
-        playlistUl.appendChild(fragment);
-        // 重新獲取元素列表
-        originalLiElements = Array.from(playlistUl.querySelectorAll('li'));
-    }
-    
-    const fragment = document.createDocumentFragment();
-    const liMap = new Map();
-    originalLiElements.forEach(item => {
-        const onclickAttr = item.getAttribute('onclick');
-        const match = onclickAttr.match(/loadTrack\((\d+)\)/);
-        if (match) {
-            liMap.set(parseInt(match[1]), item);
-        }
-    });
-
-    // 根據排序後的列表 currentPlaylist 順序，將 li 元素添加到片段中
-    currentPlaylist.forEach(track => { 
-        const originalIndex = track.originalIndex;
-        const liElement = liMap.get(originalIndex);
-        if (liElement) {
-            fragment.appendChild(liElement); // 移除舊位置，添加到片段
-        }
-    });
-    
-    // 6. 清空舊列表並一次性添加新順序
-    playlistUl.innerHTML = '';
-    playlistUl.appendChild(fragment);
-    
-    // 7. 更新全局引用的 playlistItems
-    playlistItems = document.querySelectorAll('#playlist li'); 
-    updatePlaylistDisplay();
-    
-    // ⭐️ 修正：強制重新載入當前歌曲，確保播放器在新的列表順序中
-    if (currentTrackIndex !== -1 && currentTrackIndex < currentPlaylist.length) {
-        const track = currentPlaylist[currentTrackIndex];
-        // 只有在新的曲目 URL 與當前音源不符時才更改 src
-        if (audio.src !== track.url) {
-             // 重新設定音源 (通常不需要，因為 URL 不變，但這是最保險的做法)
-             audio.src = track.url; 
-        }
-        
-        // ⭐️ 核心修正：更新標題以反映新的播放位置（可選，用於調試）
-        if (!audio.paused) {
-            playerTitle.textContent = `正在播放：${track.title} (歌單已排序)`;
-        } else {
-            playerTitle.textContent = `上次播放：${track.title} (歌單已排序)`;
+            modeSpan.textContent = "[本地統計]";
+            modeSpan.style.color = '';
         }
     }
     
-    updatePlaylistHighlight();
-}
-
-
-
-// --- *** LocalStorage 邏輯 *** ---
-// ⭐️ 修正 A: 更改鍵名，儲存歌曲的原始索引
-const CURRENT_TRACK_INDEX_KEY = 'audioPlayerOriginalIndex';
-const CURRENT_TRACK_TIME_KEY = 'audioPlayerTime';
-
-function saveSettings() {
-    try {
-        localStorage.setItem('audioPlayerVolume', audio.volume);
-        localStorage.setItem('audioPlayerMuted', audio.muted);
-        localStorage.setItem('audioPlayerMode', playMode);
-        localStorage.setItem(DATA_MODE_STORAGE_KEY, dataMode);  
+    function updateModeUI() {
+        let modeText;
         
-        // ⭐️ 修正 A: 儲存歌曲在 MASTER_TRACK_LIST 中的原始索引
-        if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
-            const track = currentPlaylist[currentTrackIndex];
-            localStorage.setItem(CURRENT_TRACK_INDEX_KEY, track.originalIndex);
+        if (playMode === 1) {
+            modeText = "[ 模式: 單曲循環 ]";
+        } else if (playMode === 2) {
+            modeText = "[ 模式: 隨機 ]";
+        } else if (playMode === 3) {
+            modeText = "[ 模式: 自由 ]";
+        } else if (playMode === 4) {
+            modeText = "[ 模式: 順序循環 ]"; 
         } else {
-            localStorage.removeItem(CURRENT_TRACK_INDEX_KEY); 
+            modeText = "[ 模式: 順序停止 ]"; 
         }
         
-        if (audio.currentTime > 0) {
-             localStorage.setItem(CURRENT_TRACK_TIME_KEY, audio.currentTime);
-        } else {
-             localStorage.removeItem(CURRENT_TRACK_TIME_KEY);
-        }
-        
-    } catch (e) {
-        console.warn('LocalStorage is not available or blocked.', e);
+        modeButton.textContent = modeText;
     }
-}
 
-// ⭐️ 修正後的 loadSavedSettings 函數
-function loadSavedSettings() {
-    try {
-        const savedVolume = localStorage.getItem('audioPlayerVolume');
-        if (savedVolume !== null) {
-            audio.volume = Math.max(0, Math.min(1, parseFloat(savedVolume)));
+    // --- *** 主題切換/定時器/統計邏輯 (保持不變) *** ---
+    const THEME_STORAGE_KEY = 'userThemePreference';
+    const LIGHT_THEME = 'light'; 
+    const DARK_THEME = 'dark';   
+    const GREY_THEME = 'grey';   
+    const BLUE_THEME = 'blue';
+    const GREEN_THEME = 'green';
+    const PURPLE_THEME = 'purple';
+    const PINK_THEME = 'pink';
+    const YELLOW_THEME = 'yellow';
+    const RED_THEME = 'red';
+        
+    function applyTheme(desiredTheme, isManual = false) {
+        const body = document.body;
+        let displayName = '';
+        
+        body.classList.remove(
+            DARK_THEME + '-theme', 
+            GREY_THEME + '-theme',
+            BLUE_THEME + '-theme',
+            GREEN_THEME + '-theme',
+            PURPLE_THEME + '-theme', 
+            PINK_THEME + '-theme',  
+            YELLOW_THEME + '-theme',
+            RED_THEME + '-theme'     
+        );
+        let themeToApply = desiredTheme;
+        let modeText = '【手動】';
+        if (isManual) {
+            localStorage.setItem(THEME_STORAGE_KEY, desiredTheme);
+        } 
+        else if (desiredTheme === LIGHT_THEME) {
+            themeToApply = getSystemThemeBasedOnTime();
+            modeText = '【自動】';
         }
-        const savedMuted = localStorage.getItem('audioPlayerMuted');
-        if (savedMuted !== null) {
-            audio.muted = (savedMuted === 'true');
-        }
-        const savedMode = localStorage.getItem('audioPlayerMode');
-        if (savedMode !== null) {
-            const mode = parseInt(savedMode);
-            if (mode >= 0 && mode <= 4) { 
-                playMode = mode;
-                updateModeUI(); 
-            }
+        if (themeToApply === DARK_THEME) {
+            body.classList.add(DARK_THEME + '-theme');
+            displayName = '黑色';
+        } else if (themeToApply === GREY_THEME) {
+            body.classList.add(GREY_THEME + '-theme');
+            displayName = '灰色';
+        } else if (themeToApply === BLUE_THEME) {
+            body.classList.add(BLUE_THEME + '-theme');
+            displayName = '藍色';
+        } else if (themeToApply === GREEN_THEME) {
+            body.classList.add(GREEN_THEME + '-theme');
+            displayName = '綠色';
+        } else if (themeToApply === PURPLE_THEME) { 
+            body.classList.add(PURPLE_THEME + '-theme');
+            displayName = '紫色';
+        } else if (themeToApply === PINK_THEME) { 
+            body.classList.add(PINK_THEME + '-theme');
+            displayName = '粉色';
+        } else if (themeToApply === YELLOW_THEME) { 
+            body.classList.add(YELLOW_THEME + '-theme');
+            displayName = '黃色';
+        } else if (themeToApply === RED_THEME) { 
+            body.classList.add(RED_THEME + '-theme');
+            displayName = '紅色';
+        } else { 
+            displayName = '白色';
         }
         
-        const savedCounts = localStorage.getItem(PLAY_COUNT_STORAGE_KEY);
-        if (savedCounts) {
-            trackPlayCounts = JSON.parse(savedCounts);
-        }
+        currentThemeName.textContent = `${displayName} ${modeText}`;
+    }
+    function getSystemThemeBasedOnTime() {
+        const hour = new Date().getHours();
+        return (hour >= 19 || hour < 7) ? DARK_THEME : LIGHT_THEME;
+    }
+    function initializeTheme() {
+        const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
         
-        const savedDataMode = localStorage.getItem(DATA_MODE_STORAGE_KEY);
-        if (savedDataMode && (savedDataMode === 'local' || savedDataMode === 'global')) {
-            dataMode = savedDataMode;
-        }
-        updateDataModeUI(); 
-
-        
-        // ⭐️ 修正 B: 載入並定位原始索引
-        const savedOriginalIndex = localStorage.getItem(CURRENT_TRACK_INDEX_KEY);
-        
-        if (savedOriginalIndex !== null) {
-            const originalIndex = parseInt(savedOriginalIndex);
-            
-            // 檢查原始索引是否有效
-            if (originalIndex >= 0 && originalIndex < MASTER_TRACK_LIST.length) { 
-                
-                const track = MASTER_TRACK_LIST[originalIndex]; 
-                audio.src = track.url;
-                playerTitle.textContent = `上次播放：${track.title}`;
-                
-                // 關鍵：設定一個標記，讓 initializePlayer 知道要播放哪首歌
-                window.__LAST_PLAYED_ORIGINAL_INDEX = originalIndex;
-                
+        if (storedTheme) {
+            if (storedTheme === LIGHT_THEME) {
+                 applyTheme(LIGHT_THEME, false); 
             } else {
-                currentTrackIndex = 0; 
-                if (MASTER_TRACK_LIST.length > 0) {
-                    const track = MASTER_TRACK_LIST[0]; 
-                    audio.src = track.url;
-                    playerTitle.textContent = `上次播放的歌曲已更新，現播放：${track.title}`;
-                } else {
-                    currentTrackIndex = -1; 
+                 applyTheme(storedTheme, true); 
+            }
+        } else {
+            applyTheme(LIGHT_THEME, false);
+        }
+    }
+    
+    themeToggleBtn.addEventListener('click', () => {
+        themeMenu.classList.toggle('hidden-menu');
+        
+        if (!timerMenu.classList.contains('hidden-menu')) {
+            timerMenu.classList.add('hidden-menu');
+        }
+    });
+    themeOptions.forEach(option => {
+        option.addEventListener('click', (e) => {
+            const selectedTheme = e.target.getAttribute('data-theme');
+            applyTheme(selectedTheme, true); 
+            themeMenu.classList.add('hidden-menu'); 
+        });
+    });
+    
+    document.addEventListener('click', (e) => {
+        const target = e.target;
+
+        if (!themeMenu.contains(target) && !themeToggleBtn.contains(target)) {
+            themeMenu.classList.add('hidden-menu');
+        }
+
+        if (!timerMenu.contains(target) && !timerToggleButton.contains(target)) {
+            timerMenu.classList.add('hidden-menu');
+        }
+    });
+    setInterval(() => {
+        const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+        
+        if (storedTheme === LIGHT_THEME) {
+            applyTheme(LIGHT_THEME, false); 
+        }
+    }, 1000 * 60 * 60); 
+        
+    function toggleTimerMenu() {
+        timerMenu.classList.toggle('hidden-menu');
+        
+        if (!themeMenu.classList.contains('hidden-menu')) {
+            themeMenu.classList.add('hidden-menu');
+        }
+    }
+    
+    function setSleepTimer(minutes) {
+        clearSleepTimer();
+        toggleTimerMenu(); 
+        
+        const delayMilliseconds = minutes * 60 * 1000;
+        
+        sleepTime = minutes * 60;
+        endTime = Date.now() + delayMilliseconds;
+        
+        sleepTimerId = setTimeout(() => {
+            audio.pause(); 
+            playerTitle.textContent = `定時器到期，已暫停播放 (${minutes} 分鐘)`;
+        }, delayMilliseconds);
+        
+        countdownIntervalId = setInterval(updateTimerCountdown, 1000);
+        timerToggleButton.textContent = `定時 (${minutes} 分鐘)`;
+        playerTitle.textContent = `定時器已設置：${minutes} 分鐘後自動關閉`;
+        if (audio.paused) {
+            audio.play();
+        }
+    }
+
+    function clearSleepTimer() {
+        if (sleepTimerId !== null) {
+            clearTimeout(sleepTimerId);
+            sleepTimerId = null;
+        }
+        if (countdownIntervalId !== null) {
+            clearInterval(countdownIntervalId);
+            countdownIntervalId = null;
+        }
+        
+        sleepTime = 0;
+        endTime = 0;
+        timerToggleButton.textContent = "定時 (未設定)";
+        remainingTimerSpan.textContent = "--:--";
+        playerTitle.textContent = "已取消定時器";
+    }
+    
+    function updateTimerCountdown() {
+        if (endTime > 0) {
+            const remainingMs = endTime - Date.now();
+            const remainingS = Math.max(0, Math.floor(remainingMs / 1000));
+            
+            const minutes = Math.floor(remainingS / 60);
+            const seconds = remainingS % 60;
+            
+            remainingTimerSpan.textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+            if (remainingS === 0) {
+                clearSleepTimer(); 
+                if (!audio.paused) {
+                     audio.pause();
+                     playerTitle.textContent = `定時器到期，已暫停播放`;
                 }
             }
         }
-        
-        const savedTime = localStorage.getItem(CURRENT_TRACK_TIME_KEY);
-        if (savedTime !== null && currentTrackIndex >= 0) { 
-             const time = parseFloat(savedTime);
-             if (!isNaN(time) && time > 0) {
-                 audio.currentTime = time;
-             }
-             localStorage.removeItem(CURRENT_TRACK_TIME_KEY); 
-        }
-
-        const currentKeys = MASTER_TRACK_LIST.map(t => t.originalIndex.toString());
-        let keysToDelete = [];
-        for (const key in trackPlayCounts) {
-            if (!currentKeys.includes(key)) {
-                keysToDelete.push(key);
-            }
-        }
-        keysToDelete.forEach(key => delete trackPlayCounts[key]);
-        
-        localStorage.setItem(PLAY_COUNT_STORAGE_KEY, JSON.stringify(trackPlayCounts));
-        
-    } catch (e) {
-        console.warn('Failed to load settings from LocalStorage.', e);
     }
-}
 
-// --- *** URL 錨點處理邏輯 *** ---
-function handleUrlAnchor(isInitialLoad = false) {
-    const hash = window.location.hash;
-    
-    if (hash.startsWith('#song-index-')) {
-        const parts = hash.split('-');
-        const originalIndex = parseInt(parts[parts.length - 1]);
+    audio.addEventListener('play', () => {
+        if (listenIntervalId === null) {
+            listenIntervalId = setInterval(updateTotalListenTime, 1000);
+        }
+    });
+    audio.addEventListener('pause', () => {
+        if (listenIntervalId !== null) {
+            clearInterval(listenIntervalId);
+            listenIntervalId = null;
+        }
+    });
+    function updateTotalListenTime() {
+        totalListenSeconds++;
+        if (totalListenSeconds >= 60) {
+            totalListenMinutes++;
+            totalListenSeconds = 0;
+        }
         
-        if (!isNaN(originalIndex) && originalIndex >= 0 && originalIndex < MASTER_TRACK_LIST.length) {
-            
-            const trackTitle = MASTER_TRACK_LIST[originalIndex].title;
-            
-            loadTrack(originalIndex); 
-            
-            // ⭐️ 修正：只在初次載入時重置模式，因為分享連結通常需要從頭開始
-            if (isInitialLoad) {
-                playMode = 0; // 順序停止
-                updateModeUI();
-                saveSettings();
+        totalListenTimeSpan.textContent = 
+            `${totalListenMinutes} 分鐘 ${totalListenSeconds} 秒`;
+    }
+
+    function updateMusicScore() {
+        if (audio.paused) {
+            if (scoreTimerIntervalId !== null) {
+                clearInterval(scoreTimerIntervalId);
+                scoreTimerIntervalId = null;
+                scoreAccumulatorSeconds = 0; 
+            }
+            return;
+        }
+        
+        scoreAccumulatorSeconds++;
+        
+        if (scoreAccumulatorSeconds >= 60) {
+            if (typeof window.addMusicScore === 'function') {
+                window.addMusicScore(); 
+                console.log("遊戲化：音樂計時器觸發，增加 1 分鐘音樂時長和積分。");
+            } else {
+                 console.error("錯誤：window.addMusicScore 函數未找到。請檢查 music.md 中的 <script type=module> 導入。");
             }
             
-            playerTitle.textContent = `從分享連結載入：${trackTitle} (正在緩衝...)`;
-            const handlePlaying = () => {
-                 if (playerTitle.textContent.includes(trackTitle)) { 
-                     playerTitle.textContent = `正在播放：${trackTitle}`;
-                     audio.removeEventListener('playing', handlePlaying);
-                 }
-            };
-            audio.addEventListener('playing', handlePlaying);
-            
-            audio.play().catch(error => {
-                 playerTitle.textContent = `從分享載入：${trackTitle} (需點擊播放)`;
-            });
+            scoreAccumulatorSeconds = 0; 
         }
     }
-}
-// ------------------------------------
-// --- *** 事件監聽器區塊 (底部初始化之前) *** ---
-audio.addEventListener('volumechange', saveSettings);
-audio.addEventListener('ratechange', saveSettings); 
-audio.addEventListener('loadedmetadata', saveSettings); 
-audio.addEventListener('timeupdate', () => {
-    if (!audio.paused && audio.currentTime % 5 < 1) {
-         saveSettings();
+    function incrementPlayCount() {
+        if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
+            const track = currentPlaylist[currentTrackIndex];
+            const key = track.originalIndex; 
+            
+            trackPlayCounts[key] = (trackPlayCounts[key] || 0) + 1; 
+            
+            try {
+                localStorage.setItem(PLAY_COUNT_STORAGE_KEY, JSON.stringify(trackPlayCounts));
+            } catch (e) {
+                console.warn('無法儲存播放次數到 LocalStorage.', e);
+            }
+            
+            if (typeof gtag === 'function') {
+                gtag('event', 'song_played', {
+                    'song_index': key,           
+                    'song_title': track.title    
+                });
+                console.log(`GA4 事件發送成功: song_played, 歌曲ID: ${key}, 標題: ${track.title}`);
+            } 
+        }
     }
-});
-audio.addEventListener('play', () => {
-    if (listenIntervalId === null) {
-        listenIntervalId = setInterval(updateTotalListenTime, 1000);
-    }
-    
-    // ⭐️ 核心新增: 啟動積分計時器
-    if (scoreTimerIntervalId === null) {
-        // 每 1 秒檢查一次，累積到 60 秒才計分
-        scoreTimerIntervalId = setInterval(updateMusicScore, 1000); 
-    }
-    
-    // ⭐️ 核心新增: 發送數據到數據庫
-    if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
-        // 使用 track.id 作為 song_id 傳入
-        const currentSongId = currentPlaylist[currentTrackIndex].id; 
-        trackPlayToDatabase(currentSongId); 
-    }
-    
-    saveSettings(); 
-});
-audio.addEventListener('pause', () => {
-    if (listenIntervalId !== null) {
-        clearInterval(listenIntervalId);
-        listenIntervalId = null;
-    }
-    
-        // 2. ⭐️ 核心新增: 停止積分計時器
-    if (scoreTimerIntervalId !== null) {
-        clearInterval(scoreTimerIntervalId);
-        scoreTimerIntervalId = null;
-    }
-    
-    saveSettings();
-});
-
-audio.addEventListener('ended', saveSettings);
-playlistSearchInput.addEventListener('input', debounce(filterPlaylist, 300));
-
-// --- *** 異步初始化函數 *** ---
-
-async function initializePlayer(isManualToggle = false) {
-    // 1. 載入本地設置 (包括 dataMode, __LAST_PLAYED_ORIGINAL_INDEX, playMode 等)
-    loadSavedSettings(); 
-    
-    // 2. 只有在模式設定為 'global' 時才發起 API 請求
-    if (dataMode === 'global') {
-         // UI 顯示正在載入
-         document.getElementById('current-data-mode').textContent = '[載入中...]'; 
-         const counts = await fetchGlobalPlayCounts();
-         globalTrackPlayCounts = counts; 
-         // API 載入完成，顯示正常狀態
-         document.getElementById('current-data-mode').textContent = '[全球統計]'; 
-    } else {
-         globalTrackPlayCounts = {}; 
-         document.getElementById('current-data-mode').textContent = '[本地統計]';
-    }
-
-    // 3. ⭐️ 核心修正：檢查是否在篩選狀態
-    if (playlistSearchInput.value.trim().length > 0) {
-        // 如果有搜索文本，我們只需要重新執行篩選。
-        // filterPlaylist() 會自行設置 currentPlaylist 為篩選結果。
-        filterPlaylist(); 
-    } else {
-        // 如果沒有搜索文本，則重置 currentPlaylist 為完整歌單
-        resetCurrentPlaylist(); 
-    }
-    
-    // 4. 處理 UI 
-    updateModeUI(); // 確保 UI 反映 loadSavedSettings 中載入的 playMode
-    
-    // 5. 排序
-    sortPlaylistByPlayCount(); 
-    
-    // ⭐️ 修正 C: 在排序後，根據儲存的 originalIndex 重新定位 currentTrackIndex
-    if (window.__LAST_PLAYED_ORIGINAL_INDEX !== undefined) {
-        const lastPlayedOriginalIndex = window.__LAST_PLAYED_ORIGINAL_INDEX;
         
-        // 在新排序/篩選後的 currentPlaylist 中查找歌曲
-        const newIndex = currentPlaylist.findIndex(track => track.originalIndex === lastPlayedOriginalIndex);
+    // --- 外部呼叫函數 (現在主要為 URL 錨點服務) ---
+    /**
+     * @param {number} originalIndex - 歌曲在 Master List 中的原始索引
+     */
+    function loadTrack(originalIndex) { 
+        
+        // 1. 如果搜索框有內容，清空它並重置歌單 (退出篩選)
+        const isFiltered = playlistSearchInput.value.trim().length > 0;
+        if (isFiltered) {
+            playlistSearchInput.value = ''; 
+            filterPlaylist(); // 重置 currentPlaylist, 排序, 並渲染
+        }
+        
+        // 2. 在當前列表 (已排序或重置) 中查找歌曲
+        const newIndex = currentPlaylist.findIndex(track => track.originalIndex === originalIndex);
         
         if (newIndex !== -1) {
-            currentTrackIndex = newIndex; // 設置正確的索引！
+            // 3. 播放並更新模式為自由模式
+            if (playMode !== 3) {
+                playMode = 3; 
+                updateModeUI();
+                saveSettings(); 
+            }
+            playTrack(newIndex);
         } else {
-            // 如果歌曲在當前列表中找不到（例如被篩選掉了），預設為第一首
-            currentTrackIndex = 0;
+            console.error(`loadTrack 錯誤: 歌曲 (原始索引: ${originalIndex}) 在當前歌單中找不到。`);
+            playerTitle.textContent = `錯誤：歌曲找不到。請手動點擊歌單中的其他歌曲。`;
+        }
+    }
+
+
+    // --- *** 搜尋/篩選邏輯 *** ---
+    function filterPlaylist() {
+        const searchText = playlistSearchInput.value.toLowerCase().trim(); 
+        
+        if (searchText.length > 0) {
+            currentPlaylist = MASTER_TRACK_LIST.filter(track => { 
+                const itemText = (track.title + ' ' + track.artist).toLowerCase(); 
+                return itemText.includes(searchText);
+            });
+            
+            if (listenIntervalId !== null) {
+                clearInterval(listenIntervalId); 
+                listenIntervalId = null;
+            }
+            if (currentPlaylist.length === 0) {
+                playerTitle.textContent = `未找到與 "${searchText}" 相關的歌曲。`;
+                audio.pause(); 
+                currentTrackIndex = -1;
+                
+            } else {
+                 playerTitle.textContent = `已根據篩選建立新歌單 (${currentPlaylist.length} 首)。請點擊播放。`;
+                 currentTrackIndex = 0; 
+                 
+                 const track = currentPlaylist[0]; 
+                 audio.src = track.url; 
+                 audio.pause(); 
+            }
+        } else {
+            resetCurrentPlaylist(); 
+            playerTitle.textContent = "我的音樂播放器";
+            
+            if (listenIntervalId !== null) {
+                clearInterval(listenIntervalId); 
+                listenIntervalId = null;
+            }
+            
+            if (currentTrackIndex === -1 || currentPlaylist.length === 0) {
+                currentTrackIndex = 0; 
+            }
+            
+            if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
+                const track = currentPlaylist[currentTrackIndex]; 
+                audio.src = track.url;
+            } else {
+                currentTrackIndex = -1;
+            }
+
+            audio.pause(); 
         }
         
-        // 清除標記
-        delete window.__LAST_PLAYED_ORIGINAL_INDEX; 
+        // ⭐️ 關鍵：無論篩選還是清空，都調用 sortPlaylistByPlayCount (它現在負責渲染)
+        sortPlaylistByPlayCount(); 
+    }
+    
+    // --- 播放列表顯示與排序邏輯 (核心重構區) ---
+
+    /**
+     * 獲取單個 Track 的播放次數和顯示資訊
+     */
+    function getTrackDisplayInfo(track) {
+        const originalIndex = track.originalIndex;
+        const originalText = track.title + ' - ' + track.artist;
         
-        // 確保 audio.src 和標題正確
-        const track = currentPlaylist[currentTrackIndex];
-        audio.src = track.url; 
-        playerTitle.textContent = `上次播放：${track.title}`;
-        updatePlaylistHighlight();
-    }
-    
-    initializeTheme();
-}
-
-// ⭐️ 關鍵修正 2: 修正 DOMContentLoaded 閉合 
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. 在 DOM 準備就緒後，確保全局 playlistItems 變量被正確賦值
-    playlistItems = document.querySelectorAll('#playlist li'); 
-
-    // 2. 檢查列表是否為空
-    if (playlistItems.length === 0 && MASTER_TRACK_LIST.length > 0) {
-        console.error("嚴重警告: DOMContentLoaded 時 playlist 元素為空。");
+        let playCount = 0;
+        if (dataMode === 'global') {
+            playCount = globalTrackPlayCounts[track.id] || 0; 
+        } else {
+            playCount = trackPlayCounts[originalIndex] || 0; 
+        }
+        
+        return { originalText, playCount };
     }
 
-    // 3. 啟動播放器 (載入設置、數據、排序)
-    initializePlayer(); 
-    
-    // 4. 處理 URL 錨點 (只在首次載入時執行模式重置)
-    handleUrlAnchor(true);
-});
+    /**
+     * ⭐️ 核心重構：統一渲染/重排列表的 DOM 函數
+     */
+    function renderPlaylist() {
+        const playlistUl = document.getElementById('playlist');
+        playlistUl.innerHTML = ''; 
+        
+        const fragment = document.createDocumentFragment();
+
+        // 根據當前 internal currentPlaylist 數組渲染 DOM
+        currentPlaylist.forEach((track, index) => {
+            const li = document.createElement('li');
+            li.setAttribute('data-index', index); // 儲存它在當前列表中的索引 (即 currentPlaylist 的索引)
+            const { originalText, playCount } = getTrackDisplayInfo(track);
+            
+            li.textContent = originalText;
+            
+            if (playCount > 0) {
+                const countSpan = document.createElement('small');
+                countSpan.className = 'play-stats'; 
+                countSpan.textContent = ` (${playCount} 次播放)`;
+                countSpan.style.fontSize = '0.8em'; 
+                countSpan.style.color = '#888'; 
+                countSpan.style.marginLeft = '10px';
+                li.appendChild(countSpan);
+            }
+            
+            // ⭐️ 關鍵修正：使用事件監聽器，確保點擊時傳入的是當前列表中的索引 (index)
+            li.addEventListener('click', () => {
+                // 點擊後直接播放它在 currentPlaylist 中的索引
+                playTrack(index);
+                
+                // 點擊列表應進入自由模式
+                if (playMode !== 3) {
+                     playMode = 3; 
+                     updateModeUI();
+                     saveSettings();
+                }
+            });
+            
+            fragment.appendChild(li);
+        });
+        
+        playlistUl.appendChild(fragment);
+        
+        // 確保更新高亮顯示 (因為 DOM 已經重構)
+        updatePlaylistHighlight(true);
+    }
+
+
+    /**
+     * ⭐️ 最終修正：sortPlaylistByPlayCount 函數 (只排序資料，然後調用渲染)
+     */
+    function sortPlaylistByPlayCount() {
+        
+        // 篩選狀態下，只渲染，不排序
+        if (currentPlaylist.length !== MASTER_TRACK_LIST.length) {
+             renderPlaylist(); 
+             return;
+        }
+        
+        // 1. 準備用於排序的增強列表
+        const sortableList = [...MASTER_TRACK_LIST].map(track => {
+            const { playCount } = getTrackDisplayInfo(track);
+            return { ...track, playCount: playCount };
+        });
+        
+        // 2. 執行排序
+        sortableList.sort((a, b) => {
+            if (b.playCount !== a.playCount) {
+                return b.playCount - a.playCount;
+            }
+            return a.originalIndex - b.originalIndex; 
+        });
+        
+        // 3. 儲存當前播放歌曲的原始索引 (在排序前獲取)
+        const currentlyPlayingOriginalIndex = currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length
+            ? currentPlaylist[currentTrackIndex].originalIndex 
+            : -1; 
+            
+        // 4. 更新內部播放列表 currentPlaylist
+        currentPlaylist = sortableList; 
+        
+        // 5. 重新定位當前歌曲在新列表中的索引 (如果有歌曲在播放)
+        if (currentlyPlayingOriginalIndex !== -1) {
+            const newIndex = currentPlaylist.findIndex(track => track.originalIndex === currentlyPlayingOriginalIndex);
+            currentTrackIndex = newIndex !== -1 ? newIndex : 0; 
+        } else {
+            currentTrackIndex = 0;
+        }
+
+        // 6. 核心：調用渲染函數來重繪 DOM
+        renderPlaylist();
+        
+        // 7. 確保音源和標題正確 (在初始化中會覆蓋，但在切換數據模式時需要)
+        if (currentTrackIndex !== -1 && currentTrackIndex < currentPlaylist.length) {
+            const track = currentPlaylist[currentTrackIndex];
+            audio.src = track.url; 
+            if (!audio.paused) {
+                playerTitle.textContent = `正在播放：${track.title} (歌單已排序)`;
+            } else if (!playlistSearchInput.value.trim()){ // 僅在非篩選狀態下更新標題
+                playerTitle.textContent = `上次播放：${track.title} (歌單已排序)`;
+            }
+        }
+    }
+
+
+    // --- *** LocalStorage 邏輯 *** ---
+    const CURRENT_TRACK_INDEX_KEY = 'audioPlayerOriginalIndex';
+    const CURRENT_TRACK_TIME_KEY = 'audioPlayerTime';
+
+    function saveSettings() {
+        try {
+            localStorage.setItem('audioPlayerVolume', audio.volume);
+            localStorage.setItem('audioPlayerMuted', audio.muted);
+            localStorage.setItem('audioPlayerMode', playMode);
+            localStorage.setItem(DATA_MODE_STORAGE_KEY, dataMode);  
+            
+            if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
+                const track = currentPlaylist[currentTrackIndex];
+                // ⭐️ 儲存原始索引，與列表的排序無關
+                localStorage.setItem(CURRENT_TRACK_INDEX_KEY, track.originalIndex); 
+            } else {
+                localStorage.removeItem(CURRENT_TRACK_INDEX_KEY); 
+            }
+            
+            if (audio.currentTime > 0) {
+                 localStorage.setItem(CURRENT_TRACK_TIME_KEY, audio.currentTime);
+            } else {
+                 localStorage.removeItem(CURRENT_TRACK_TIME_KEY);
+            }
+            
+        } catch (e) {
+            console.warn('LocalStorage is not available or blocked.', e);
+        }
+    }
+
+    // ⭐️ 修正後的 loadSavedSettings 函數 (只讀取數據，不設定播放器狀態)
+    function loadSavedSettings() {
+        try {
+            const savedVolume = localStorage.getItem('audioPlayerVolume');
+            if (savedVolume !== null) {
+                audio.volume = Math.max(0, Math.min(1, parseFloat(savedVolume)));
+            }
+            const savedMuted = localStorage.getItem('audioPlayerMuted');
+            if (savedMuted !== null) {
+                audio.muted = (savedMuted === 'true');
+            }
+            
+            const savedMode = localStorage.getItem('audioPlayerMode');
+            if (savedMode !== null) {
+                const mode = parseInt(savedMode);
+                if (mode >= 0 && mode <= 4) { 
+                    playMode = mode; 
+                } else {
+                    playMode = 0; 
+                }
+            } else {
+                playMode = 0; 
+            }
+            updateModeUI(); 
+
+            
+            const savedCounts = localStorage.getItem(PLAY_COUNT_STORAGE_KEY);
+            if (savedCounts) {
+                trackPlayCounts = JSON.parse(savedCounts);
+            }
+            
+            const savedDataMode = localStorage.getItem(DATA_MODE_STORAGE_KEY);
+            if (savedDataMode && (savedDataMode === 'local' || savedDataMode === 'global')) {
+                dataMode = savedDataMode;
+            }
+            updateDataModeUI(); 
+
+            
+            const savedOriginalIndex = localStorage.getItem(CURRENT_TRACK_INDEX_KEY);
+            
+            // 🚨 關鍵修正：只儲存上次播放的原始索引，不在此處設定 currentTrackIndex 或 audio.src
+            if (savedOriginalIndex !== null) {
+                const originalIndex = parseInt(savedOriginalIndex);
+                
+                if (originalIndex >= 0 && originalIndex < MASTER_TRACK_LIST.length) { 
+                    window.__LAST_PLAYED_ORIGINAL_INDEX = originalIndex;
+                } else {
+                     // 清理無效的索引
+                     localStorage.removeItem(CURRENT_TRACK_INDEX_KEY); 
+                }
+            } else {
+                 window.__LAST_PLAYED_ORIGINAL_INDEX = -1;
+            }
+            
+            // 備註：savedTime 也在 initializePlayer 結束時統一處理，保持原樣
+            
+            // 清理不再存在的歌曲計數
+            const currentKeys = MASTER_TRACK_LIST.map(t => t.originalIndex.toString());
+            let keysToDelete = [];
+            for (const key in trackPlayCounts) {
+                if (!currentKeys.includes(key)) {
+                    keysToDelete.push(key);
+                }
+            }
+            keysToDelete.forEach(key => delete trackPlayCounts[key]);
+            
+            localStorage.setItem(PLAY_COUNT_STORAGE_KEY, JSON.stringify(trackPlayCounts));
+            
+        } catch (e) {
+            console.warn('Failed to load settings from LocalStorage.', e);
+        }
+    }
+
+    // --- *** URL 錨點處理邏輯 (保持不變) *** ---
+    function handleUrlAnchor(isInitialLoad = false) {
+        const hash = window.location.hash;
+        
+        if (hash.startsWith('#song-index-')) {
+            const parts = hash.split('-');
+            const originalIndex = parseInt(parts[parts.length - 1]);
+            
+            if (!isNaN(originalIndex) && originalIndex >= 0 && originalIndex < MASTER_TRACK_LIST.length) {
+                
+                const trackTitle = MASTER_TRACK_LIST[originalIndex].title;
+                
+                loadTrack(originalIndex); 
+                
+                if (isInitialLoad) {
+                    playMode = 0; // 順序停止
+                    updateModeUI();
+                    saveSettings();
+                }
+                
+                playerTitle.textContent = `從分享連結載入：${trackTitle} (正在緩衝...)`;
+                const handlePlaying = () => {
+                     if (playerTitle.textContent.includes(trackTitle)) { 
+                         playerTitle.textContent = `正在播放：${trackTitle}`;
+                         audio.removeEventListener('playing', handlePlaying);
+                     }
+                };
+                audio.addEventListener('playing', handlePlaying);
+                
+                audio.play().catch(error => {
+                     playerTitle.textContent = `從分享載入：${trackTitle} (需點擊播放)`;
+                });
+            }
+        }
+    }
+    // ------------------------------------
+    // --- *** 事件監聽器區塊 (底部初始化之前) *** ---
+    audio.addEventListener('volumechange', saveSettings);
+    audio.addEventListener('ratechange', saveSettings); 
+    audio.addEventListener('loadedmetadata', saveSettings); 
+    audio.addEventListener('timeupdate', () => {
+        if (!audio.paused && audio.currentTime % 5 < 1) {
+             saveSettings();
+        }
+    });
+    audio.addEventListener('play', () => {
+        if (listenIntervalId === null) {
+            listenIntervalId = setInterval(updateTotalListenTime, 1000);
+        }
+        
+        if (scoreTimerIntervalId === null) {
+            scoreTimerIntervalId = setInterval(updateMusicScore, 1000); 
+        }
+        
+        if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
+            const currentSongId = currentPlaylist[currentTrackIndex].id; 
+            trackPlayToDatabase(currentSongId); 
+        }
+        
+        saveSettings(); 
+    });
+    audio.addEventListener('pause', () => {
+        if (listenIntervalId !== null) {
+            clearInterval(listenIntervalId);
+            listenIntervalId = null;
+        }
+        
+        if (scoreTimerIntervalId !== null) {
+            clearInterval(scoreTimerIntervalId);
+            scoreTimerIntervalId = null;
+        }
+        
+        saveSettings();
+    });
+
+    audio.addEventListener('ended', saveSettings);
+    playlistSearchInput.addEventListener('input', debounce(filterPlaylist, 300));
+
+    // --- *** 異步初始化函數 *** ---
+
+    async function initializePlayer(isManualToggle = false) {
+        
+        // 1. 載入本地設置 (只讀取數據和模式)
+        loadSavedSettings(); 
+        
+        // 2. 只有在模式設定為 'global' 時才發起 API 請求
+        if (dataMode === 'global') {
+             document.getElementById('current-data-mode').textContent = '[載入中...]'; 
+             const counts = await fetchGlobalPlayCounts();
+             globalTrackPlayCounts = counts; 
+             document.getElementById('current-data-mode').textContent = '[全球統計]'; 
+        } else {
+             globalTrackPlayCounts = {}; 
+             document.getElementById('current-data-mode').textContent = '[本地統計]';
+        }
+
+        // 3. 檢查是否在篩選狀態，並重置 currentPlaylist 
+        if (playlistSearchInput.value.trim().length > 0) {
+            filterPlaylist(); // 此函數會調用 sortPlaylistByPlayCount
+        } else {
+            resetCurrentPlaylist(); 
+            sortPlaylistByPlayCount(); // 排序並渲染 (並在內部重新定位 currentTrackIndex)
+        }
+        
+        // 4. 根據儲存的 originalIndex 最終確定 currentTrackIndex 和播放器狀態
+        const lastPlayedOriginalIndex = window.__LAST_PLAYED_ORIGINAL_INDEX;
+        
+        if (lastPlayedOriginalIndex !== -1) {
+            
+            // 🚨 關鍵：在排序後的 currentPlaylist 中查找歌曲
+            const newIndex = currentPlaylist.findIndex(track => track.originalIndex === lastPlayedOriginalIndex);
+            
+            if (newIndex !== -1) {
+                currentTrackIndex = newIndex; // 設置正確的索引！
+            } else {
+                 // 如果找不到，就保持 sortPlaylistByPlayCount 設定的 0
+                 currentTrackIndex = 0; 
+            }
+        } else {
+             // 如果沒有上次播放記錄，就保持 sortPlaylistByPlayCount 設定的 0
+             currentTrackIndex = 0;
+        }
+        
+        delete window.__LAST_PLAYED_ORIGINAL_INDEX; 
+
+        // 5. 最終設置播放器狀態
+        if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
+            const track = currentPlaylist[currentTrackIndex];
+            audio.src = track.url; 
+            playerTitle.textContent = `上次播放：${track.title}`;
+            
+            // 處理上次播放的時間點
+            const savedTime = localStorage.getItem(CURRENT_TRACK_TIME_KEY);
+            if (savedTime !== null) { 
+                const time = parseFloat(savedTime);
+                if (!isNaN(time) && time > 0) {
+                    audio.currentTime = time;
+                    localStorage.removeItem(CURRENT_TRACK_TIME_KEY); 
+                }
+            }
+            
+            updatePlaylistHighlight();
+        } else {
+             currentTrackIndex = -1; // 沒有歌曲
+             playerTitle.textContent = "我的音樂播放器 (無歌曲)";
+        }
+        
+        initializeTheme();
+    }
+
+    // ⭐️ 關鍵修正 2: 修正 DOMContentLoaded 閉合 
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // 1. 啟動播放器 (載入設置、數據、排序、渲染、設定狀態)
+        initializePlayer(); 
+        
+        // 2. 處理 URL 錨點 (只在首次載入時執行模式重置)
+        handleUrlAnchor(true);
+    });
 </script>
