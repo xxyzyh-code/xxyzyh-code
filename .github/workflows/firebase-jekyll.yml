@@ -6,27 +6,31 @@ on:
       - main
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      # 1️⃣ 取得最新代碼
+      - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 2️⃣ 安裝 Ruby & Jekyll
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
           bundler-cache: true
 
-      - name: Install Jekyll
+      - name: Install dependencies
         run: |
           gem install bundler
           bundle install
 
+      # 3️⃣ 生成靜態網站
       - name: Build Jekyll site
         run: bundle exec jekyll build
 
+      # 4️⃣ 部署 Firebase Hosting
       - name: Deploy to Firebase Hosting
         uses: w9jds/firebase-action@v2.2.0
         with:
@@ -34,3 +38,8 @@ jobs:
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PROJECT_ID: my-site-d7fb8
+
+      # ✅ 注意：部署後 firebase.json 的 Cache-Control 自動生效
+      # HTML 短緩存 10 分鐘
+      # CSS/JS 1 天緩存
+      # 圖片/音樂/favicons 長期緩存 + immutable
