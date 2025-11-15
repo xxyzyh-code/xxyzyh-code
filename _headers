@@ -4,26 +4,20 @@
 
 /*.html
   Cache-Control: public, max-age=600
-
 /*/*.html
   Cache-Control: public, max-age=600
-
 
 # =======================
 # CSS / JS （1 天）
 # =======================
 /*.css
   Cache-Control: public, max-age=86400, immutable
-
 /*/*.css
   Cache-Control: public, max-age=86400, immutable
-
 /*.js
   Cache-Control: public, max-age=86400, immutable
-
 /*/*.js
   Cache-Control: public, max-age=86400, immutable
-
 
 # =======================
 # 圖片（1 年）
@@ -32,37 +26,30 @@
   Cache-Control: public, max-age=31536000, immutable
 /*/*.png
   Cache-Control: public, max-age=31536000, immutable
-
 /*.jpg
   Cache-Control: public, max-age=31536000, immutable
 /*/*.jpg
   Cache-Control: public, max-age=31536000, immutable
-
 /*.jpeg
   Cache-Control: public, max-age=31536000, immutable
 /*/*.jpeg
   Cache-Control: public, max-age=31536000, immutable
-
 /*.gif
   Cache-Control: public, max-age=31536000, immutable
 /*/*.gif
   Cache-Control: public, max-age=31536000, immutable
-
 /*.svg
   Cache-Control: public, max-age=31536000, immutable
 /*/*.svg
   Cache-Control: public, max-age=31536000, immutable
-
 /*.webp
   Cache-Control: public, max-age=31536000, immutable
 /*/*.webp
   Cache-Control: public, max-age=31536000, immutable
-
 /*.ico
   Cache-Control: public, max-age=31536000, immutable
 /*/*.ico
   Cache-Control: public, max-age=31536000, immutable
-
 
 # =======================
 # 文本資源（1 年）
@@ -71,47 +58,125 @@
   Cache-Control: public, max-age=31536000, immutable
 /*/*.json
   Cache-Control: public, max-age=31536000, immutable
-
 /*.xml
   Cache-Control: public, max-age=31536000, immutable
 /*/*.xml
   Cache-Control: public, max-age=31536000, immutable
-
 /*.txt
   Cache-Control: public, max-age=31536000, immutable
 /*/*.txt
   Cache-Control: public, max-age=31536000, immutable
-
 
 # =======================
 # 音頻資源（1 年）
 # =======================
 /*.mp3
   Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
 /*/*.mp3
   Cache-Control: public, max-age=31536000, immutable
-
+  Edge-Control: cache-max-age=31536000
 /*.m4a
   Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
 /*/*.m4a
   Cache-Control: public, max-age=31536000, immutable
-
+  Edge-Control: cache-max-age=31536000
 /*.wav
   Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
 /*/*.wav
   Cache-Control: public, max-age=31536000, immutable
-
+  Edge-Control: cache-max-age=31536000
 /*.ogg
   Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
 /*/*.ogg
   Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
+/*.flac
+  Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
+/*/*.flac
+  Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
+/*.aac
+  Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
+/*/*.aac
+  Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
+/*.opus
+  Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
+/*/*.opus
+  Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
 
+# =======================
+# 影片資源（1 年）
+# =======================
+/*.mp4
+  Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
+/*/*.mp4
+  Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
+/*.webm
+  Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
+/*/*.webm
+  Cache-Control: public, max-age=31536000, immutable
+  Edge-Control: cache-max-age=31536000
+
+# =======================
+# 字型資源（1 年）
+# =======================
+/*.woff
+  Cache-Control: public, max-age=31536000, immutable
+/*/*.woff
+  Cache-Control: public, max-age=31536000, immutable
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+/*/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+/*.ttf
+  Cache-Control: public, max-age=31536000, immutable
+/*/*.ttf
+  Cache-Control: public, max-age=31536000, immutable
+/*.otf
+  Cache-Control: public, max-age=31536000, immutable
+/*/*.otf
+  Cache-Control: public, max-age=31536000, immutable
+
+# =======================
+# 壓縮檔/資料檔（1 年）
+# =======================
+/*.zip
+  Cache-Control: public, max-age=31536000, immutable
+/*/*.zip
+  Cache-Control: public, max-age=31536000, immutable
+/*.tar
+  Cache-Control: public, max-age=31536000, immutable
+/*/*.tar
+  Cache-Control: public, max-age=31536000, immutable
+/*.gz
+  Cache-Control: public, max-age=31536000, immutable
+/*/*.gz
+  Cache-Control: public, max-age=31536000, immutable
+
+# =======================
+# PDF / 文檔（1 年）
+# =======================
+/*.pdf
+  Cache-Control: public, max-age=31536000, immutable
+/*/*.pdf
+  Cache-Control: public, max-age=31536000, immutable
 
 # =======================
 # 特定文件（1 年）
 # =======================
 /favicon.ico
   Cache-Control: public, max-age=31536000, immutable
-
 /social-share.png
   Cache-Control: public, max-age=31536000, immutable
