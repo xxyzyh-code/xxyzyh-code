@@ -1,55 +1,61 @@
-// service-worker.js - 最終生產版
+// service-worker.js
+const AUDIO_CACHE_PREFIX = "music-cache-";
+const MAX_AUDIO_CACHE_ITEMS = 50; // LRU/FIFO 控制音频缓存
+let AUDIO_CACHE_NAME = AUDIO_CACHE_PREFIX + "temp";
 
-// ---------------------------
+const STATIC_CACHE_NAME = "static-cache-v1";
+const AUDIO_YML = "/data/music.yml";
+
 // 簡單 hash 函數 (djb2)
-// ---------------------------
 function hashString(str) {
   let hash = 5381;
   for (let i = 0; i < str.length; i++) {
     hash = (hash * 33) ^ str.charCodeAt(i);
   }
-  return (hash >>> 0).toString(36); // 轉成 base36 字串
+  return (hash >>> 0).toString(36);
 }
 
-// ---------------------------
-// 配置
-// ---------------------------
-const MUSIC_YML = "/data/music.yml";
-let CACHE_NAME = "music-cache-temp"; // 會在安裝時自動改成 hash 版本
-const MAX_CACHE_ITEMS = 30; // LRU 限制：最多緩存 30 首音樂
-
-// ---------------------------
-// 安裝 Service Worker
-// ---------------------------
+// ------------------ 安裝 SW ------------------
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    fetch(MUSIC_YML)
+    fetch(AUDIO_YML)
       .then((res) => res.text())
       .then((text) => {
         const urls = [...text.matchAll(/url:\s*"([^"]+)"/g)].map((m) => m[1]);
-        // 生成版本號（只依賴 URL 列表）
-        const versionHash = hashString(urls.join("|"));
-        CACHE_NAME = `music-cache-${versionHash}`;
-        return caches.open(CACHE_NAME).then((cache) => cache.addAll(urls));
+        AUDIO_CACHE_NAME = AUDIO_CACHE_PREFIX + hashString(urls.join("|"));
+        return caches.open(AUDIO_CACHE_NAME).then((cache) => cache.addAll(urls));
       })
-      .catch((err) => {
-        console.error("SW 安裝時抓取音樂列表失敗:", err);
-        CACHE_NAME = "music-cache-empty"; // 保底
-        return caches.open(CACHE_NAME);
+      .catch(() => {
+        // music.yml 获取失败，创建空缓存
+        return caches.open(AUDIO_CACHE_NAME);
       })
   );
+
+  // 預緩存靜態資源 (CSS/JS/圖片/首頁HTML)
+  event.waitUntil(
+    caches.open(STATIC_CACHE_NAME).then((cache) => {
+      return cache.addAll([
+        "/index.html",
+        "/about/index.html",
+        "/assets/css/style.css",
+        "/assets/js/main.js",
+        "/assets/images/blog-header.jpg",
+      ]);
+    })
+  );
+
   self.skipWaiting();
 });
 
-// ---------------------------
-// 激活 Service Worker
-// ---------------------------
+// ------------------ 激活 SW ------------------
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME)
+          .filter(
+            (key) => key !== AUDIO_CACHE_NAME && key !== STATIC_CACHE_NAME
+          )
           .map((key) => caches.delete(key))
       )
     )
@@ -57,36 +63,67 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// ---------------------------
-// 攔截 fetch 請求
-// ---------------------------
+// ------------------ 攔截 fetch ------------------
 self.addEventListener("fetch", (event) => {
-  const request = event.request;
+  const req = event.request;
+  const url = new URL(req.url);
 
-  // 只攔截音頻請求
-  if (request.destination === "audio") {
+  // 音頻文件 Cache-First
+  if (req.destination === "audio") {
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) return cachedResponse;
+      caches.match(req).then((cached) => {
+        if (cached) return cached;
 
-        return fetch(request)
-          .then((response) => {
-            if (!response || response.status !== 200) return response;
-
-            // 緩存新音樂，並控制 LRU
-            caches.open(CACHE_NAME).then(async (cache) => {
-              const keys = await cache.keys();
-              if (keys.length >= MAX_CACHE_ITEMS) {
-                // 刪除最舊的一個 (FIFO 近似 LRU)
-                cache.delete(keys[0]);
-              }
-              cache.put(request, response.clone());
+        return fetch(req).then((res) => {
+          if (res && res.status === 200) {
+            const resClone = res.clone();
+            caches.open(AUDIO_CACHE_NAME).then((cache) => {
+              cache.put(req, resClone).then(async () => {
+                // LRU 控制
+                const keys = await cache.keys();
+                if (keys.length > MAX_AUDIO_CACHE_ITEMS) {
+                  cache.delete(keys[0]);
+                }
+              });
             });
-
-            return response;
-          })
-          .catch(() => caches.match(request)); // 網絡失敗回退到緩存
+          }
+          return res;
+        }).catch(() => caches.match(req));
       })
     );
+    return;
+  }
+
+  // HTML Stale-While-Revalidate
+  if (req.destination === "document") {
+    event.respondWith(
+      caches.match(req).then((cached) => {
+        const networkFetch = fetch(req)
+          .then((res) => {
+            if (res && res.status === 200) {
+              caches.open(STATIC_CACHE_NAME).then((cache) => cache.put(req, res.clone()));
+            }
+            return res;
+          })
+          .catch(() => cached); // 网络失败时回退到缓存
+        return cached || networkFetch;
+      })
+    );
+    return;
+  }
+
+  // CSS/JS/图片长期缓存
+  if (["style", "script", "image"].includes(req.destination)) {
+    event.respondWith(
+      caches.match(req).then((cached) => {
+        return cached || fetch(req).then((res) => {
+          if (res && res.status === 200) {
+            caches.open(STATIC_CACHE_NAME).then((cache) => cache.put(req, res.clone()));
+          }
+          return res;
+        }).catch(() => cached);
+      })
+    );
+    return;
   }
 });
