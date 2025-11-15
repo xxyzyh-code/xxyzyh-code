@@ -1,23 +1,23 @@
 # data/music.yml
 - title: Alive in the summer time
   artist: AI
-  url: "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@4eb7774/example/Alive%20in%20the%20summer%20time.m4a"
+  url: "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/example/Alive%20in%20the%20summer%20time.m4a"
 
 - title: Breakbeat background
   artist: AI
-  url: "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@83b99da/example/Breakbeat%20background.m4a"
+  url: "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/example/Breakbeat%20background.m4a"
 
 - title: The best moments in life
   artist: AI
-  url: "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@937b7bc/example/The%20best%20moments%20in%20life.m4a"
+  url: "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/example/The%20best%20moments%20in%20life.m4a"
 
 - title: Time to travel
   artist: AI
-  url: "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@a40951a/example/Time%20to%20travel.m4a"
+  url: "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/example/Time%20to%20travel.m4a"
 
 - title: Elegance
   artist: AI
-  url: "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@c91a530/example/Elegance.m4a"
+  url: "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/example/Elegance.m4a"
 
 - title: The More I Know You, Jesus
   artist: ReavoWorship
