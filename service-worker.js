@@ -1,41 +1,49 @@
-// service-worker.js
-// 改進版：動態緩存 music.yml 中的所有音樂文件，支持跨域
+// service-worker.js - 最終生產版
 
+// ---------------------------
 // 簡單 hash 函數 (djb2)
+// ---------------------------
 function hashString(str) {
   let hash = 5381;
   for (let i = 0; i < str.length; i++) {
     hash = (hash * 33) ^ str.charCodeAt(i);
   }
-  return (hash >>> 0).toString(36); // base36 字串
+  return (hash >>> 0).toString(36); // 轉成 base36 字串
 }
 
+// ---------------------------
+// 配置
+// ---------------------------
 const MUSIC_YML = "/data/music.yml";
-let CACHE_NAME = "music-cache-temp"; // 安裝時自動更新
+let CACHE_NAME = "music-cache-temp"; // 會在安裝時自動改成 hash 版本
+const MAX_CACHE_ITEMS = 30; // LRU 限制：最多緩存 30 首音樂
 
-// 安裝 SW
+// ---------------------------
+// 安裝 Service Worker
+// ---------------------------
 self.addEventListener("install", (event) => {
   event.waitUntil(
     fetch(MUSIC_YML)
       .then((res) => res.text())
       .then((text) => {
-        // 提取所有音樂 URL
         const urls = [...text.matchAll(/url:\s*"([^"]+)"/g)].map((m) => m[1]);
-        // hash 生成版本號
-        CACHE_NAME = `music-cache-${hashString(urls.join("|"))}`;
-        // 緩存所有音樂
+        // 生成版本號（只依賴 URL 列表）
+        const versionHash = hashString(urls.join("|"));
+        CACHE_NAME = `music-cache-${versionHash}`;
         return caches.open(CACHE_NAME).then((cache) => cache.addAll(urls));
       })
       .catch((err) => {
-        console.error("SW 安裝時抓取 music.yml 失敗:", err);
-        CACHE_NAME = "music-cache-empty";
+        console.error("SW 安裝時抓取音樂列表失敗:", err);
+        CACHE_NAME = "music-cache-empty"; // 保底
         return caches.open(CACHE_NAME);
       })
   );
   self.skipWaiting();
 });
 
-// 激活 SW，刪除舊緩存
+// ---------------------------
+// 激活 Service Worker
+// ---------------------------
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -49,11 +57,13 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// 攔截 fetch 請求，自動緩存音樂
+// ---------------------------
+// 攔截 fetch 請求
+// ---------------------------
 self.addEventListener("fetch", (event) => {
   const request = event.request;
 
-  // 只處理音頻文件 (audio)
+  // 只攔截音頻請求
   if (request.destination === "audio") {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
@@ -61,19 +71,21 @@ self.addEventListener("fetch", (event) => {
 
         return fetch(request)
           .then((response) => {
-            // 檢查有效響應
-            if (!response || !response.ok) return response;
+            if (!response || response.status !== 200) return response;
 
-            // 緩存跨域音頻 (type: "cors" 也可以)
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, responseToCache));
+            // 緩存新音樂，並控制 LRU
+            caches.open(CACHE_NAME).then(async (cache) => {
+              const keys = await cache.keys();
+              if (keys.length >= MAX_CACHE_ITEMS) {
+                // 刪除最舊的一個 (FIFO 近似 LRU)
+                cache.delete(keys[0]);
+              }
+              cache.put(request, response.clone());
+            });
 
             return response;
           })
-          .catch(() => {
-            // 如果網絡失敗，返回緩存或空
-            return caches.match(request);
-          });
+          .catch(() => caches.match(request)); // 網絡失敗回退到緩存
       })
     );
   }
