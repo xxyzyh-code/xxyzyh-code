@@ -46,16 +46,17 @@
   document.addEventListener("DOMContentLoaded", function() {
     const footerContainer = document.getElementById('footer') || document.querySelector('.site-footer');
     if (footerContainer) {
-      // 创建占位 div
       const placeholder = document.createElement('div');
       placeholder.id = 'footer-placeholder';
-      placeholder.style.height = '80px';  // 调整高度
       placeholder.style.background = 'transparent';
 
-      // 将占位 div 插入 footerContainer 前
-      footerContainer.parentNode.insertBefore(placeholder, footerContainer);
+      // 根据屏幕高度计算占位高度
+      const screenHeight = window.innerHeight;
+      // 占位高度为屏幕高度的 10%，最小 50px，最大 120px
+      const height = Math.min(Math.max(screenHeight * 0.1, 50), 120);
+      placeholder.style.height = height + 'px';
 
-      // 移除原 footer
+      footerContainer.parentNode.insertBefore(placeholder, footerContainer);
       footerContainer.remove();
     }
   });
