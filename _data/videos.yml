@@ -1,0 +1,17 @@
+- id: intro_demo
+  sources:
+    - "https://cdn.jsdelivr.net/gh/xxyzyh-code/videos@main/intro.mp4"
+    - "https://cdn.statically.io/gh/xxyzyh-code/videos/main/intro.mp4"
+    - "https://raw.githubusercontent.com/xxyzyh-code/videos/main/intro.mp4"
+
+- id: worship_clip
+  sources:
+    - "https://cdn.jsdelivr.net/gh/xxyzyh-code/videos@main/worship.mp4"
+    - "https://cdn.statically.io/gh/xxyzyh-code/videos/main/worship.mp4"
+    - "https://raw.githubusercontent.com/xxyzyh-code/videos/main/worship.mp4"
+
+- id: new_video_id
+  sources:
+    - "jsDelivr 連結"
+    - "Statically 連結"
+    - "GitHub raw 連結"
