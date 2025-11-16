@@ -2,17 +2,25 @@
 # 主导航栏（显示在页面顶部）
 # ----------------------------------------
 main:
-  - title: "首页"
+  - title: "🏠 首页"
     url: /
-  - title: "关于我"
+  - title: "📚 學習中心" # 這將是可展開的頂級菜單
+    children:        # 👈 關鍵：使用 children 來定義子連結
+      - title: "📂 所有分類" # 第一個子連結
+        url: /categories/
+      - title: "📂 二級分類" # 第二個子連結
+        url: /subcategories/
+      - title: "🏷️ 所有標籤"    # 第二個子連結
+        url: /tags/
+      - title: "📅 歸檔"       # 第三個子連結
+        url: /archives/
+  - title: "娛樂中心"
+    children:
+      - title: "🎵靜態音樂站"
+        url: /music/
+      - title: "⏰數字時鐘"
+        url: /clock/    
+  - title: "關於我"
     url: /about/
-  - title: "联系我"
+  - title: "聯繫我"
     url: /contact/
-  - title: "标签"
-    url: /tags/
-  - title: "分类"
-    url: /categories/
-  - title: "二级分类"
-    url: /subcategories/
-  - title: "存档"
-    url: /archives/
