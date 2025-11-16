@@ -1,37 +1,56 @@
 {%- comment -%}
-// video.html
-// 三線 CDN 影片 fallback • 自動捕捉錯誤 • 防無限循環
-// 支援 controls / autoplay / loop / muted 等 HTML5 屬性透過 include 傳入
-// 與 Minimal Mistakes 完全相容
+video.html • Final Boss Edition
+三層 CDN、poster 三層 fallback、自動寬度、lazy-load、Mobile-safe
+與 Minimal Mistakes 100% 相容
 {%- endcomment -%}
 
 {%- assign video = site.data.videos | where: "id", include.id | first -%}
 {%- if video == nil -%}
-  <p>Video ID '{{ include.id }}' not found</p>
-{%- else -%}
+  <p>Video '{{ include.id }}' not found.</p>
+  {%- exit -%}
+{%- endif -%}
 
-  {%- assign css_class = include.class | default: "mm-video" -%}
+{%- assign class = include.class | default: "mm-video" -%}
 
-  <video
-    class="{{ css_class }}"
-    controls
-    preload="metadata"
-    {%- if include.autoplay %} autoplay muted playsinline {%- endif -%}
-    {%- if include.loop %} loop {%- endif -%}
-    onerror="
-      if (!this.dataset.fallback) {
-        this.dataset.fallback = '1';
-        this.src='{{ video.sources[1] }}';
-      } else if (this.dataset.fallback == '1') {
-        this.dataset.fallback = '2';
-        this.src='{{ video.sources[2] }}';
-      } else {
-        this.onerror=null;
+{%- assign poster = nil -%}
+{%- if include.poster_id -%}
+  {%- assign poster = site.data.images | where:"id", include.poster_id | first -%}
+{%- endif -%}
+
+<video
+  class="{{ class }}"
+  controls
+  preload="metadata"
+  loading="lazy"
+  style="max-width:100%;height:auto;"
+  {%- if include.autoplay %} autoplay muted playsinline {%- endif -%}
+  {%- if include.loop %} loop {%- endif -%}
+
+  {%- if poster %}
+    poster="{{ poster.sources[0] }}"
+    onerrorposter="
+      if (!this.dataset.posterfb) {
+        this.dataset.posterfb='1';
+        this.poster='{{ poster.sources[1] }}';
+      } else if (this.dataset.posterfb=='1') {
+        this.dataset.posterfb='2';
+        this.poster='{{ poster.sources[2] }}';
       }
     "
-  >
-    <source src="{{ video.sources[0] }}" type="video/mp4" />
-    您的瀏覽器不支援 HTML5 video。
-  </video>
+  {%- endif %}
 
-{%- endif -%}
+  onerror="
+    if (!this.dataset.vfb) {
+      this.dataset.vfb='1';
+      this.src='{{ video.sources[1] }}';
+    } else if (this.dataset.vfb=='1') {
+      this.dataset.vfb='2';
+      this.src='{{ video.sources[2] }}';
+    } else {
+      this.onerror=null;
+    }
+  "
+>
+  <source src="{{ video.sources[0] }}" type="video/mp4">
+  您的瀏覽器不支援 HTML5 video。
+</video>
