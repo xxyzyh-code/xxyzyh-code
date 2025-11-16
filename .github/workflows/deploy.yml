@@ -1,10 +1,9 @@
-# .github/workflows/deploy.yml
 name: Jekyll Build & Deploy to Netlify
 
 on:
   push:
     branches:
-      # 當推送到 main 分支時觸發此工作流程
+      # 当推送到 main 分支时触发此工作流程
       - main
 
 jobs:
@@ -12,35 +11,45 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    # 1. 檢查程式碼
+    # 1. 检出代码
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. 設定 Ruby 環境
+    # 2. 设置 Ruby 环境
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        # 修正：與您現有的 jekyll.yml 保持一致
         ruby-version: '3.2'
-        bundler-cache: true # 執行 bundle install
+        bundler-cache: true # 执行 bundle install
 
-    # 3. 安裝 Jekyll 依賴
-    - name: Install dependencies
+    # 3. 安装 Ruby 依赖
+    - name: Install Ruby dependencies
       run: |
         gem install bundler
         bundle install
 
-    # 4. 執行 Jekyll 建構 (核心：耗時操作在 GitHub 執行)
+    # 4. 设置 Node.js 环境
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'  # 使用 Node.js 16，或者你项目所需的版本
+
+    # 5. 安装 Node.js 依赖
+    - name: Install npm dependencies
+      run: |
+        npm install
+
+    # 6. 执行 Jekyll 构建 (核心：耗时操作在 GitHub 执行)
     - name: Build Jekyll site
       run: bundle exec jekyll build
 
-    # 5. 部署到 Netlify (使用預先建構的 _site 資料夾)
+    # 7. 部署到 Netlify (使用预先构建的 _site 目录)
     - name: Deploy to Netlify
       uses: netlify/actions/cli@master
       env:
-        # 使用 GitHub Secrets 中設定的值
+        # 使用 GitHub Secrets 中设置的值
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       with:
-        # 指定要部署的目錄，這是 Jekyll 建構輸出的 _site
+        # 指定要部署的目录，这是 Jekyll 构建输出的 _site
         args: deploy --prod --dir=_site --message="Deploy from GitHub Actions"
