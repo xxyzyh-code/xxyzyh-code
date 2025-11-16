@@ -1,5 +1,36 @@
-    // 圖像三線CDN穩定保存       
-{% assign img = site.data.images | where: "id", include.id | first %}
-<img src="{{ img.sources[0] }}" 
-     onerror="this.onerror=null;this.src='{{ img.sources[1] }}';this.onerror=function(){this.src='{{ img.sources[2] }}';}" 
-     alt="{{ include.alt | default: '' }}">
+{%- comment -%}
+cdn-image.html
+  // 三線 CDN • lazy loading • async decoding • SEO alt/title • class 支援
+  // 支援三層 fallback，加防止無限循環
+{%- endcomment -%}
+
+{%- assign img = site.data.images | where: "id", include.id | first -%}
+{%- if img == nil -%}
+  <!-- 圖片 ID 找不到：顯示提示 -->
+  <img src="" alt="Image ID '{{ include.id }}' not found">
+{%- else -%}
+
+  {%- assign alt_text = include.alt | default: img.alt | default: img.id -%}
+  {%- assign css_class = include.class | default: "mm-image" -%}
+
+  <img
+    src="{{ img.sources[0] }}"
+    alt="{{ alt_text }}"
+    title="{{ alt_text }}"
+    class="{{ css_class }}"
+    loading="lazy"
+    decoding="async"
+    fetchpriority="low"
+    onerror="
+      if (!this.dataset.fallback) {
+        this.dataset.fallback = '1';
+        this.src='{{ img.sources[1] }}';
+      } else if (this.dataset.fallback == '1') {
+        this.dataset.fallback = '2';
+        this.src='{{ img.sources[2] }}';
+      } else {
+        this.onerror=null;
+      }
+    "
+  />
+{%- endif -%}
