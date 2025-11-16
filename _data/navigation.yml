@@ -4,10 +4,10 @@
 main:
   - title: "🏠 首页"
     url: /
-  
-  # 🌟 修復 1：為學習中心添加 URL 🌟
+    
+  # 🌟 設置為主連結，但移除 URL，確保點擊時不會跳轉 🌟
   - title: "📚 學習中心" 
-    url: /archives/    # 👈 建議指向所有文章歸檔頁面
+    # url: /archives/  <-- 刪除此行
     children:
       - title: "📂 所有分類" 
         url: /categories/
@@ -17,17 +17,23 @@ main:
         url: /tags/
       - title: "📅 歸檔"
         url: /archives/
-
-  # 🌟 修復 2：為娛樂中心添加 URL 🌟
-  - title: "🔮娛樂中心"
-    url: /music/       # 👈 建議指向綜合娛樂頁面（例如靜態音樂站）
+        
+  # 🌟 設置為主連結，但移除 URL，確保點擊時不會跳轉 🌟
+  - title: "娛樂中心"
+    # url: /music/  <-- 刪除此行
     children:
-      - title: "🎵靜態音樂站"
+      - title: "靜態音樂站"
         url: /music/
-      - title: "⏰數字時鐘"
+      - title: "數字時鐘"
         url: /clock/
         
-  - title: "關於我"
+  # 增加額外的單層連結，確保導航被收攏
+  - title: "🏷️ 標籤列表"
+    url: /tags/
+  - title: "📅 文章歸檔"
+    url: /archives/
+        
+  - title: "🙋 關於我"
     url: /about/
   - title: "聯繫我"
     url: /contact/
