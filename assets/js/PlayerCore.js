@@ -11,6 +11,10 @@ import {
     totalListenMinutes, totalListenSeconds
 } from './StateAndUtils.js';
 
+// 🌟 新增：導入 LRC 模組 🌟
+import { fetchLRC, parseLRC } from './LrcParser.js'; 
+// 🌟 導入結束 🌟
+
 // 🌟 修正步驟 1：添加一個全局標記，確保事件監聽器只綁定一次
 let hasInitializedListeners = false;
 
@@ -148,6 +152,86 @@ const playingItem = DOM_ELEMENTS.playlistUl.querySelector(`li[data-original-inde
         }
     }
 }
+
+// --- 歌詞渲染與同步輔助函數 ---
+
+function renderLyrics() {
+    const { currentLRC } = getState();
+    const contentDiv = DOM_ELEMENTS.lyricsContent;
+    
+    contentDiv.innerHTML = ''; // 清空舊歌詞
+    
+    if (!currentLRC || currentLRC.length === 0) {
+        contentDiv.innerHTML = '<p id="lyrics-placeholder">沒有找到歌詞。</p>';
+        return;
+    }
+
+    // 渲染所有歌詞行
+    const fragment = document.createDocumentFragment();
+    currentLRC.forEach((lyric, index) => {
+        const p = document.createElement('p');
+        p.textContent = lyric.text;
+        p.setAttribute('data-index', index); // 使用 index 作為唯一標識
+        fragment.appendChild(p);
+    });
+    contentDiv.appendChild(fragment);
+}
+
+
+function syncLyrics() {
+    const { currentLRC, currentLyricIndex } = getState();
+    const currentTime = DOM_ELEMENTS.audio.currentTime || 0;
+    
+    if (!currentLRC || currentLRC.length === 0) return;
+
+    let nextIndex = currentLyricIndex;
+
+    // 優化：從當前索引（或前一行）開始查找，而不是從頭開始
+    const startIndex = Math.max(0, currentLyricIndex); 
+
+    for (let i = startIndex; i < currentLRC.length; i++) {
+        // 如果當前時間大於或等於歌詞的時間戳
+        if (currentLRC[i].time <= currentTime) {
+            nextIndex = i;
+        } else {
+            // 由於歌詞已排序，一旦超過當前時間，就可以停止查找
+            break;
+        }
+    }
+    
+    // 檢查是否需要更新高亮
+    if (nextIndex !== currentLyricIndex) {
+        setState({ currentLyricIndex: nextIndex });
+        
+        // 移除舊高亮
+        const oldLine = DOM_ELEMENTS.lyricsContent.querySelector(`p.current-line`);
+        if (oldLine) {
+            oldLine.classList.remove('current-line');
+        }
+
+        // 添加新高亮
+        const newLine = DOM_ELEMENTS.lyricsContent.querySelector(`p[data-index="${nextIndex}"]`);
+        
+        if (newLine) {
+            newLine.classList.add('current-line');
+            
+            // 滾動歌詞容器
+            const container = DOM_ELEMENTS.lyricsContainer;
+            const content = DOM_ELEMENTS.lyricsContent;
+            
+            // 核心滾動邏輯：讓高亮行居中
+            const offsetTop = newLine.offsetTop - content.offsetTop;
+            const targetScrollTop = offsetTop - (container.clientHeight / 2) + (newLine.clientHeight / 2);
+            
+            container.scrollTo({
+                top: targetScrollTop,
+                behavior: 'smooth' 
+            });
+        }
+    }
+}
+// --- 歌詞輔助函數結束 ---
+
 
 function getSystemThemeBasedOnTime() {
     const hour = new Date().getHours();
@@ -353,6 +437,22 @@ export function playTrack(index) {
              console.error(`歌曲 ${track.title} 缺少 sources 陣列!`);
              DOM_ELEMENTS.audio.src = ''; 
         }
+                        // 🌟 新增：歌詞載入與解析邏輯 🌟
+        if (track.lrcPath) {
+            fetchLRC(track.lrcPath).then(lrcText => {
+                const parsedLRC = parseLRC(lrcText);
+                setState({ 
+                    currentLRC: parsedLRC, 
+                    currentLyricIndex: -1 // 重置索引
+                });
+                renderLyrics();
+            });
+        } else {
+             // 如果沒有 lrcPath 或載入失敗，清空歌詞區域
+             setState({ currentLRC: null, currentLyricIndex: -1 });
+             renderLyrics(); 
+        }
+        // 🌟 新增結束 🌟
         DOM_ELEMENTS.audio.load();
 
         DOM_ELEMENTS.playerTitle.textContent = `正在播放：${track.title}`;
@@ -777,11 +877,19 @@ function handlePlay() {
         scoreTimerIntervalId = setInterval(window.updateMusicScore || (() => console.warn('updateMusicScore not defined')), 1000); 
         setState({ scoreTimerIntervalId }); 
     }
+
+    // 🌟 新增：啟動歌詞同步計時器 🌟
+    if (lyricsIntervalId === null) {
+        lyricsIntervalId = setInterval(syncLyrics, 100); // 100ms 頻率確保同步平滑
+        setState({ lyricsIntervalId });
+    }
+    // 🌟 新增結束 🌟
     
     if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
         const currentSongId = currentPlaylist[currentTrackIndex].id; 
         trackPlayToDatabase(currentSongId); 
     }
+
     
     saveSettings(); 
 }
@@ -798,6 +906,13 @@ function handlePause() {
         clearInterval(scoreTimerIntervalId);
         setState({ scoreTimerIntervalId: null });
     }
+
+    // 🌟 新增：停止歌詞同步計時器 🌟
+    if (lyricsIntervalId !== null) {
+        clearInterval(lyricsIntervalId);
+        setState({ lyricsIntervalId: null });
+    }
+    // 🌟 新增結束 🌟
     
     saveSettings();
 }
