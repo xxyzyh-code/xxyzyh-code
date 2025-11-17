@@ -558,16 +558,16 @@ function filterPlaylist() {
     const searchText = DOM_ELEMENTS.playlistSearchInput.value.toLowerCase().trim(); 
     
     if (searchText.length > 0) {
-        // --- 篩選邏輯 (保持原樣) ---
+        // --- 篩選邏輯 ---
         let newPlaylist = MASTER_TRACK_LIST.filter(track => { 
             const itemText = (track.title + ' ' + track.artist).toLowerCase(); 
             return itemText.includes(searchText);
         });
 
+        // 1. 更新狀態
         setState({ currentPlaylist: newPlaylist });
 
-        // 🚨 這是原代碼中的邏輯，我將其替換為調用 handlePause 以保持一致性
-        handlePause(); // 清除 listenIntervalId 和 scoreTimerIntervalId (原代碼中只有 listenIntervalId)
+        handlePause(); // 清除計時器
 
         if (newPlaylist.length === 0) {
             DOM_ELEMENTS.playerTitle.textContent = `未找到與 "${searchText}" 相關的歌曲。`;
@@ -579,56 +579,41 @@ function filterPlaylist() {
              setState({ currentTrackIndex: 0 }); 
              DOM_ELEMENTS.audio.pause(); 
         }
+
+        // 🚨 修正：篩選完成後，必須重新渲染播放列表 UI
+        renderPlaylist(); // <--- 新增這行
+
     } else {
-        // --- 退出篩選邏輯 (修正高光亂跳的問題) ---
+        // --- 退出篩選邏輯 (保持您上次修正的、健壯的邏輯) ---
         
-        // 1. 儲存當前正在播放歌曲的唯一標識 (OriginalIndex)
         let { currentTrackIndex, currentPlaylist } = getState();
         const currentlyPlayingOriginalIndex = currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length
             ? currentPlaylist[currentTrackIndex].originalIndex 
             : -1; 
 
-        // 2. 清除計時器 (與 if 塊保持一致)
-        handlePause(); // 清除 listenIntervalId 和 scoreTimerIntervalId
-        
-        // 3. 重設列表
+        handlePause(); 
         resetCurrentPlaylist(); 
         DOM_ELEMENTS.playerTitle.textContent = "我的音樂播放器";
         
-        // 4. 執行排序。此時 currentPlaylist 已經是 MASTER_TRACK_LIST。
-        //    sortPlaylistByPlayCount 會排序列表，並根據 currentlyPlayingOriginalIndex 找到新索引並更新狀態。
-        // 🚨 原始代碼中，sortPlaylistByPlayCount 會使用它自己讀取到的狀態來更新索引，
-        //    但因為我們在篩選模式下更改了列表，索引可能會丟失。
-        //    我們必須讓 sortPlaylistByPlayCount 使用我們已經準備好的 originalIndex。
-
-        // 執行排序
-        sortPlaylistByPlayCount(); 
+        sortPlaylistByPlayCount(); // 排序並在內部調用 renderPlaylist()
         
-        // 5. 手動修正索引 (使用步驟 1 儲存的 originalIndex)
-        //    由於 sortPlaylistByPlayCount 內部已包含索引修復邏輯，我們只需確保它拿到正確的原始索引。
-        //    如果步驟 1 獲取的 originalIndex 是來自篩選列表的歌曲，那麼 sortPlaylistByPlayCount 應該能找到它在主列表中的位置。
-        //    我們重新獲取排序後的狀態
+        // 手動修正索引 (使用步驟 1 儲存的 originalIndex)
         ({ currentTrackIndex, currentPlaylist } = getState()); 
         
         if (currentlyPlayingOriginalIndex !== -1) {
-            // 如果清空前正在播放，且歌曲確實存在於新列表（這幾乎是肯定的，因為 MASTER_TRACK_LIST 包含了所有歌曲）
-            // 重新尋找該歌曲在新排序列表中的位置，以防 sortPlaylistByPlayCount 內部邏輯被意外跳過或誤判
             const newIndex = currentPlaylist.findIndex(track => track.originalIndex === currentlyPlayingOriginalIndex);
             
             if (newIndex !== -1) {
                 setState({ currentTrackIndex: newIndex });
             } else {
-                setState({ currentTrackIndex: 0 }); // 找不到就設為第一首
+                setState({ currentTrackIndex: 0 });
             }
         } else if (currentTrackIndex === -1 || currentTrackIndex >= currentPlaylist.length) {
-            // 如果之前沒有正在播放的歌曲，確保索引在列表範圍內 (設為 0)
             setState({ currentTrackIndex: 0 }); 
         }
         
-        // 6. 保持原邏輯：暫停播放
         DOM_ELEMENTS.audio.pause(); 
-
-        // renderPlaylist() 在 sortPlaylistByPlayCount() 中被調用，將更新高光。
+        // 無需在這裡重複 renderPlaylist()，因為它已經在 sortPlaylistByPlayCount 內部調用。
     }
 }
 
