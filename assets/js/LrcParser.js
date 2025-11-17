@@ -14,13 +14,26 @@ export function parseLRC(lrcText) {
     const lines = lrcText.split('\n');
     const parsedLyrics = [];
 
-    // 正則表達式用於匹配時間戳，如 [00:12.34] 或 [00:12.345]
-    const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/g; 
+    // 1. 用於 *匹配並提取* 時間戳的正則表達式
+    const timeMatchRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/g;
     
+    // 2. 用於 *清除* 所有時間戳的正則表達式
+    const timeCleanRegex = /\[\d{2}:\d{2}\.\d{2,3}\]/g;
+
     lines.forEach(line => {
+        // 重置匹配的正則表達式（因為 'g' 標誌會記住 lastIndex）
+        timeMatchRegex.lastIndex = 0; 
+        
         let match;
-        // 迭代一行中的所有時間戳（處理一行多個時間戳的情況）
-        while ((match = timeRegex.exec(line)) !== null) {
+        
+        // 3. 先清理文本：獲取該行純淨的歌詞
+        const text = line.replace(timeCleanRegex, '').trim();
+
+        // 4. 如果這行沒有歌詞（例如只有標籤或空白），則跳過
+        if (!text) return; 
+
+        // 5. 迭代該行的所有時間戳
+        while ((match = timeMatchRegex.exec(line)) !== null) {
             const minutes = parseInt(match[1]);
             const seconds = parseInt(match[2]);
             // 處理毫秒：兩位數補零 (如 12 -> 120)，三位數直接用
@@ -29,19 +42,14 @@ export function parseLRC(lrcText) {
             // 計算總時間（秒）
             const timeInSeconds = minutes * 60 + seconds + milliseconds / 1000;
             
-            // 提取歌詞文本 (移除所有時間戳)
-            const text = line.replace(timeRegex, '').trim();
-            
-            if (text) {
-                parsedLyrics.push({
-                    time: timeInSeconds,
-                    text: text
-                });
-            }
+            parsedLyrics.push({
+                time: timeInSeconds,
+                text: text // 使用已清理的文本
+            });
         }
     });
 
-    // 確保歌詞按時間順序播放，這對同步至關重要
+    // 6. 確保歌詞按時間順序播放，這對同步至關重要
     parsedLyrics.sort((a, b) => a.time - b.time);
     
     return parsedLyrics;
