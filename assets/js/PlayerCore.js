@@ -581,57 +581,82 @@ function filterPlaylist() {
             const itemText = (track.title + ' ' + track.artist).toLowerCase(); 
             return itemText.includes(searchText);
         });
+// 1. 儲存舊的播放歌曲的 originalIndex
+let { currentTrackIndex, currentPlaylist } = getState();
+const playingOriginalIndex = currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length
+    ? currentPlaylist[currentTrackIndex].originalIndex 
+    : -1; 
+    
+// 2. 更新狀態為新列表
+setState({ currentPlaylist: newPlaylist });
 
-        // 1. 更新狀態
-        setState({ currentPlaylist: newPlaylist });
+handlePause(); // 清除計時器
+DOM_ELEMENTS.audio.pause(); // 確保暫停
 
-        handlePause(); // 清除計時器
+if (newPlaylist.length === 0) {
+    DOM_ELEMENTS.playerTitle.textContent = `未找到與 "${searchText}" 相關的歌曲。`;
+    setState({ currentTrackIndex: -1 });
+    
+} else {
+    // 3. 檢查正在播放的歌曲是否在新列表內
+    let newIndex = -1;
+    if (playingOriginalIndex !== -1) {
+        newIndex = newPlaylist.findIndex(track => track.originalIndex === playingOriginalIndex);
+    }
 
-        if (newPlaylist.length === 0) {
-            DOM_ELEMENTS.playerTitle.textContent = `未找到與 "${searchText}" 相關的歌曲。`;
-            DOM_ELEMENTS.audio.pause(); 
-            setState({ currentTrackIndex: -1 });
-            
-        } else {
-             DOM_ELEMENTS.playerTitle.textContent = `已根據篩選建立新歌單 (${newPlaylist.length} 首)。請點擊播放。`;
-             setState({ currentTrackIndex: 0 }); 
-             DOM_ELEMENTS.audio.pause(); 
-        }
+    if (newIndex !== -1) {
+        // A. 如果正在播放的歌曲還在列表中，高光它
+        setState({ currentTrackIndex: newIndex });
+        DOM_ELEMENTS.playerTitle.textContent = `篩選結果 (${newPlaylist.length} 首)。`;
+    } else {
+        // B. 如果不在列表中，將索引設為 0
+        setState({ currentTrackIndex: 0 }); 
+        DOM_ELEMENTS.playerTitle.textContent = `已根據篩選建立新歌單 (${newPlaylist.length} 首)。請點擊播放。`;
+    }
+}
+
 
         // 🚨 修正：篩選完成後，必須重新渲染播放列表 UI
         renderPlaylist(); // <--- 新增這行
 
     } else {
-        // --- 退出篩選邏輯 (保持您上次修正的、健壯的邏輯) ---
-        
-        let { currentTrackIndex, currentPlaylist } = getState();
-        const currentlyPlayingOriginalIndex = currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length
-            ? currentPlaylist[currentTrackIndex].originalIndex 
-            : -1; 
 
-        handlePause(); 
-        resetCurrentPlaylist(); 
-        DOM_ELEMENTS.playerTitle.textContent = "我的音樂播放器";
-        
-        sortPlaylistByPlayCount(); // 排序並在內部調用 renderPlaylist()
-        
-        // 手動修正索引 (使用步驟 1 儲存的 originalIndex)
-        ({ currentTrackIndex, currentPlaylist } = getState()); 
-        
-        if (currentlyPlayingOriginalIndex !== -1) {
-            const newIndex = currentPlaylist.findIndex(track => track.originalIndex === currentlyPlayingOriginalIndex);
-            
-            if (newIndex !== -1) {
-                setState({ currentTrackIndex: newIndex });
-            } else {
-                setState({ currentTrackIndex: 0 });
-            }
-        } else if (currentTrackIndex === -1 || currentTrackIndex >= currentPlaylist.length) {
-            setState({ currentTrackIndex: 0 }); 
-        }
-        
-        DOM_ELEMENTS.audio.pause(); 
-        // 無需在這裡重複 renderPlaylist()，因為它已經在 sortPlaylistByPlayCount 內部調用。
+// --- 退出篩選邏輯 ---
+
+let { currentTrackIndex, currentPlaylist } = getState();
+// 🌟 修正：退出篩選時，我們應該找回上次播放的歌曲的 originalIndex，而不是當前篩選列表的索引。
+// 由於我們在進入篩選時已經更新了 currentTrackIndex，這裡的邏輯是正確的：
+const currentlyPlayingOriginalIndex = currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length
+    ? currentPlaylist[currentTrackIndex].originalIndex 
+    : -1; 
+    
+// 保持這段邏輯不變，因為在步驟 1 我們已經確保了 currentlyPlayingOriginalIndex 指向的是用戶最後一次點擊的歌曲。
+
+handlePause(); 
+resetCurrentPlaylist(); 
+DOM_ELEMENTS.playerTitle.textContent = "我的音樂播放器";
+
+sortPlaylistByPlayCount(); // 排序並在內部調用 renderPlaylist()
+
+// 手動修正索引 (重新獲取狀態，因為 sortPlaylistByPlayCount 可能會改變它)
+({ currentTrackIndex, currentPlaylist } = getState()); 
+
+if (currentlyPlayingOriginalIndex !== -1) {
+    // 根據上次播放的 originalIndex 找到它在恢復後的總歌單中的新位置
+    const newIndex = currentPlaylist.findIndex(track => track.originalIndex === currentlyPlayingOriginalIndex);
+    
+    if (newIndex !== -1) {
+        setState({ currentTrackIndex: newIndex });
+    } else {
+        // 這不應該發生，但作為防護
+        setState({ currentTrackIndex: 0 }); 
+    }
+} else if (currentTrackIndex === -1 || currentTrackIndex >= currentPlaylist.length) {
+    setState({ currentTrackIndex: 0 }); 
+}
+
+DOM_ELEMENTS.audio.pause(); 
+// renderPlaylist() 會在 sortPlaylistByPlayCount() 內部被調用，並帶有 setTimeout(0) 修正。
     }
 }
 
