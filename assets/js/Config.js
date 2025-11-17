@@ -43,7 +43,11 @@ const DOM_ELEMENTS = {
     themeMenu: document.getElementById('theme-menu'),
     currentThemeName: document.getElementById('current-theme-name'),
     themeOptions: document.querySelectorAll('#theme-menu .theme-option'),
-    playlistUl: document.getElementById('playlist')
+    playlistUl: document.getElementById('playlist'),
+        // 🌟 新增：歌詞相關 DOM 元素 🌟
+    lyricsContainer: document.getElementById('lyrics-container'),
+    lyricsContent: document.getElementById('lyrics-content'),
+    lyricsPlaceholder: document.getElementById('lyrics-placeholder')
 };
 
 const STORAGE_KEYS = {
