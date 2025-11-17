@@ -17,8 +17,9 @@ export function parseLRC(lrcText) {
     // 1. 用於 *匹配並提取* 時間戳的正則表達式
     const timeMatchRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/g;
     
-    // 2. 用於 *清除* 所有時間戳的正則表達式
-    const timeCleanRegex = /\[\d{2}:\d{2}\.\d{2,3}\]/g;
+    // 2. 用於 *清除所有方括號內容* 的正則表達式
+    //    這將移除時間戳、[music]、[singing]、[ti:]、[ar:] 等所有標籤
+    const allTagCleanRegex = /\[[^\]]+\]/g; 
 
     lines.forEach(line => {
         // 重置匹配的正則表達式（因為 'g' 標誌會記住 lastIndex）
@@ -26,11 +27,15 @@ export function parseLRC(lrcText) {
         
         let match;
         
-        // 3. 先清理文本：獲取該行純淨的歌詞
-        const text = line.replace(timeCleanRegex, '').trim();
+        // 3. 核心修正：先清除所有方括號標籤，再清理行首的特殊符號 (如 >>)
+        // 使用 allTagCleanRegex 替換 timeCleanRegex
+        const cleanTextWithNonTimeTags = line.replace(allTagCleanRegex, '').trim();
+        
+        // 額外清理行首的非標準符號 (如 >>)
+        const text = cleanTextWithNonTimeTags.replace(/^>>\s*/, '').trim();
 
         // 4. 如果這行沒有歌詞（例如只有標籤或空白），則跳過
-        if (!text) return; 
+        if (text.length === 0) return; // 使用 length === 0 更嚴謹
 
         // 5. 迭代該行的所有時間戳
         while ((match = timeMatchRegex.exec(line)) !== null) {
