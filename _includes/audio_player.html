@@ -47,7 +47,7 @@
             </div>
             
             <div id="sleep-timer-area" style="position: relative;">
-                <button id="timer-toggle-btn" onclick="toggleTimerMenu()" style="cursor: pointer;">
+                <button id="timer-toggle-btn" style="cursor: pointer;"> 
                     定時 (未設定)
                 </button>
                 
@@ -75,7 +75,6 @@
 
 <script>
     // ⭐️ Liquid 數據層：將數據注入到全局變量供模組使用
-    // 這是唯一保留在 HTML 中的非模組 JS。
     window.PLAYER_GLOBAL_DATA = {
         trackDataArray: {{ site.data.music | jsonify }}
     };
