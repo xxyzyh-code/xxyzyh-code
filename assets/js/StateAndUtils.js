@@ -21,6 +21,12 @@ let listenIntervalId = null;
 let scoreTimerIntervalId = null; 
 let scoreAccumulatorSeconds = 0; 
 
+// 🌟 新增：歌詞同步狀態 🌟
+let currentLRC = null;         // 儲存解析後的歌詞陣列
+let lyricsIntervalId = null;   // 歌詞同步的 setInterval ID
+let currentLyricIndex = -1;    // 當前高亮的歌詞行索引
+// 🌟 新增結束 🌟
+
 // --- 實用工具函數 ---
 
 export function debounce(func, delay) {
@@ -138,7 +144,11 @@ export function loadSavedSettings() {
 export const getState = () => ({
     currentPlaylist, currentTrackIndex, playMode, dataMode, 
     trackPlayCounts, globalTrackPlayCounts, sleepTimerId, endTime, countdownIntervalId,
-    listenIntervalId, scoreTimerIntervalId, scoreAccumulatorSeconds
+    listenIntervalId, scoreTimerIntervalId, scoreAccumulatorSeconds,
+        // 🌟 導出新增狀態 🌟
+    currentLRC, lyricsIntervalId, currentLyricIndex
+});
+
 });
 
 export const setState = (newState) => {
@@ -155,6 +165,12 @@ export const setState = (newState) => {
     if (newState.listenIntervalId !== undefined) listenIntervalId = newState.listenIntervalId;
     if (newState.scoreTimerIntervalId !== undefined) scoreTimerIntervalId = newState.scoreTimerIntervalId;
     if (newState.scoreAccumulatorSeconds !== undefined) scoreAccumulatorSeconds = newState.scoreAccumulatorSeconds;
+        // 🌟 設置新增狀態 🌟
+    if (newState.currentLRC !== undefined) currentLRC = newState.currentLRC;
+    if (newState.lyricsIntervalId !== undefined) lyricsIntervalId = newState.lyricsIntervalId;
+    if (newState.currentLyricIndex !== undefined) currentLyricIndex = newState.currentLyricIndex;
+};
+
 };
 
 // 導出重置歌單
