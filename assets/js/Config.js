@@ -23,7 +23,9 @@ const MASTER_TRACK_LIST = (function() {
         title: track.title,
         artist: track.artist,
         sources: track.sources, 
-        originalIndex: index 
+        originalIndex: index,
+        lrcPath: track.lrcPath || null 
+
     }));
 })(); 
 
