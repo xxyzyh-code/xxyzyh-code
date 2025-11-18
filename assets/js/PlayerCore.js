@@ -491,57 +491,41 @@ if (track.lrcPath) {
 
 
 export function playNextTrack() {
-    const { currentPlaylist, currentTrackIndex, playMode } = getState();
+    const { currentPlaylist, currentTrackIndex } = getState();
     if (currentPlaylist.length === 0) return;
     
     let nextIndex;
     
-    if (playMode === 1) { 
-        nextIndex = currentTrackIndex; 
-    } else if (playMode === 2) { 
-        nextIndex = getNextRandomIndex();
+    // ⭐️ 修正：不再檢查 playMode。手動切歌總是使用順序循環邏輯 ⭐️
+    
+    // 如果不是最後一首歌，則播放下一首
+    if (currentTrackIndex < currentPlaylist.length - 1) {
+        nextIndex = currentTrackIndex + 1;
     } else { 
-        if (currentTrackIndex < currentPlaylist.length - 1) {
-            nextIndex = currentTrackIndex + 1;
-        } else if (playMode === 4) { 
-            nextIndex = 0; 
-        } else { 
-            DOM_ELEMENTS.audio.pause();
-            DOM_ELEMENTS.playerTitle.textContent = "已到達列表末尾。";
-            setState({ currentTrackIndex: currentPlaylist.length }); 
-            updatePlaylistHighlight();
-            window.location.hash = '';
-            return;
-        }
+        // 已經到達列表末尾，循環到第一首
+        nextIndex = 0; 
     }
+    
     playTrack(nextIndex);
 }
 
 
 export function playPreviousTrack() {
-    const { currentPlaylist, currentTrackIndex, playMode } = getState();
+    const { currentPlaylist, currentTrackIndex } = getState();
     if (currentPlaylist.length === 0) return;
     
     let prevIndex;
     
-    if (playMode === 1) { 
-        prevIndex = currentTrackIndex; 
-    } else if (playMode === 2) { 
-        prevIndex = getNextRandomIndex();
+    // ⭐️ 修正：不再檢查 playMode。手動切歌總是使用順序循環邏輯 ⭐️
+    
+    // 如果不是第一首歌，則播放上一首
+    if (currentTrackIndex > 0) {
+        prevIndex = currentTrackIndex - 1;
     } else { 
-        if (currentTrackIndex > 0) {
-            prevIndex = currentTrackIndex - 1;
-        } else if (playMode === 4) { 
-            prevIndex = currentPlaylist.length - 1; 
-        } else { 
-            DOM_ELEMENTS.audio.pause();
-            DOM_ELEMENTS.playerTitle.textContent = "已到達列表開頭。";
-            setState({ currentTrackIndex: -1 });
-            updatePlaylistHighlight();
-            window.location.hash = '';
-            return;
-        }
+        // 已經到達列表開頭，循環到最後一首
+        prevIndex = currentPlaylist.length - 1; 
     }
+    
     playTrack(prevIndex);
 }
 
