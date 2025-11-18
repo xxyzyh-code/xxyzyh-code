@@ -338,7 +338,8 @@ span[onclick]:focus, span[onclick]:active {
     opacity: 1.0; 
     
     /* 使用正在播放的文字顏色作為強調色，確保主題兼容 */
-    color: var(--playing-text); 
+    /* ⭐️ 修正：改用獨立的高亮文字顏色變量 ⭐️ */
+    color: var(--lyric-highlight-text); 
     font-size: 1.1em;
     font-weight: bold;
 }
