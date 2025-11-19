@@ -112,4 +112,11 @@
     - "https://cdn.statically.io/gh/xxyzyh-code/music/main/Thank%20You%20Lord.mp3"
     - "https://raw.githubusercontent.com/xxyzyh-code/music/main/Thank%20You%20Lord.mp3"
   lrcPath: "https://cdn.jsdelivr.net/gh/xxyzyh-code/xxyzyh-code.github.io@main/assets/lyrics/Thank%20You%20Lord.lrc"
-
+  
+- title: Lord,Im Not Okay,But Im Still Here
+  artist: ThroughMe
+  sources:
+    - "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/linoh.mp3"
+    - "https://cdn.statically.io/gh/xxyzyh-code/music/main/linoh.mp3"
+    - "https://raw.githubusercontent.com/xxyzyh-code/music/main/linoh.mp3"
+  lrcPath: "https://cdn.jsdelivr.net/gh/xxyzyh-code/lyrics@main/linoh.lrc"
