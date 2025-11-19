@@ -103,7 +103,7 @@
     - "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/The%20First%20Sin%20And%20Endless%20Love.mp3"
     - "https://cdn.statically.io/gh/xxyzyh-code/music/main/The%20First%20Sin%20And%20Endless%20Love.mp3"
     - "https://raw.githubusercontent.com/xxyzyh-code/music/main/The%20First%20Sin%20And%20Endless%20Love.mp3"
-  lrcPath: "https://cdn.jsdelivr.net/gh/xxyzyh-code/xxyzyh-code.github.io@main/assets/lyrics/The%20First%20Sin%20And%20Endless%20Love.lrc"
+  lrcPath: "https://cdn.jsdelivr.net/gh/xxyzyh-code/lyrics@main/tfsael.lrc"
   
 - title: Thank You Lord
   artist: CryToLordJesus
@@ -111,7 +111,7 @@
     - "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/Thank%20You%20Lord.mp3"
     - "https://cdn.statically.io/gh/xxyzyh-code/music/main/Thank%20You%20Lord.mp3"
     - "https://raw.githubusercontent.com/xxyzyh-code/music/main/Thank%20You%20Lord.mp3"
-  lrcPath: "https://cdn.jsdelivr.net/gh/xxyzyh-code/xxyzyh-code.github.io@main/assets/lyrics/Thank%20You%20Lord.lrc"
+  lrcPath: "https://cdn.jsdelivr.net/gh/xxyzyh-code/lyrics@main/tyl.lrc"
   
 - title: Lord,Im Not Okay,But Im Still Here
   artist: ThroughMe
@@ -120,3 +120,12 @@
     - "https://cdn.statically.io/gh/xxyzyh-code/music/main/linoh.mp3"
     - "https://raw.githubusercontent.com/xxyzyh-code/music/main/linoh.mp3"
   lrcPath: "https://cdn.jsdelivr.net/gh/xxyzyh-code/lyrics@main/linoh.lrc"
+
+- title: Jesus I Need You
+  artist: Be Still Studios
+  sources:
+    - "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/jiny.mp3"
+    - "https://cdn.statically.io/gh/xxyzyh-code/music/main/jiny.mp3"
+    - "https://raw.githubusercontent.com/xxyzyh-code/music/main/jiny.mp3"
+  lrcPath: "https://cdn.jsdelivr.net/gh/xxyzyh-code/lyrics@main/jiny.lrc"
+  
