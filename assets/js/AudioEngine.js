@@ -1,6 +1,7 @@
 // AudioEngine.js
 // 核心音頻播放引擎：專職負責 CDN 備援、錯誤處理和防範競態條件（Race Condition）
 
+let currentErrorHandler = null; // 追蹤當前活躍的錯誤處理器
 import { getState, setState } from './StateAndUtils.js';
 import { DOM_ELEMENTS, STORAGE_KEYS } from './Config.js';
 
@@ -62,6 +63,11 @@ export function playAudioWithFallback(track) {
     const audio = DOM_ELEMENTS.audio;
     const sources = track.sources;
     
+    // 🌟 1. 關鍵修正：如果存在舊的處理器，先強制移除它
+    if (currentErrorHandler) {
+        audio.removeEventListener('error', currentErrorHandler);
+    }
+    
     // 🌟 1. 創建並設置新的 Session Token
     const sessionToken = Date.now().toString(36) + Math.random().toString(36).substring(2);
     setState({ currentPlaybackSession: sessionToken });
@@ -70,10 +76,11 @@ export function playAudioWithFallback(track) {
     
     // 🌟 2. 定義具名的錯誤處理器 (必須具名，以便移除舊的)
     const handleError = (e) => {
+        
         // 核心檢查：Token 不匹配，立即中止，並移除自己
         if (getState().currentPlaybackSession !== sessionToken) {
             console.warn(`[CDN Fallback]: 舊的錯誤事件觸發，Session Token 不匹配，終止後援。`);
-            audio.removeEventListener('error', handleError); // 移除自己
+            // 不再需要移除自己，因為我們會在 tryNextSource 或外部移除
             return; 
         }
         
@@ -87,22 +94,29 @@ export function playAudioWithFallback(track) {
             console.warn(`❌ 來源 URL 失敗: ${failedUrl}。錯誤代碼: ${e.target.error?.code || 'Unknown'}`);
         }
         
-        // 無論如何，當前這個 handleError 任務已完成，應該移除它
-        audio.removeEventListener('error', handleError); 
+        // 無論如何，當前這個 handleError 任務已完成，但我們讓 tryNextSource 處理移除
+        audio.removeEventListener('error', handleError); // 移除自己 (保險)
+        currentErrorHandler = null; // 清空追蹤變量
         
         sourceIndex++;
         tryNextSource(); // 嘗試下一個
     };
     
+    // 🌟 3. 追蹤當前的處理器
+    currentErrorHandler = handleError;
+    
     const tryNextSource = () => {
         
-        // 🚨 關鍵修復：在每次嘗試前，先移除上一個可能殘留的監聽器
-        // 雖然 handleError 內部會移除自己，但如果它還沒被觸發，這行是保險
-        audio.removeEventListener('error', handleError); 
+        // 🚨 移除上一個監聽器：不再需要，因為我們只在外面移除舊的。
+        // audio.removeEventListener('error', handleError); // 移除這行
         
         // 檢查 Token，防止競態條件
         if (getState().currentPlaybackSession !== sessionToken) {
             console.log(`[CDN Fallback]: Session Token 不匹配，終止備援。`);
+            if (currentErrorHandler === handleError) {
+                audio.removeEventListener('error', handleError);
+                currentErrorHandler = null;
+            }
             return;
         }
 
@@ -111,6 +125,11 @@ export function playAudioWithFallback(track) {
             DOM_ELEMENTS.playerTitle.textContent = `🚨 播放失敗：所有備援來源都無效。`;
             audio.src = ''; 
             audio.load();
+            
+            if (currentErrorHandler === handleError) {
+                audio.removeEventListener('error', handleError);
+                currentErrorHandler = null;
+            }
             return;
         }
 
@@ -128,7 +147,11 @@ export function playAudioWithFallback(track) {
         DOM_ELEMENTS.playerTitle.textContent = `載入中：${track.title} (備援 ${sourceIndex + 1}/${sources.length})`;
 
         // 設置新的具名錯誤監聽器
-        audio.addEventListener('error', handleError); 
+        // 核心修正：只有在第一次嘗試時添加監聽器，後續嘗試在 handleError 中處理移除和添加
+        if (sourceIndex === 0) {
+            audio.addEventListener('error', handleError); 
+        }
+        
         audio.src = url;
         audio.load(); 
 
@@ -136,11 +159,17 @@ export function playAudioWithFallback(track) {
             if (error.name === "NotAllowedError" || error.name === "AbortError") {
                 console.warn("瀏覽器阻止自動播放或請求被中止。");
                 DOM_ELEMENTS.playerTitle.textContent = `需點擊播放：${track.title}`;
+                
+                // 立即移除監聽器，避免它在用戶點擊播放時再次觸發不必要的備援
+                audio.removeEventListener('error', handleError);
+                currentErrorHandler = null;
+                
             } else {
                 console.error("嘗試播放時發生非網絡錯誤，視為失敗，立即嘗試備援:", error);
                 
                 // 非預期錯誤，移除監聽器，並立即觸發備援流程
                 audio.removeEventListener('error', handleError); 
+                currentErrorHandler = null;
                 sourceIndex++;
                 tryNextSource();
             }
