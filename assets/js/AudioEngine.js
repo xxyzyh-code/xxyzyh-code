@@ -67,15 +67,18 @@ export function playAudioWithFallback(track) {
     setState({ currentPlaybackSession: sessionToken });
     
     let sourceIndex = 0;
-
-    /**
-     * 處理 audio 元素的 'error' 事件
-     */
+    
+    // 🌟 核心修復 1：清理舊的監聽器並設置一個新的錯誤處理器
+    // 確保每次 playTrack 啟動時，所有舊的 handleError 都被移除
+    // 這裡不能移除，因為它是一個 named function，所以我們必須讓它在 tryNextSource 內部被移除。
+    
+    // 必須使用一個命名函數來處理錯誤，並在其內部決定是否遞歸或結束
     const handleError = (e) => {
-        // 🌟 問題 2 修正: 檢查 Session Token，確保只處理當前播放會話的錯誤
+        // 檢查 Session Token，確保只處理當前播放會話的錯誤
         if (getState().currentPlaybackSession !== sessionToken) {
-            audio.removeEventListener('error', handleError);
-            return; // 忽略舊的錯誤事件
+            console.warn(`[CDN Fallback]: 舊的錯誤事件觸發，Session Token 不匹配，忽略。`);
+            // 不移除監聽器，讓 tryNextSource 的開頭負責移除
+            return; 
         }
         
         const failedUrl = sources[sourceIndex];
@@ -85,18 +88,22 @@ export function playAudioWithFallback(track) {
             console.warn(`❌ 來源 URL 失敗: ${failedUrl}。錯誤代碼: ${e.target.error?.code || 'Unknown'}`);
         } else {
             // 這是正常切換來源時，瀏覽器中止前一個載入的訊息
-            console.log(`[CDN Fallback]: 載入中止，切換到下一個來源...`);
+            console.log(`[CDN Fallback]: 載入中止 (MEDIA_ERR_ABORTED)，切換到下一個來源...`);
         }
-        
-        audio.removeEventListener('error', handleError); // 移除當前監聽器
         
         // 嘗試下一個來源
         sourceIndex++;
+        // 這裡不需要移除，因為 tryNextSource 的開頭會移除
         tryNextSource();
     };
     
     // 核心嘗試邏輯
     const tryNextSource = () => {
+        
+        // 🌟 核心修復 2：在每次嘗試前，移除所有舊的錯誤監聽器
+        // 🚨 這是避免競態條件的關鍵！
+        audio.removeEventListener('error', handleError); 
+        
         // 檢查 Session Token，如果用戶已經切換到下一首，則中止當前備援流程
         if (getState().currentPlaybackSession !== sessionToken) {
             console.log(`[CDN Fallback]: Session Token 不匹配，終止備援。`);
@@ -113,7 +120,7 @@ export function playAudioWithFallback(track) {
 
         const url = sources[sourceIndex];
         
-        // 🌟 問題 4 修正: 檢查是否是已知失敗的 URL
+        // 檢查是否是已知失敗的 URL
         if (failedUrls[url] && Date.now() - failedUrls[url] < MAX_FAILED_URLS_DURATION_MS) { 
             console.warn(`⏭ 跳過已知失敗來源: ${url}`);
             sourceIndex++;
@@ -125,9 +132,9 @@ export function playAudioWithFallback(track) {
         showSimpleAlert(`嘗試備援 (CDN ${sourceIndex + 1}/${sources.length}) 載入 ${track.title}。`);
         DOM_ELEMENTS.playerTitle.textContent = `載入中：${track.title} (備援 ${sourceIndex + 1}/${sources.length})`;
 
-        // 🌟 問題 3 修正: 統一使用 audio.src = url
+        // 設置新的錯誤監聽器
+        audio.addEventListener('error', handleError, { once: true }); // 使用 once: true
         audio.src = url;
-        audio.addEventListener('error', handleError, { once: true }); // 設置新的錯誤監聽器
         audio.load(); // 重新載入音頻元素
 
         audio.play().catch(error => {
@@ -137,7 +144,7 @@ export function playAudioWithFallback(track) {
                 DOM_ELEMENTS.playerTitle.textContent = `需點擊播放：${track.title}`;
             } else {
                 // 其他播放錯誤 (例如解碼失敗，但尚未觸發 'error' 事件)
-                console.error("嘗試播放時發生非網絡錯誤，視為失敗，嘗試備援:", error);
+                console.error("嘗試播放時發生非網絡錯誤，視為失敗，立即嘗試備援:", error);
                 
                 // 立即觸發備援流程
                 audio.removeEventListener('error', handleError); 
@@ -150,6 +157,9 @@ export function playAudioWithFallback(track) {
     // 清理舊的 audio.src 和 listeners (確保 PlayTrack 啟動時是乾淨的)
     audio.innerHTML = ''; 
     audio.src = '';
+    
+    // 首次啟動時，確保沒有殘留的監聽器
+    // 由於我們不知道舊的監聽器是什麼名字，所以只在 tryNextSource 內部移除它自己
     
     tryNextSource();
     
