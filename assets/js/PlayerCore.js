@@ -910,7 +910,6 @@ function handleUrlAnchor(isInitialLoad = false) {
             };
             DOM_ELEMENTS.audio.addEventListener('playing', handlePlaying);
             
-            DOM_ELEMENTS.audio.play().catch(error => {
                  DOM_ELEMENTS.playerTitle.textContent = `從分享載入：${trackTitle} (需點擊播放)`;
             });
         }
