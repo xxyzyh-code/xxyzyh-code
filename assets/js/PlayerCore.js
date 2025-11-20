@@ -398,7 +398,7 @@ export function playTrack(index) {
         // 舊的 <source> 標籤插入邏輯被移除
         const sessionToken = playAudioWithFallback(track);
         // 將新的 Session Token 設置到狀態中 (儘管 AudioEngine.js 內部也做了，這裡可以作為保護)
-        setState({ currentPlaybackSession: sessionToken }); 
+        //setState({ currentPlaybackSession: sessionToken }); 
 
         // --- 核心修正 3：使用 LrcParser 的備援邏輯 ---
         if (track.lrcSources && track.lrcSources.length > 0) {
