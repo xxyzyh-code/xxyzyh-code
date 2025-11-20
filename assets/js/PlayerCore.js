@@ -882,6 +882,7 @@ function handleAudioError(e) {
     }
 }
 
+// 🎯 核心修復點 1：修復 handleUrlAnchor 結構錯誤和冗餘的播放請求
 function handleUrlAnchor(isInitialLoad = false) {
     const hash = window.location.hash;
     
@@ -893,7 +894,7 @@ function handleUrlAnchor(isInitialLoad = false) {
             
             const trackTitle = MASTER_TRACK_LIST[originalIndex].title;
             
-            loadTrack(originalIndex); 
+            loadTrack(originalIndex); // 👈 這裡調用了 playTrack，它會啟動 CDN 備援和播放
             
             if (isInitialLoad) {
                 setState({ playMode: 0 }); 
@@ -901,19 +902,24 @@ function handleUrlAnchor(isInitialLoad = false) {
                 saveSettings();
             }
             
+            // 由於 playTrack 已經調用 playAudioWithFallback，這裡只需要處理 UI 提示，
+            // 避免額外的 audio.play() 再次觸發播放邏輯並造成 Session Token 不匹配
             DOM_ELEMENTS.playerTitle.textContent = `從分享連結載入：${trackTitle} (正在緩衝...)`;
             const handlePlaying = () => {
                  if (DOM_ELEMENTS.playerTitle.textContent.includes(trackTitle)) { 
                      DOM_ELEMENTS.playerTitle.textContent = `正在播放：${trackTitle}`;
+                     // 播放成功後移除監聽器，避免重複觸發
                      DOM_ELEMENTS.audio.removeEventListener('playing', handlePlaying);
                  }
             };
             DOM_ELEMENTS.audio.addEventListener('playing', handlePlaying);
             
-                 DOM_ELEMENTS.playerTitle.textContent = `從分享載入：${trackTitle} (需點擊播放)`;
-            });
-        }
-    }
+            // ❌ 移除上次代碼末尾多餘的 });
+            // ❌ 移除冗餘的 DOM_ELEMENTS.audio.play() 及其錯誤處理
+            //    原因：loadTrack -> playTrack 已經啟動了播放
+            
+        } // 歌曲索引有效結束
+    } // hash 檢查結束
 }
 
 
@@ -934,7 +940,7 @@ async function initializePlayer(isManualToggle = false) {
         filterPlaylist(); 
     } else {
         resetCurrentPlaylist(); 
-        sortPlaylistByPlayCount(); 
+        sortPlaylistByPlayCount(); // sortPlaylistByPlayCount 內部會調用 renderPlaylist
     }
     
     const lastPlayedOriginalIndex = window.__LAST_PLAYED_ORIGINAL_INDEX;
@@ -974,6 +980,9 @@ async function initializePlayer(isManualToggle = false) {
          DOM_ELEMENTS.playerTitle.textContent = "我的音樂播放器 (無歌曲)";
     }
     
+    // 🎯 核心修復點 2：強制在初始化結束時重新渲染列表，解決列表消失問題
+    renderPlaylist();
+
     initializeTheme();
     
     if (!hasInitializedListeners) {
