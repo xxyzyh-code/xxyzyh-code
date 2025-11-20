@@ -10,7 +10,7 @@ import { DOM_ELEMENTS, STORAGE_KEYS } from './Config.js';
 // 從 LocalStorage 載入上次失敗的來源 URL 列表
 // 🚨 注意：這裡使用了您在 Config.js 中新增的 FAILED_URLS Key
 const failedUrls = JSON.parse(localStorage.getItem(STORAGE_KEYS.FAILED_URLS) || '{}');
-const MAX_FAILED_URLS_DURATION_MS = 1000 * 60 * 60 * 24; // 失敗的 URL 在 24 小時內會被跳過
+const MAX_FAILED_URLS_DURATION_MS = 1000 * 60 * 60 * 1; // 失敗的 URL 在 1 小時內會被跳過
 
 /**
  * 記錄失敗 URL 並更新 LocalStorage。
@@ -76,31 +76,38 @@ export function playAudioWithFallback(track) {
     
     // 🌟 2. 定義具名的錯誤處理器 (必須具名，以便移除舊的)
     const handleError = (e) => {
-        
-        // 核心檢查：Token 不匹配，立即中止，並移除自己
-        if (getState().currentPlaybackSession !== sessionToken) {
-            console.warn(`[CDN Fallback]: 舊的錯誤事件觸發，Session Token 不匹配，終止後援。`);
-            // 不再需要移除自己，因為我們會在 tryNextSource 或外部移除
-            return; 
-        }
-        
-        // 核心檢查：如果錯誤是正常中止 (如切換 SRC 導致)，則忽略
-        if (e.target.error?.code === audio.error.MEDIA_ERR_ABORTED) {
-            console.log(`[CDN Fallback]: 載入中止 (MEDIA_ERR_ABORTED)，切換到下一個來源...`);
-        } else {
-            // 真正失敗，記錄並嘗試下一個
-            const failedUrl = sources[sourceIndex];
-            recordFailedUrl(failedUrl); 
-            console.warn(`❌ 來源 URL 失敗: ${failedUrl}。錯誤代碼: ${e.target.error?.code || 'Unknown'}`);
-        }
-        
-        // 無論如何，當前這個 handleError 任務已完成，但我們讓 tryNextSource 處理移除
-        audio.removeEventListener('error', handleError); // 移除自己 (保險)
-        currentErrorHandler = null; // 清空追蹤變量
-        
-        sourceIndex++;
-        tryNextSource(); // 嘗試下一個
-    };
+    
+    // 核心檢查：Token 不匹配，立即中止
+    if (getState().currentPlaybackSession !== sessionToken) {
+        console.warn(`[CDN Fallback]: 舊的錯誤事件觸發，Session Token 不匹配，終止後援。`);
+        // 🚨 這是最關鍵的一步：當 Token 不匹配時，必須在這裡移除自己，否則它可能會在稍後被其他錯誤觸發。
+        audio.removeEventListener('error', handleError); 
+        currentErrorHandler = null; // 確保全局變量也被清除
+        return; 
+    }
+    
+    // 核心檢查：如果錯誤是正常中止 (如切換 SRC 導致)，則忽略
+    if (e.target.error?.code === audio.error.MEDIA_ERR_ABORTED) {
+        console.log(`[CDN Fallback]: 載入中止 (MEDIA_ERR_ABORTED)，終止當前備援。`);
+        // 🚨 關鍵修改：如果是中止，我們不應嘗試下一個來源，因為這是外部操作造成的。
+        // 我們只需要移除這個處理器，讓新的播放鏈繼續工作即可。
+        audio.removeEventListener('error', handleError); 
+        currentErrorHandler = null; 
+        return; // 立即返回，不執行 sourceIndex++ 和 tryNextSource()
+    } else {
+        // 真正失敗，記錄並嘗試下一個
+        const failedUrl = sources[sourceIndex];
+        recordFailedUrl(failedUrl); 
+        console.warn(`❌ 來源 URL 失敗: ${failedUrl}。錯誤代碼: ${e.target.error?.code || 'Unknown'}`);
+    }
+    
+    // 只有在進入下一個來源時才需要執行後續邏輯
+    audio.removeEventListener('error', handleError); // 移除自己 (保險)
+    currentErrorHandler = null; // 清空追蹤變量
+    
+    sourceIndex++;
+    tryNextSource(); // 嘗試下一個
+};
     
     // 🌟 3. 追蹤當前的處理器
     currentErrorHandler = handleError;
