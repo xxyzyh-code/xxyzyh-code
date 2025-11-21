@@ -398,20 +398,20 @@ function getNextRandomIndex() {
 /**
  * 核心播放函數：載入並嘗試播放指定索引的歌曲。
  * @param {number} index - 歌曲在當前播放列表 currentPlaylist 中的索引
- * @param {boolean} [autoPlay=true] - 是否嘗試立即播放（點擊歌單時為 true，初始化時為 false）
+ * @param {boolean} [autoPlay=true] - 是否嘗試立即播放（點擊歌單或切歌時為 true，初始化時為 false）
  */
 export function playTrack(index, autoPlay = true) {
     const { currentPlaylist } = getState();
     const audio = DOM_ELEMENTS.audio;
 
     if (index < 0 || index >= currentPlaylist.length) { 
-        // 處理播放列表結束時的邏輯
+        // ... (播放列表結束邏輯 - 保留不變)
         if (index === currentPlaylist.length) {
             audio.pause(); 
             DOM_ELEMENTS.playerTitle.textContent = "播放列表已結束";
             setState({ currentTrackIndex: -1 }); 
             updatePlaylistHighlight();
-            window.location.hash = ''; // 清除 URL 錨點
+            window.location.hash = ''; 
         }
         return; 
     }
@@ -422,22 +422,24 @@ export function playTrack(index, autoPlay = true) {
     });
     const track = currentPlaylist[index]; 
 
-    // --- 播放核心邏輯 ---
+    // --- 播放核心邏輯：統一交給 AudioEngine 處理 ---
+    // 傳遞 autoPlay 參數，讓 AudioEngine 決定是否 play()
+    // ⚠️ 這是核心變動：playAudioWithFallback 需要知道是否 autoPlay
+    playAudioWithFallback(track, autoPlay); 
+
+    // 設置 URL 錨點
+    window.location.hash = `song-index-${track.originalIndex}`;
+    
+    // 設置臨時 UI 標題 (等待 AudioEngine 更新)
     if (autoPlay) {
-         // 模式一：自動播放/點擊播放。完全交由 AudioEngine 處理 CDN 備援和 UI 狀態
-         playAudioWithFallback(track);
-         // 設置 URL 錨點 (讓用戶可以分享)
-         window.location.hash = `song-index-${track.originalIndex}`;
+         DOM_ELEMENTS.playerTitle.textContent = `載入中：${track.title} (正在嘗試播放...)`;
     } else {
-         // 模式二：僅載入音源 (用於初始化)。
-         audio.src = track.sources[0] || ''; 
-         audio.load();
-         
-         // 設置臨時 UI 標題
-         DOM_ELEMENTS.playerTitle.textContent = `載入中：${track.title}`;
+         // 初始化載入
+         DOM_ELEMENTS.playerTitle.textContent = `載入中：${track.title} (等待播放)`;
     }
 
-    // --- 歌詞載入邏輯 ---
+
+    // --- 歌詞載入邏輯 (保留不變) ---
     if (track.lrcSources && track.lrcSources.length > 0) {
         fetchLRC(track.lrcSources).then(lrcText => {
             const parsedLRC = parseLRC(lrcText);
