@@ -116,9 +116,17 @@ self.addEventListener("fetch", (event) => {
             });
           }
           return res;
-        }).catch(() => {
+        }).catch(async() => {
           console.log(`SW: 網路失敗，音頻資源 ${req.url} 回退至緩存。`);
-          return caches.match(req);
+          const cachedAudio = await caches.match(req); // 異步獲取緩存
+          
+          if (cachedAudio) return cachedAudio;
+
+          // 必須返回一個 Response 對象！
+          return new Response("網路或緩存失敗，音頻資源不可用。", {
+              status: 503,
+              statusText: "Service Unavailable"
+          });
         });
       })
     );
@@ -143,7 +151,16 @@ self.addEventListener("fetch", (event) => {
             return cached;
           });
           
-        return cached || networkFetch;
+        // 🌟 核心修正：確保當 cached 為 undefined 時，networkFetch 失敗後有後備響應
+        return networkFetch.catch(() => {
+            if (cached) return cached;
+            
+            // 必須返回一個 Response 對象！
+            return new Response("網路或緩存失敗，頁面不可用。", {
+                status: 503,
+                statusText: "Service Unavailable"
+            });
+        });
       })
     );
     return;
@@ -162,10 +179,12 @@ self.addEventListener("fetch", (event) => {
           return res; // 將原始響應返回給瀏覽器
         }).catch(() => {
            console.log(`SW: 網路失敗，靜態資源 ${req.url} 回退至緩存。`);
-           return cached;
+           // 🌟 核心修正：如果網路和緩存都失敗，返回一個 404/錯誤響應，而不是 undefined
+           if (cached) return cached;
+           
+           // 必須返回一個 Response 對象！
+           return new Response("網路或緩存失敗，資源不可用。", {
+               status: 503,
+               statusText: "Service Unavailable"
+           });
         });
-      })
-    );
-    return;
-  }
-});
