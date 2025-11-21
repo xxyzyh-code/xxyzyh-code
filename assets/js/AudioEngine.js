@@ -27,17 +27,37 @@ function recordFailedUrl(url) {
 
 // 🎯 新增輔助函數：正確地移除錯誤處理器
 function removeCurrentErrorHandler(handler, audio) {
+    // 只有當當前全局處理器是我們想要移除的 handler 時才執行
     if (globalErrorHandler === handler) {
         audio.removeEventListener('error', globalErrorHandler);
         globalErrorHandler = null;
         console.log(`[CDN Fallback]: 移除錯誤處理器成功。`);
     } else if (handler) {
-         // 確保如果不是全局的，我們也嘗試移除它，防止洩漏
+         // 確保如果 handler 存在，我們嘗試移除它，防止洩漏
          audio.removeEventListener('error', handler);
     }
 }
 
+// 🌟 新增：處理音源成功載入元數據的事件 🌟
+// 這個函數會在 loadedmetadata 發生時，標記成功並移除 error handler。
+function handleMetadata(audio, track, handler, sessionToken) {
+    // 核心檢查 1：檢查 Session Token，防止過時的 metadata 事件影響當前播放
+    if (getState().currentPlaybackSession !== sessionToken) {
+         console.warn(`[CDN Fallback]: 舊的 metadata 事件，Token 不匹配，忽略。`);
+         return;
+    }
+    
+    console.log(`[CDN Fallback]: ✅ 音源成功載入元數據 (${track.title})。`);
 
+    // 核心動作 1：如果成功載入，則備援流程完成，移除錯誤處理器。
+    // 這能防止 audio.play() 失敗時，錯誤地觸發下一個備援。
+    removeCurrentErrorHandler(handler, audio); 
+
+    // 核心動作 2：更新 UI 狀態（如果音頻沒有在播放）
+    if (audio.paused) {
+        DOM_ELEMENTS.playerTitle.textContent = `載入成功：${track.title} (請點擊播放)`;
+    }
+}
 // --- UI 提示輔助函數 ---
 
 function showSimpleAlert(message) {
@@ -53,7 +73,8 @@ function showSimpleAlert(message) {
             if (getState().currentPlaybackSession === currentSessionToken) {
                  // 保持 "載入中..." 狀態直到 handlePlaying 確認播放成功
                  const currentText = statusDiv.textContent;
-                 if (currentText === message) {
+                 // 只有在顯示 Alert 訊息時才清除
+                 if (currentText.includes('嘗試備援')) {
                      statusDiv.textContent = `載入中...`; 
                  }
             }
@@ -84,6 +105,10 @@ export function playAudioWithFallback(track) {
         globalErrorHandler = null;
     }
 
+    // 🌟 移除舊的 audio.src (防止重複加載)
+    audio.innerHTML = ''; 
+    audio.src = '';
+
     /**
      * 穩定版錯誤處理器：專門處理音頻加載或播放失敗，並遞歸推進備援。
      * @param {Event} e - 錯誤事件
@@ -93,7 +118,7 @@ export function playAudioWithFallback(track) {
         // 核心檢查 1：Token 不匹配，這不是我們本次 playTrack 產生的錯誤，忽略。
         if (getState().currentPlaybackSession !== sessionToken) {
             console.warn(`[CDN Fallback]: 舊的錯誤事件觸發，Token 不匹配，終止後援。`);
-            // 這裡不需要移除處理器，因為這意味著新的 stableErrorHandler 已經註冊
+            // 這裡不需要移除處理器，因為新的 stableErrorHandler 已經註冊
             return; 
         }
 
@@ -123,13 +148,15 @@ export function playAudioWithFallback(track) {
         if (getState().currentPlaybackSession !== sessionToken) {
             console.log(`[CDN Fallback]: Session Token 不匹配，終止備援。`);
             
-            // 🎯 修正 1：如果 Session Token 不匹配，意味著新的 playAudioWithFallback 已經啟動，
-            // 則這個 stableErrorHandler 已經過期，必須移除自己。
+            // 🎯 修正 1：如果 Session Token 不匹配，移除這個過期的處理器。
             removeCurrentErrorHandler(stableErrorHandler, audio);
             
             return;
         }
-
+        
+        // 🌟 新增：移除舊的 metadata 監聽器，防止混亂
+        audio.removeEventListener('loadedmetadata', oldMetadataHandler);
+        
         if (sourceIndex >= sources.length) {
             console.error(`🚨 所有音頻來源都已嘗試失敗: ${track.title}`);
             DOM_ELEMENTS.playerTitle.textContent = `🚨 播放失敗：音源格式不受支持或所有備援失敗。`;
@@ -155,14 +182,22 @@ export function playAudioWithFallback(track) {
         audio.src = url;
         audio.load(); // 觸發 loadedmetadata 或 error 事件
 
+        // 🌟 核心修正：綁定新的 metadata 監聽器
+        // 必須用變數保存，以便在下次 tryNextSource 或成功播放時移除。
+        const currentMetadataHandler = (e) => handleMetadata(audio, track, stableErrorHandler, sessionToken);
+        audio.addEventListener('loadedmetadata', currentMetadataHandler, { once: true });
+        window.oldMetadataHandler = currentMetadataHandler; // 儲存供下次 tryNextSource 移除
+
         audio.play().catch(error => {
             
             // 處理瀏覽器阻止自動播放的情況
             if (error.name === "NotAllowedError" || error.name === "AbortError") {
                 console.warn("瀏覽器阻止自動播放或請求被中止。等待用戶手勢。");
-                DOM_ELEMENTS.playerTitle.textContent = `需點擊播放：${track.title}`;
+                // 這裡不需要再次更新 DOM_ELEMENTS.playerTitle，
+                // 因為 loadedmetadata 處理器會處理這個 UI 更新。
                 
-                // 🎯 修正 3：載入成功但播放被阻止，備援邏輯完成，移除 error 監聽器。
+                // 🎯 修正 3：播放被阻止，備援邏輯完成，移除 error 監聽器。
+                // 讓 loadedmetadata 事件來處理 UI 標題更新。
                 removeCurrentErrorHandler(stableErrorHandler, audio);
                 
             } else {
@@ -170,15 +205,13 @@ export function playAudioWithFallback(track) {
                 
                 // 這裡不需遞增 sourceIndex 或遞歸調用 tryNextSource，
                 // 因為這個錯誤會觸發 audio 上的 'error' 事件，
-                // 穩定版的 stableErrorHandler 會接管處理並遞歸。
+                // stableErrorHandler 會接管處理並遞歸。
             }
         });
     };
-
-    // 清理舊的 audio.src (防止重複加載)
-    audio.innerHTML = ''; 
-    audio.src = '';
     
+    // 🌟 移除舊的 audio.src 的位置已經提前到 tryNextSource 之前了
+
     tryNextSource();
     
     return sessionToken; 
