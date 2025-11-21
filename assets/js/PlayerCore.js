@@ -984,7 +984,7 @@ async function initializePlayer(isManualToggle = false) {
         
         updatePlaylistHighlight();
         // 載入當前歌曲的音源，但不自動播放 (autoPlay=false)
-        //playTrack(currentTrackIndex, false); 
+        playTrack(currentTrackIndex, false); 
         
     } else {
          setState({ currentTrackIndex: -1 }); 
