@@ -396,64 +396,60 @@ function getNextRandomIndex() {
 }
 
 /**
+ * 核心播放函數：載入並嘗試播放指定索引的歌曲。
  * @param {number} index - 歌曲在當前播放列表 currentPlaylist 中的索引
- * @param {boolean} [autoPlay=true] - 是否嘗試立即播放（如果瀏覽器允許）
+ * @param {boolean} [autoPlay=true] - 是否嘗試立即播放（點擊歌單時為 true，初始化時為 false）
  */
 export function playTrack(index, autoPlay = true) {
     const { currentPlaylist } = getState();
     const audio = DOM_ELEMENTS.audio;
-    
-    if (index >= 0 && index < currentPlaylist.length) { 
-        setState({ 
-            currentTrackIndex: index,
-            // 🌟 修正 3：重置播放記錄標誌，新歌應被記錄
-            isTrackPlayRecorded: false 
-        });
-        const track = currentPlaylist[index]; 
-        
-        // --- 核心修正 2：使用 AudioEngine 處理 CDN 備援 ---
-        if (autoPlay) {
-             // 啟動備援邏輯，並嘗試播放
-             playAudioWithFallback(track);
-             DOM_ELEMENTS.playerTitle.textContent = `正在播放：${track.title} (載入中...)`; 
-        } else {
-             // 僅載入第一個來源，不嘗試播放，等待用戶手勢
-             audio.src = track.sources[0] || ''; 
-             audio.load();
-             DOM_ELEMENTS.playerTitle.textContent = `載入成功：${track.title} (請點擊播放)`;
-        }
 
-        // --- 核心修正 3：使用 LrcParser 的備援邏輯 ---
-        if (track.lrcSources && track.lrcSources.length > 0) {
-            console.log(`嘗試加載歌詞 (${track.lrcSources.length} 個備援來源)...`); 
-            
-            fetchLRC(track.lrcSources).then(lrcText => {
-                const parsedLRC = parseLRC(lrcText);
-                
-                if (parsedLRC && parsedLRC.length > 0) {
-                    console.log("✅ 歌詞解析成功，找到行數:", parsedLRC.length);
-                } else {
-                    console.warn("❌ 歌詞解析失敗或解析結果為空！");
-                }
-                
-                setState({ 
-                    currentLRC: parsedLRC, 
-                    currentLyricIndex: -1
-                });
-                renderLyrics();
-            }).catch(error => {
-                console.error(`❌ 歌詞文件加載最終失敗:`, error);
-                setState({ currentLRC: null, currentLyricIndex: -1 });
-                renderLyrics();
+    if (index < 0 || index >= currentPlaylist.length) { 
+        return; // 索引無效則退出
+    }
+    
+    setState({ 
+        currentTrackIndex: index,
+        isTrackPlayRecorded: false // 重置播放記錄標誌
+    });
+    const track = currentPlaylist[index]; 
+
+    // --- 播放核心邏輯 ---
+    if (autoPlay) {
+         // 模式一：自動播放/點擊播放。完全交由 AudioEngine 處理 CDN 備援和 UI 狀態
+         playAudioWithFallback(track);
+         // 💡 修復點：不在這裡設置 UI 標題，避免覆蓋 AudioEngine 的 "載入中..." 狀態。
+    } else {
+         // 模式二：僅載入音源 (用於初始化)。
+         audio.src = track.sources[0] || ''; 
+         audio.load();
+         
+         // 設置臨時 UI 標題，等待 loadedmetadata 觸發後由 AudioEngine 的邏輯（或 PlayerCore 的全局監聽）來更新為「載入完成」。
+         DOM_ELEMENTS.playerTitle.textContent = `載入中：${track.title}`;
+    }
+
+    // --- 歌詞載入邏輯 ---
+    if (track.lrcSources && track.lrcSources.length > 0) {
+        fetchLRC(track.lrcSources).then(lrcText => {
+            const parsedLRC = parseLRC(lrcText);
+            setState({ 
+                currentLRC: parsedLRC, 
+                currentLyricIndex: -1
             });
-        } else {
-             // 如果沒有 lrcSources，清空歌詞區域
-             setState({ currentLRC: null, currentLyricIndex: -1 });
-             renderLyrics(); 
-        }
-        
-        updatePlaylistHighlight();
-        
+            renderLyrics();
+        }).catch(error => {
+            console.error(`歌詞文件加載失敗:`, error);
+            setState({ currentLRC: null, currentLyricIndex: -1 });
+            renderLyrics();
+        });
+    } else {
+         setState({ currentLRC: null, currentLyricIndex: -1 });
+         renderLyrics(); 
+    }
+    
+    updatePlaylistHighlight();
+}
+      
         // ❌ 核心修復：移除此行，防止點擊歌單項目時觸發頁面導航/干擾播放邏輯。
         // window.location.hash = `song-index-${track.originalIndex}`; 
     } else if (index === currentPlaylist.length) { 
