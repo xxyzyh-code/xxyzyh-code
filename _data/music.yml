@@ -3,6 +3,7 @@
   sources:
     - "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/Alive%20in%20the%20summer%20time.m4a"
     - "https://cdn.statically.io/gh/xxyzyh-code/music/main/Alive%20in%20the%20summer%20time.m4a"
+    - "https://ghproxy.net/https://raw.githubusercontent.com/xxyzyh-code/music/main/Alive%20in%20the%20summer%20time.m4a"
     - "https://raw.githubusercontent.com/xxyzyh-code/music/main/Alive%20in%20the%20summer%20time.m4a" 
 
 - title: Breakbeat background
@@ -49,7 +50,7 @@
   sources:
     - "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/Jesus%20Walks%20With%20Me.mp3"
     - "https://cdn.statically.io/gh/xxyzyh-code/music/main/Jesus%20Walks%20With%20Me.mp3"
-        - "https://raw.githubusercontent.com/xxyzyh-code/music/main/Jesus%20Walks%20With%20Me.mp3" 
+    - "https://raw.githubusercontent.com/xxyzyh-code/music/main/Jesus%20Walks%20With%20Me.mp3" 
   lrcSources:
     - "https://cdn.statically.io/gh/xxyzyh-code/lyrics/main/jwwm.lrc"
     - "https://raw.githubusercontent.com/xxyzyh-code/lyrics/main/jwwm.lrc"
