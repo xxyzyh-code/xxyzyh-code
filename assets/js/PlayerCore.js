@@ -309,7 +309,7 @@ function updateTimerCountdown() {
     }
 }
 
-// --- 定時器函數 (不變) ---
+// --- 定時器函數 ---
 
 export function toggleTimerMenu(e) {
     if (e && typeof e.stopPropagation === 'function') {
@@ -329,7 +329,7 @@ export function setSleepTimer(minutes) {
     toggleTimerMenu(); 
     
     const delayMilliseconds = minutes * 60 * 1000;
-    const newEndTime = Date.now() + delayMilliseconds;
+    const newEndTime = Date. hẳn + delayMilliseconds;
     
     const intervalId = setInterval(updateTimerCountdown, 1000);
     
@@ -347,8 +347,17 @@ export function setSleepTimer(minutes) {
     
     DOM_ELEMENTS.timerToggleButton.textContent = `定時 (${minutes} 分鐘)`;
     DOM_ELEMENTS.playerTitle.textContent = `定時器已設置：${minutes} 分鐘後自動關閉`;
+    
+    // 🌟 修正 1：定時器錯誤修復 - 添加 .catch() 處理播放失敗
     if (DOM_ELEMENTS.audio.paused) {
-        DOM_ELEMENTS.audio.play();
+        DOM_ELEMENTS.audio.play().catch(error => {
+            if (error.name === "DOMException" || error.name === "NotSupportedError") {
+                console.warn("定時器啟動：無法自動播放 (無音源/被阻止)。", error);
+                // 這裡我們只記錄警告，定時器本身仍應生效
+            } else {
+                console.error("定時器啟動時，播放發生未知錯誤:", error);
+            }
+        });
     }
 }
 
@@ -388,9 +397,12 @@ function getNextRandomIndex() {
 
 /**
  * @param {number} index - 歌曲在當前播放列表 currentPlaylist 中的索引
+ * @param {boolean} [autoPlay=true] - 是否嘗試立即播放（如果瀏覽器允許）
  */
-export function playTrack(index) {
+export function playTrack(index, autoPlay = true) {
     const { currentPlaylist } = getState();
+    const audio = DOM_ELEMENTS.audio;
+    
     if (index >= 0 && index < currentPlaylist.length) { 
         setState({ 
             currentTrackIndex: index,
@@ -400,7 +412,16 @@ export function playTrack(index) {
         const track = currentPlaylist[index]; 
         
         // --- 核心修正 2：使用 AudioEngine 處理 CDN 備援 ---
-        playAudioWithFallback(track);
+        if (autoPlay) {
+             // 啟動備援邏輯，並嘗試播放
+             playAudioWithFallback(track);
+             DOM_ELEMENTS.playerTitle.textContent = `正在播放：${track.title} (載入中...)`; 
+        } else {
+             // 僅載入第一個來源，不嘗試播放，等待用戶手勢
+             audio.src = track.sources[0] || ''; 
+             audio.load();
+             DOM_ELEMENTS.playerTitle.textContent = `載入成功：${track.title} (請點擊播放)`;
+        }
 
         // --- 核心修正 3：使用 LrcParser 的備援邏輯 ---
         if (track.lrcSources && track.lrcSources.length > 0) {
@@ -431,15 +452,11 @@ export function playTrack(index) {
              renderLyrics(); 
         }
         
-        // 🚨 優化點 1：將 title 設置為「載入中...」，等待 playing 事件來確認播放成功並更新
-        // 這樣可以避免在 AudioEngine 嘗試多個 CDN 來源時，UI 顯示錯誤的成功狀態。
-        DOM_ELEMENTS.playerTitle.textContent = `正在播放：${track.title} (載入中...)`; 
-        
         updatePlaylistHighlight();
         
         window.location.hash = `song-index-${track.originalIndex}`; 
     } else if (index === currentPlaylist.length) { 
-        DOM_ELEMENTS.audio.pause(); 
+        audio.pause(); 
         DOM_ELEMENTS.playerTitle.textContent = "播放列表已結束";
         setState({ currentTrackIndex: -1 }); 
         updatePlaylistHighlight();
@@ -460,7 +477,7 @@ export function playNextTrack() {
         nextIndex = 0; 
     }
     
-    playTrack(nextIndex);
+    playTrack(nextIndex); // 默認 autoPlay=true
 }
 
 
@@ -476,7 +493,7 @@ export function playPreviousTrack() {
         prevIndex = currentPlaylist.length - 1; 
     }
     
-    playTrack(prevIndex);
+    playTrack(prevIndex); // 默認 autoPlay=true
 }
 
 
@@ -550,7 +567,7 @@ function renderPlaylist() {
         }
         
         const playTrackAction = () => {
-             playTrack(index);
+             playTrack(index); // 默認 autoPlay=true
              if (playMode !== 3) {
                  setState({ playMode: 3 }); 
                  updateModeUI();
@@ -693,9 +710,15 @@ function filterPlaylist() {
 }
 
 
-// --- 外部呼叫函數 (用於 URL 錨點) (不變) ---
+// --- 外部呼叫函數 (用於 URL 錨點) ---
 
-export function loadTrack(originalIndex) { 
+/**
+ * 載入指定索引的歌曲，並強制進入自由模式，
+ * 決定是否自動播放的邏輯交給 handleUrlAnchor。
+ * @param {number} originalIndex - 歌曲在 MASTER_TRACK_LIST 中的原始索引
+ * @param {boolean} [autoPlay=true] - 是否嘗試立即播放
+ */
+export function loadTrack(originalIndex, autoPlay = true) { 
     
     const isFiltered = DOM_ELEMENTS.playlistSearchInput.value.trim().length > 0;
     if (isFiltered) {
@@ -712,7 +735,7 @@ export function loadTrack(originalIndex) {
             updateModeUI();
             saveSettings(); 
         }
-        playTrack(newIndex);
+        playTrack(newIndex, autoPlay); // 🌟 傳遞 autoPlay 參數
     } else {
         console.error(`loadTrack 錯誤: 歌曲 (原始索引: ${originalIndex}) 在當前歌單中找不到。`);
         DOM_ELEMENTS.playerTitle.textContent = `錯誤：歌曲找不到。請手動點擊歌單中的其他歌曲。`;
@@ -765,7 +788,7 @@ function handleTrackEnd() {
         }
     }
     if (nextIndex !== undefined && nextIndex !== -1) {
-        playTrack(nextIndex);
+        playTrack(nextIndex); // 默認 autoPlay=true
     }
 }
 
@@ -910,7 +933,9 @@ function handleUrlAnchor(isInitialLoad = false) {
             
             const trackTitle = MASTER_TRACK_LIST[originalIndex].title;
             
-            loadTrack(originalIndex); // 👈 這裡調用了 playTrack，它會啟動 CDN 備援和播放
+            // 🌟 修正 2：如果初次載入（來自URL），則不自動播放
+            // loadTrack(originalIndex, autoPlay = !isInitialLoad)
+            loadTrack(originalIndex, !isInitialLoad); 
             
             if (isInitialLoad) {
                 // 如果是初始化載入（來自URL），設定為順序停止模式，等待用戶手動播放
@@ -918,12 +943,6 @@ function handleUrlAnchor(isInitialLoad = false) {
                 updateModeUI();
                 saveSettings();
             }
-            
-            // 🚨 優化點 2：移除冗餘的 `playing` 監聽器。
-            // 由於 playTrack 內部已經將 playerTitle 設置為「載入中...」，
-            // 且 `handlePlaying` (全局監聽器) 會在播放成功後將其更新為「正在播放...」，
-            // 因此這裡不需要額外的臨時監聽器來移除。
-            // 保持 `playTrack` 中設置的 "載入中..." 狀態即可。
             
             DOM_ELEMENTS.playerTitle.textContent = `從分享連結載入：${trackTitle} (正在緩衝...)`;
             
