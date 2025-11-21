@@ -25,6 +25,19 @@ function recordFailedUrl(url) {
     }
 }
 
+// 🎯 新增輔助函數：正確地移除錯誤處理器
+function removeCurrentErrorHandler(handler, audio) {
+    if (globalErrorHandler === handler) {
+        audio.removeEventListener('error', globalErrorHandler);
+        globalErrorHandler = null;
+        console.log(`[CDN Fallback]: 移除錯誤處理器成功。`);
+    } else if (handler) {
+         // 確保如果不是全局的，我們也嘗試移除它，防止洩漏
+         audio.removeEventListener('error', handler);
+    }
+}
+
+
 // --- UI 提示輔助函數 ---
 
 function showSimpleAlert(message) {
@@ -73,7 +86,6 @@ export function playAudioWithFallback(track) {
 
     /**
      * 穩定版錯誤處理器：專門處理音頻加載或播放失敗，並遞歸推進備援。
-     * 由於它是一個全局監聽器，它需要根據 Token 判斷是否應該處理。
      * @param {Event} e - 錯誤事件
      */
     const stableErrorHandler = (e) => {
@@ -81,6 +93,7 @@ export function playAudioWithFallback(track) {
         // 核心檢查 1：Token 不匹配，這不是我們本次 playTrack 產生的錯誤，忽略。
         if (getState().currentPlaybackSession !== sessionToken) {
             console.warn(`[CDN Fallback]: 舊的錯誤事件觸發，Token 不匹配，終止後援。`);
+            // 這裡不需要移除處理器，因為這意味著新的 stableErrorHandler 已經註冊
             return; 
         }
 
@@ -109,6 +122,11 @@ export function playAudioWithFallback(track) {
         // 檢查 Token，防止競態條件
         if (getState().currentPlaybackSession !== sessionToken) {
             console.log(`[CDN Fallback]: Session Token 不匹配，終止備援。`);
+            
+            // 🎯 修正 1：如果 Session Token 不匹配，意味著新的 playAudioWithFallback 已經啟動，
+            // 則這個 stableErrorHandler 已經過期，必須移除自己。
+            removeCurrentErrorHandler(stableErrorHandler, audio);
+            
             return;
         }
 
@@ -116,11 +134,8 @@ export function playAudioWithFallback(track) {
             console.error(`🚨 所有音頻來源都已嘗試失敗: ${track.title}`);
             DOM_ELEMENTS.playerTitle.textContent = `🚨 播放失敗：音源格式不受支持或所有備援失敗。`;
             
-            // 備援失敗，移除監聽器
-            if (globalErrorHandler === stableErrorHandler) {
-                 audio.removeEventListener('error', globalErrorHandler);
-                 globalErrorHandler = null;
-            }
+            // 🎯 修正 2：備援失敗，移除監聽器
+            removeCurrentErrorHandler(stableErrorHandler, audio);
             return;
         }
 
@@ -147,12 +162,8 @@ export function playAudioWithFallback(track) {
                 console.warn("瀏覽器阻止自動播放或請求被中止。等待用戶手勢。");
                 DOM_ELEMENTS.playerTitle.textContent = `需點擊播放：${track.title}`;
                 
-                // 由於播放失敗，但載入成功，我們移除 error 監聽器，防止用戶手動播放後，
-                // 網絡延遲導致的 error 意外觸發備援。
-                if (globalErrorHandler === stableErrorHandler) {
-                    audio.removeEventListener('error', globalErrorHandler);
-                    globalErrorHandler = null;
-                }
+                // 🎯 修正 3：載入成功但播放被阻止，備援邏輯完成，移除 error 監聽器。
+                removeCurrentErrorHandler(stableErrorHandler, audio);
                 
             } else {
                 console.error("嘗試播放時發生非網絡/非自動播放錯誤，視為失敗:", error);
