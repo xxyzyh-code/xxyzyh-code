@@ -106,8 +106,8 @@ export function playAudioWithFallback(track) {
     }
 
     // 🌟 移除舊的 audio.src (防止重複加載)
-    audio.innerHTML = ''; 
     audio.src = '';
+    audio.load();
 
     /**
      * 穩定版錯誤處理器：專門處理音頻加載或播放失敗，並遞歸推進備援。
@@ -154,8 +154,11 @@ export function playAudioWithFallback(track) {
             return;
         }
         
-        // 🌟 新增：移除舊的 metadata 監聽器，防止混亂
-        audio.removeEventListener('loadedmetadata', oldMetadataHandler);
+        // 🌟 新增：移除舊的 metadata 監聽器
+        if (window.oldMetadataHandler) {
+    audio.removeEventListener('loadedmetadata', window.oldMetadataHandler);
+    window.oldMetadataHandler = null; // 最重要：一定要清空
+}
         
         if (sourceIndex >= sources.length) {
             console.error(`🚨 所有音頻來源都已嘗試失敗: ${track.title}`);
@@ -184,9 +187,12 @@ export function playAudioWithFallback(track) {
 
         // 🌟 核心修正：綁定新的 metadata 監聽器
         // 必須用變數保存，以便在下次 tryNextSource 或成功播放時移除。
-        const currentMetadataHandler = (e) => handleMetadata(audio, track, stableErrorHandler, sessionToken);
-        audio.addEventListener('loadedmetadata', currentMetadataHandler, { once: true });
-        window.oldMetadataHandler = currentMetadataHandler; // 儲存供下次 tryNextSource 移除
+        const currentMetadataHandler =
+  (e) => handleMetadata(audio, track, stableErrorHandler, sessionToken);
+
+audio.addEventListener('loadedmetadata', currentMetadataHandler, { once: true });
+
+window.oldMetadataHandler = currentMetadataHandler;
 
         audio.play().catch(error => {
             
