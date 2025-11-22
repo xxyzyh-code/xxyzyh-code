@@ -47,17 +47,10 @@ const DOM_ELEMENTS = {
     themeMenu: document.getElementById('theme-menu'),
     currentThemeName: document.getElementById('current-theme-name'),
     themeOptions: document.querySelectorAll('#theme-menu .theme-option'),
-    
-    // ✅ 修正 1：同步 HTML 中的 ID 'playlistUl'
     playlistUl: document.getElementById('playlistUl'), 
-    
     lyricsContainer: document.getElementById('lyrics-container'),
     lyricsContent: document.getElementById('lyrics-content'),
-    lyricsPlaceholder: document.getElementById('lyrics-placeholder'),
-    
-    // ✅ 修正 2：由於您使用內建 controls，我們將 'audio' 元素本身視為全局播放按鈕。
-    // 這允許 AudioEngine 仍然有目標可以操作 (雖然這次是隱藏/顯示 controls)。
-    globalPlayBtn: document.getElementById('audio') 
+    lyricsPlaceholder: document.getElementById('lyrics-placeholder')
 };
 
 const STORAGE_KEYS = {
