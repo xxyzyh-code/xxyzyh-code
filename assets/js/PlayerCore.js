@@ -855,7 +855,12 @@ function handlePlaying() {
             setState({ isTrackPlayRecorded: true }); // 設置為已記錄
             console.log(`✅ 數據庫播放記錄成功發送: ${currentTrack.title}`);
             
-            // 更新 UI 標題，確認播放成功
+            // ⭐️ 修復 3: 確保這裡最終且權威地更新播放標題
+            DOM_ELEMENTS.playerTitle.textContent = `正在播放：${currentTrack.title}`;
+        }
+        
+        // ⭐️ 新增: 處理用戶在 play() 被阻止後手動播放的情況
+        if (DOM_ELEMENTS.playerTitle.textContent.includes('(請點擊播放)')) {
             DOM_ELEMENTS.playerTitle.textContent = `正在播放：${currentTrack.title}`;
         }
     }
