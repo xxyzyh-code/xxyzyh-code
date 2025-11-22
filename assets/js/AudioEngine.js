@@ -45,7 +45,7 @@ function handleMetadata(audio, track, handler, sessionToken) {
     }
 
     console.log(`[CDN Fallback]: ✅ 音源成功載入元數據 (${track.title})`);
-    removeCurrentErrorHandler(handler, audio); // 成功後移除該 session 的錯誤處理器
+    //removeCurrentErrorHandler(handler, audio); // 成功後移除該 session 的錯誤處理器
 
     // UI 邏輯保持不變
     if (audio.paused) {
