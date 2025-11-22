@@ -230,6 +230,30 @@ function syncLyrics() {
         }
     }
 }
+// 🌟 新增/修正：LRC Fallback 🌟
+/**
+ * 朋友建議：新增輔助函數：LRC Fallback 加載
+ * @param {string[]} paths - LRC 文件的 URL 陣列
+ * @returns {Promise<string>} 成功獲取到的 LRC 文本或空字串
+ */
+async function tryFetchLRC(paths) { 
+    if (!paths || paths.length === 0) return ''; 
+    for (let i = 0; i < paths.length; i++) { 
+        try { 
+            const text = await fetchLRC(paths[i]); 
+            if (text) { 
+                console.log(`LRC 成功載入: ${paths[i]}`); 
+                return text; 
+            } else { 
+                console.warn(`LRC 內容為空，嘗試下一個: ${paths[i]}`); 
+            } 
+        } catch (error) { 
+            console.warn(`LRC 加載失敗，嘗試下一個: ${paths[i]}`, error); 
+        } 
+    } 
+    console.error('所有 LRC CDN 都失敗了'); 
+    return ''; 
+}
 // --- 歌詞輔助函數結束 ---
 
 
@@ -468,25 +492,28 @@ export function playTrack(index) {
     audio.removeAttribute('src');
     audio.load();
 
-    // 🌟 歌詞載入與解析邏輯 (保持不變) 🌟
-    if (track.lrcPath) {
-        fetchLRC(track.lrcPath).then(lrcText => {
-            const parsedLRC = parseLRC(lrcText || '');
+        // 🌟 修正：LRC 歌詞載入與解析邏輯 (支持 fallback - 朋友建議) 🌟
+    // 假設 track 數據結構中，歌詞 URL 字段已改為 lrcPaths 陣列
+    if (track.lrcPaths && track.lrcPaths.length > 0) { 
+        tryFetchLRC(track.lrcPaths).then(lrcText => { 
+            const parsedLRC = parseLRC(lrcText || ''); 
             setState({ 
                 currentLRC: parsedLRC, 
                 currentLyricIndex: -1 
-            });
-            renderLyrics();
-        }).catch(error => {
-            console.error(`❌ 歌詞文件加載失敗 (${track.lrcPath}):`, error);
-            setState({ currentLRC: null, currentLyricIndex: -1 });
-            renderLyrics();
-        });
-    } else {
-        setState({ currentLRC: null, currentLyricIndex: -1 });
-        renderLyrics();
+            }); 
+            renderLyrics(); 
+        }).catch(error => { 
+            // 儘管 tryFetchLRC 已經包含了錯誤處理，但為了防範 Promise 鏈中的其他錯誤，保留此 catch 塊
+            console.error(`❌ 所有 LRC 加載失敗:`, error); 
+            setState({ currentLRC: null, currentLyricIndex: -1 }); 
+            renderLyrics(); 
+        }); 
+    } else { 
+        setState({ currentLRC: null, currentLyricIndex: -1 }); 
+        renderLyrics(); 
     }
     // 🌟 歌詞載入結束 🌟
+
 
     // 🌟 朋友建議：使用新的 Fallback 播放邏輯 🌟
     tryPlayCurrentSource(track); 
