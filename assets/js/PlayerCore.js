@@ -3,8 +3,7 @@
 
 import { 
     DOM_ELEMENTS, STORAGE_KEYS, THEMES, GLOBAL_STATS_TABLE, 
-    MASTER_TRACK_LIST 
-} from './Config.js';
+    MASTER_TRACK_LIST, initializeDOMElements} from './Config.js';
 import { 
     getState, setState, saveSettings, loadSavedSettings, debounce, 
     getUserId, resetCurrentPlaylist, incrementListenTime, resetListenTime,
@@ -16,6 +15,16 @@ import { fetchLRC, parseLRC } from './LrcParser.js';
 import { playAudioWithFallback } from './AudioEngine.js'; // 導入新的音頻引擎
 
 let hasInitializedListeners = false;
+
+// --- 初始啟動 (DOMContentLoaded) ---
+document.addEventListener('DOMContentLoaded', () => {
+    // 🚨 核心修正：在任何其他操作之前，先確保 DOM 元素已被抓取
+    initializeDOMElements(); 
+    
+    // 接著執行播放器的初始化和 URL 處理
+    initializePlayer();
+    handleUrlAnchor(true);
+});
 
 // --- 數據模式相關函數 (API) ---
 
@@ -1093,12 +1102,6 @@ document.addEventListener('click', (e) => {
 }
 
 
-// --- 初始啟動 (DOMContentLoaded) ---
-document.addEventListener('DOMContentLoaded', () => {
-    initializePlayer(); 
-    // 只有在初始載入時，才根據 URL 錨點載入歌曲（但不自動播放）
-    handleUrlAnchor(true);
-});
 
 
 // 核心優化：集中暴露給全局空間的函數 (供 HTML 內聯 onclick / URL 錨點使用)
