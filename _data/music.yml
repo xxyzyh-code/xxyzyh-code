@@ -4,6 +4,7 @@
     - "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/Alive%20in%20the%20summer%20time.m4a"
     - "https://rawcdn.githack.com/xxyzyh-code/music/main/Alive%20in%20the%20summer%20time.m4a"
     - "https://ghproxy.net/https://raw.githubusercontent.com/xxyzyh-code/music/main/Alive%20in%20the%20summer%20time.m4a"
+  lrcPaths: [] 
 
 - title: Breakbeat background
   artist: AI
@@ -11,6 +12,7 @@
     - "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/Breakbeat%20background.m4a"
     - "https://rawcdn.githack.com/xxyzyh-code/music/main/Breakbeat%20background.m4a"
     - "https://ghproxy.net/https://raw.githubusercontent.com/xxyzyh-code/music/main/Breakbeat%20background.m4a"
+  lrcPaths: [] 
 
 - title: The best moments in life
   artist: AI
@@ -18,6 +20,7 @@
     - "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/The%20best%20moments%20in%20life.m4a"
     - "https://rawcdn.githack.com/xxyzyh-code/music/main/The%20best%20moments%20in%20life.m4a"
     - "https://ghproxy.net/https://raw.githubusercontent.com/xxyzyh-code/music/main/The%20best%20moments%20in%20life.m4a"
+  lrcPaths: [] 
 
 - title: Time to travel
   artist: AI
@@ -25,6 +28,7 @@
     - "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/Time%20to%20travel.m4a"
     - "https://rawcdn.githack.com/xxyzyh-code/music/main/Time%20to%20travel.m4a"
     - "https://ghproxy.net/https://raw.githubusercontent.com/xxyzyh-code/music/main/Time%20to%20travel.m4a"
+  lrcPaths: [] 
 
 - title: Elegance
   artist: AI
@@ -32,6 +36,7 @@
     - "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/Elegance.m4a"
     - "https://rawcdn.githack.com/xxyzyh-code/music/main/Elegance.m4a"
     - "https://ghproxy.net/https://raw.githubusercontent.com/xxyzyh-code/music/main/Elegance.m4a"
+  lrcPaths: [] 
 
 - title: The More I Know You, Jesus
   artist: ReavoWorship
@@ -173,3 +178,4 @@
     - "https://cdn.jsdelivr.net/gh/xxyzyh-code/music@main/O%20Come%20O%20Come%20Emmanuel.mp3"
     - "https://rawcdn.githack.com/xxyzyh-code/music/main/O%20Come%20O%20Come%20Emmanuel.mp3"
     - "https://ghproxy.net/https://raw.githubusercontent.com/xxyzyh-code/music/main/O%20Come%20O%20Come%20Emmanuel.mp3"
+  lrcPaths: [] 
