@@ -144,7 +144,7 @@ export function playAudioWithFallback(track, autoPlay = true) {
         audio.src = url;
         audio.load();
 
-loadedmetadata 只會觸發一次 ({once: true})
+// loadedmetadata 只會觸發一次 ({once: true})
         const currentMetadataHandler = () => handleMetadata(audio, track, stableErrorHandler, sessionToken);
         audio.addEventListener('loadedmetadata', currentMetadataHandler, { once: true });
 
