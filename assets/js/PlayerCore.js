@@ -12,7 +12,7 @@ import {
 } from './StateAndUtils.js';
 
 // 🌟 新增：導入 LRC 模組 🌟
-import { fetchLRC, parseLRC } from './LrcParser.js'; 
+import { fetchLRC, parseLRC, tryFetchLRC } from './LrcParser.js'; 
 // 🌟 導入結束 🌟
 
 // 🌟 修正步驟 1：添加一個全局標記，確保事件監聽器只綁定一次
@@ -230,30 +230,7 @@ function syncLyrics() {
         }
     }
 }
-// 🌟 新增/修正：LRC Fallback 🌟
-/**
- * 朋友建議：新增輔助函數：LRC Fallback 加載
- * @param {string[]} paths - LRC 文件的 URL 陣列
- * @returns {Promise<string>} 成功獲取到的 LRC 文本或空字串
- */
-async function tryFetchLRC(paths) { 
-    if (!paths || paths.length === 0) return ''; 
-    for (let i = 0; i < paths.length; i++) { 
-        try { 
-            const text = await fetchLRC(paths[i]); 
-            if (text) { 
-                console.log(`LRC 成功載入: ${paths[i]}`); 
-                return text; 
-            } else { 
-                console.warn(`LRC 內容為空，嘗試下一個: ${paths[i]}`); 
-            } 
-        } catch (error) { 
-            console.warn(`LRC 加載失敗，嘗試下一個: ${paths[i]}`, error); 
-        } 
-    } 
-    console.error('所有 LRC CDN 都失敗了'); 
-    return ''; 
-}
+
 // --- 歌詞輔助函數結束 ---
 
 
