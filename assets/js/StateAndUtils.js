@@ -186,7 +186,12 @@ export const setState = (newState) => {
 
 // 導出重置歌單
 export function resetCurrentPlaylist() {
-    currentPlaylist = [...MASTER_TRACK_LIST]; 
+    // ✅ 修正：使用 setState 更新全局狀態，確保 currentTrackIndex 被重置
+    const initialPlaylist = [...MASTER_TRACK_LIST];
+    setState({ 
+        currentPlaylist: initialPlaylist,
+        currentTrackIndex: 0 // 確保索引有效
+    });
 }
 
 // 導出計數器
