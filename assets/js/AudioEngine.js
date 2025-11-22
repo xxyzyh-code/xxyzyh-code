@@ -155,17 +155,14 @@ export function playAudioWithFallback(track, autoPlay = true) {
         // 核心修復 5: 根據 shouldAutoPlay 決定是否嘗試播放
         if (shouldAutoPlay) {
             audio.play().catch(error => {
-                // 如果 play() 失敗 (如 NotAllowedError/AbortError)，我們不應該觸發備援，
-                // 而是讓錯誤處理器在真正的音頻載入/播放失敗時處理。
                 if (error.name === "NotAllowedError" || error.name === "AbortError" || error.name === "NotSupportedError") {
-                    console.warn("瀏覽器阻止自動播放或格式不受支持，等待用戶手勢或嘗試下一備援");
-                    // 即使播放失敗，也要更新 UI 狀態
-                    DOM_ELEMENTS.playerTitle.textContent = `載入完成：${track.title} (請點擊播放)`;
-                    // 🚨 Bug 修復：如果播放失敗，且沒有觸發錯誤事件，我們必須自己移除處理器，否則它會永遠掛在那裡
-                    removeCurrentErrorHandler(stableErrorHandler, audio); 
+                    console.warn("瀏覽器阻止自動播放或格式不受支持，等待用戶手勢。");
+                    // ⭐️ 修復 2: 僅更新 UI。錯誤處理器已在 handleMetadata 中被移除。
+                    DOM_ELEMENTS.playerTitle.textContent = `載入成功：${track.title} (請點擊播放)`;
                 } else {
                     // 對於其他錯誤，讓錯誤事件本身觸發 stableErrorHandler，進入備援流程
                     console.error("嘗試播放時發生未知錯誤 (可能導致錯誤事件觸發備援):", error);
+                    // 這裡不需處理，等待錯誤事件觸發備援
                 }
             });
         }
