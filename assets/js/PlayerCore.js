@@ -138,7 +138,7 @@ function updatePlaylistHighlight(manualScroll = false) {
     if (currentTrackIndex >= 0 && currentTrackIndex < currentPlaylist.length) {
 // 修正：使用正在播放歌曲的 originalIndex 查找
 const currentlyPlayingOriginalIndex = currentPlaylist[currentTrackIndex].originalIndex; 
-const playingItem = DOM_ELEMENTS.playlistUl.querySelector(`li[data-original-index="${currentlyPlayingOriginalIndex}"]`);
+const playingItem = DOM_ELEMENTS.playlistUl.querySelector(`li[data-original-index="${currentlyPlayingOriginalIndex}"]`); 
         
         if (playingItem) {
             playingItem.classList.add('playing');
