@@ -129,6 +129,8 @@ export function playAudioWithFallback(track, autoPlay = true) {
 
         // metadata handler: 只作校驗/紀錄，不移除 error handler
         currentMetadataHandler = function () {
+            // ⭐️ 新增 Log
+            console.log('[AE EVENT] ✅ loadedmetadata 成功觸發！');
             if (isStale(currentExpectedUrl)) {
                 console.warn('[Audio] loadedmetadata 為過時事件，忽略');
                 return;
