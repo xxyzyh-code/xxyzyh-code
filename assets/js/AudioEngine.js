@@ -36,25 +36,21 @@ function removeCurrentErrorHandler(handler, audio) {
 }
 
 function handleMetadata(audio, track, handler, sessionToken) {
-    // 確保只有當前的播放會話才能觸發這個事件
     if (getState().currentPlaybackSession !== sessionToken) {
-        // 如果不是當前會話，移除此 session 的 metadata 處理器（在 tryNextSource 中添加）
-        // 由於 metadata 處理器是一次性的 ({once: true})，這步在技術上是多餘的，但作為防禦性編程保留。
-        audio.removeEventListener('loadedmetadata', handleMetadata); 
+        // 如果不是當前會話，不再處理
         return;
     }
 
     console.log(`[CDN Fallback]: ✅ 音源成功載入元數據 (${track.title})`);
-    removeCurrentErrorHandler(handler, audio); // 成功後移除該 session 的錯誤處理器
+    
+    // ⭐️ 修正 A.1: 載入元數據成功，立即移除錯誤處理器
+    removeCurrentErrorHandler(handler, audio); 
 
-    // UI 邏輯保持不變
-    if (audio.paused) {
-        DOM_ELEMENTS.playerTitle.textContent = `載入成功：${track.title} (請點擊播放)`; // 🌟 UI 詞語修正
-    } else {
-        // 否則，讓 'playing' 事件 (PlayerCore.js) 來更新標題
-        DOM_ELEMENTS.playerTitle.textContent = `載入成功，等待播放事件確認...`;
-    }
+    // ⭐️ 修正 A.2: 【關鍵】不再在這裡更新 playerTitle
+    // 讓 PlayerCore.js 中的 'playing' 或 'pause' 權威地更新標題。
+    // 如果此時音頻已暫停，PlayerCore.js 會在 playTrack 結束後將其標記為「等待播放」。
 }
+
 
 function showSimpleAlert(message) {
     console.warn(`[CDN Fallback 提示]: ${message}`);
@@ -148,21 +144,21 @@ export function playAudioWithFallback(track, autoPlay = true) {
         audio.src = url;
         audio.load();
 
-        // 這裡確保我們傳遞 stableErrorHandler 作為處理器參數
+loadedmetadata 只會觸發一次 ({once: true})
         const currentMetadataHandler = () => handleMetadata(audio, track, stableErrorHandler, sessionToken);
         audio.addEventListener('loadedmetadata', currentMetadataHandler, { once: true });
+
 
         // 核心修復 5: 根據 shouldAutoPlay 決定是否嘗試播放
         if (shouldAutoPlay) {
             audio.play().catch(error => {
                 if (error.name === "NotAllowedError" || error.name === "AbortError" || error.name === "NotSupportedError") {
-                    console.warn("瀏覽器阻止自動播放或格式不受支持，等待用戶手勢。");
-                    // ⭐️ 修復 2: 僅更新 UI。錯誤處理器已在 handleMetadata 中被移除。
+                    console.warn("瀏覽器阻止自動播放，等待用戶手勢。");
+                    // ⭐️ 修正 A.3: 如果被阻止，強制設置為等待播放狀態。
+                    // 由於錯誤處理器已在 loadedmetadata 中移除，這不會觸發備援。
                     DOM_ELEMENTS.playerTitle.textContent = `載入成功：${track.title} (請點擊播放)`;
                 } else {
-                    // 對於其他錯誤，讓錯誤事件本身觸發 stableErrorHandler，進入備援流程
-                    console.error("嘗試播放時發生未知錯誤 (可能導致錯誤事件觸發備援):", error);
-                    // 這裡不需處理，等待錯誤事件觸發備援
+                    console.error("嘗試播放時發生未知錯誤:", error);
                 }
             });
         }
