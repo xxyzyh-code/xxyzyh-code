@@ -22,7 +22,7 @@ const MASTER_TRACK_LIST = (function() {
         id: track.id || `s${index}`, 
         title: track.title,
         artist: track.artist,
-        // 🚨 核心修正 1：確保 sources 永遠是陣列，防止單一字串導致 AudioEngine 錯誤
+        // 🚨 核心修正 1：確保 sources 永遠是陣列
         sources: Array.isArray(track.sources) ? track.sources : (track.sources ? [track.sources] : []), 
         originalIndex: index,
         // 確保 lrcSources 是陣列
@@ -34,7 +34,8 @@ const MASTER_TRACK_LIST = (function() {
 // 2. DOM 元素 & 儲存鍵常量
 // ------------------------------------
 const DOM_ELEMENTS = {
-    audio: document.getElementById('main-audio'),
+    // 您的 HTML 中 ID 是 'audio'，這裡是正確的
+    audio: document.getElementById('audio'), 
     playerTitle: document.querySelector('#custom-audio-player h3'),
     modeButton: document.getElementById('mode-button'), 
     timerToggleButton: document.getElementById('timer-toggle-btn'),
@@ -46,11 +47,17 @@ const DOM_ELEMENTS = {
     themeMenu: document.getElementById('theme-menu'),
     currentThemeName: document.getElementById('current-theme-name'),
     themeOptions: document.querySelectorAll('#theme-menu .theme-option'),
-    playlistUl: document.getElementById('playlist'),
+    
+    // ✅ 修正 1：同步 HTML 中的 ID 'playlistUl'
+    playlistUl: document.getElementById('playlistUl'), 
+    
     lyricsContainer: document.getElementById('lyrics-container'),
     lyricsContent: document.getElementById('lyrics-content'),
     lyricsPlaceholder: document.getElementById('lyrics-placeholder'),
-    globalPlayBtn: document.getElementById('global-play-btn')
+    
+    // ✅ 修正 2：由於您使用內建 controls，我們將 'audio' 元素本身視為全局播放按鈕。
+    // 這允許 AudioEngine 仍然有目標可以操作 (雖然這次是隱藏/顯示 controls)。
+    globalPlayBtn: document.getElementById('audio') 
 };
 
 const STORAGE_KEYS = {
